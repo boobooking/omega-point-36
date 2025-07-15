@@ -58,14 +58,14 @@
 
         base {
             bindings = <
-  &none  &kp W              &kp F                &kp P                &kp B                            &kp Z          &kp L                 &kp U                 &kp Y               &none
-  &kp A  &hml LEFT_SHIFT R  &hml LEFT_CONTROL S  &hml LEFT_COMMAND T  &kp G                            &kp M          &hmr RIGHT_COMMAND N  &hmr RIGHT_CONTROL E  &hmr RIGHT_SHIFT I  &kp O
-  &to 0  &kp X              &kp C                &hml LEFT_ALT D      &kp V                            &kp K          &hmr RIGHT_ALT H      &kp J                 &kp Q               &to 4
-                                                 &mo 1                &kp SPACE  &kp ESC    &kp ENTER  &kp BACKSPACE  &mo 2
+  &none  &kp W              &kp F                &kp P                &kp B                                 &kp Z            &kp L                 &kp U                 &kp Y               &none
+  &kp A  &hml LEFT_SHIFT R  &hml LEFT_CONTROL S  &hml LEFT_COMMAND T  &kp G                                 &kp M            &hmr RIGHT_COMMAND N  &hmr RIGHT_CONTROL E  &hmr RIGHT_SHIFT I  &kp O
+  &to 0  &kp X              &kp C                &hml LEFT_ALT D      &kp V                                 &kp K            &hmr RIGHT_ALT H      &kp J                 &kp Q               &to 4
+                                                 &mo 1                &kp SPACE  &lt 6 ESCAPE    &kp ENTER  &lt 5 BACKSPACE  &mo 2
             >;
         };
 
-        nav {
+        defnav {
             bindings = <
   &kp N1         &kp N2    &kp N3     &kp N4     &kp N5                        &kp N6           &kp N7           &kp N8           &kp N9        &kp N0
   &hml LGUI ESC  &kp LALT  &kp LSHFT  &kp LCTRL  &kp ENTER                     &kp PRINTSCREEN  &hmr RCTRL LEFT  &hmr RSHFT DOWN  &hmr LALT UP  &hmr RGUI RIGHT
@@ -98,6 +98,24 @@
   &kp Z   &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &hml LEFT_COMMAND F  &kp G                     &kp H   &hmr RIGHT_COMMAND J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
   &to 0   &kp X              &kp C                &kp V                &kp B                     &kp N   &kp M                 &kp COMMA             &kp DOT             &to 4
                                                   &trans               &trans  &trans    &trans  &trans  &trans
+            >;
+        };
+
+        nav {
+            bindings = <
+  &trans  &kp LG(LEFT_BRACKET)  &kp UP_ARROW    &kp LG(RIGHT_BRACKET)  &trans                     &trans  &trans  &trans  &trans  &trans
+  &trans  &kp LEFT_ARROW        &kp DOWN_ARROW  &kp RIGHT_ARROW        &kp TAB                    &trans  &trans  &trans  &trans  &trans
+  &trans  &trans                &trans          &trans                 &trans                     &trans  &trans  &trans  &trans  &trans
+                                                &trans                 &trans   &trans    &trans  &trans  &trans
+            >;
+        };
+
+        numbers {
+            bindings = <
+  &trans  &trans  &trans  &trans  &trans                    &trans        &kp NUMBER_7  &kp NUMBER_8  &kp NUMBER_9  &trans
+  &trans  &trans  &trans  &trans  &trans                    &kp NUMBER_0  &kp NUMBER_4  &kp NUMBER_5  &kp NUMBER_6  &kp EQUAL
+  &trans  &trans  &trans  &trans  &trans                    &trans        &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &trans
+                          &trans  &trans  &trans    &trans  &trans        &trans
             >;
         };
     };
