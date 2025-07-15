@@ -78,8 +78,8 @@
             bindings = <
   &none  &kp Q              &kp E                &kp R                &kp T                                &kp Y            &kp U                 &kp I                 &kp P               &none
   &kp Z  &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &hml LEFT_COMMAND F  &kp G                                &kp H            &hmr RIGHT_COMMAND J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
-  &to 0  &kp X              &kp C                &lt 3 V              &kp B                                &kp N            &lt 3 M               &kp COMMA             &kp DOT             &to 2
-                                                 &none                &lt 4 SPACE  &lt 6 ESC    &kp ENTER  &lt 5 BACKSPACE  &none
+  &none  &kp X              &kp C                &lt 3 V              &kp B                                &kp N            &lt 3 M               &kp COMMA             &kp DOT             &none
+                                                 &to 0                &lt 4 SPACE  &lt 6 ESC    &kp ENTER  &lt 5 BACKSPACE  &to 2
             >;
         };
 
@@ -94,9 +94,9 @@
 
         ru_symbols {
             bindings = <
-  &trans  &trans  &trans  &trans  &trans                    &kp QUESTION      &kp LS(LA(RIGHT_BRACKET))  &kp MINUS         &kp RA(RIGHT_BRACKET)  &none
-  &trans  &trans  &trans  &trans  &trans                    &kp FSLH          &kp LS(NUMBER_5)           &kp PLUS          &kp LS(NUMBER_8)       &kp EQUAL
-  &trans  &trans  &trans  &trans  &trans                    &kp LA(NUMBER_4)  &kp LS(NUMBER_6)           &kp LS(NUMBER_7)  &none                  &none
+  &trans  &trans  &trans  &trans  &trans                    &kp QUESTION      &none             &kp MINUS         &none             &none
+  &trans  &trans  &trans  &trans  &trans                    &kp FSLH          &kp LS(NUMBER_5)  &kp PLUS          &kp LS(NUMBER_8)  &kp EQUAL
+  &trans  &trans  &trans  &trans  &trans                    &kp LA(NUMBER_4)  &kp LS(NUMBER_6)  &kp LS(NUMBER_7)  &none             &none
                           &trans  &trans  &trans    &trans  &trans            &trans
             >;
         };
