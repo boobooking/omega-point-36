@@ -60,7 +60,7 @@
             bindings = <
   &none  &kp W              &kp F                &kp P                &kp B                            &kp Z          &kp L                 &kp U                 &kp Y               &none
   &kp A  &hml LEFT_SHIFT R  &hml LEFT_CONTROL S  &hml LEFT_COMMAND T  &kp G                            &kp M          &hmr RIGHT_COMMAND N  &hmr RIGHT_CONTROL E  &hmr RIGHT_SHIFT I  &kp O
-  &none  &kp X              &kp C                &hml LEFT_ALT D      &kp V                            &kp K          &hmr RIGHT_ALT H      &kp J                 &kp Q               &none
+  &to 0  &kp X              &kp C                &hml LEFT_ALT D      &kp V                            &kp K          &hmr RIGHT_ALT H      &kp J                 &kp Q               &to 4
                                                  &mo 1                &kp SPACE  &kp ESC    &kp ENTER  &kp BACKSPACE  &mo 2
             >;
         };
@@ -89,6 +89,15 @@
   &kp LGUI     &hml LALT F5  &hml LSHFT F6  &hml LCTRL F7  &kp F8                     &out OUT_BLE  &hmr RCTRL C_VOL_DN  &hmr RSHFT C_MUTE  &hmr LALT C_VOL_UP  &kp RGUI
   &none        &kp F9        &kp F10        &kp F11        &kp F12                    &out OUT_USB  &kp C_PREV           &kp C_PP           &kp C_NEXT          &studio_unlock
                                             &trans         &trans   &trans    &trans  &trans        &trans
+            >;
+        };
+
+        ru {
+            bindings = <
+  &trans  &kp Q              &kp E                &kp R                &kp T                     &kp Y   &kp U                 &kp I                 &kp P               &trans
+  &kp Z   &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &hml LEFT_COMMAND F  &kp G                     &kp H   &hmr RIGHT_COMMAND J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
+  &to 0   &kp X              &kp C                &kp V                &kp B                     &kp N   &kp M                 &kp COMMA             &kp DOT             &to 4
+                                                  &trans               &trans  &trans    &trans  &trans  &trans
             >;
         };
     };
