@@ -60,17 +60,8 @@
             bindings = <
   &none  &kp W              &kp F                &kp P                &kp B                                   &kp Z            &kp L                 &kp U                 &kp Y               &none
   &kp A  &hml LEFT_SHIFT R  &hml LEFT_CONTROL S  &hml LEFT_COMMAND T  &kp G                                   &kp M            &hmr RIGHT_COMMAND N  &hmr RIGHT_CONTROL E  &hmr RIGHT_SHIFT I  &kp O
-  &to 0  &kp X              &kp C                &hml LEFT_ALT D      &kp V                                   &kp K            &hmr RIGHT_ALT H      &kp J                 &kp Q               &to 3
-                                                 &mo 8                &lt 2 SPACE  &lt 7 ESCAPE    &kp ENTER  &lt 6 BACKSPACE  &none
-            >;
-        };
-
-        cmd_en {
-            bindings = <
-  &none      &kp LG(W)  &kp LG(F)  &kp LG(P)  &kp LG(B)                               &kp RG(Z)            &kp RG(L)  &kp RG(U)  &kp RG(Y)  &none
-  &kp LG(A)  &kp LG(R)  &kp LG(S)  &kp LG(T)  &kp LG(G)                               &kp RG(M)            &kp RG(N)  &kp RG(E)  &kp RG(I)  &kp RG(O)
-  &none      &kp LG(X)  &kp LG(C)  &kp LG(D)  &kp LG(V)                               &kp RG(K)            &kp RG(H)  &kp RG(J)  &kp RG(Q)  &none
-                                   &mo 8      &lt 2 SPACE  &lt 7 ESCAPE    &kp ENTER  &lt 6 RG(BACKSPACE)  &none
+  &none  &kp X              &kp C                &hml LEFT_ALT D      &kp V                                   &kp K            &hmr RIGHT_ALT H      &kp J                 &kp Q               &none
+                                                 &to 0                &lt 1 SPACE  &lt 6 ESCAPE    &kp ENTER  &lt 5 BACKSPACE  &to 2
             >;
         };
 
@@ -85,10 +76,10 @@
 
         ru {
             bindings = <
-  &none  &kp Q              &kp E                &kp R    &kp T                                &kp Y            &kp U    &kp I                 &kp P               &none
-  &kp Z  &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &lt 1 F  &kp G                                &kp H            &lt 1 J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
-  &to 0  &kp X              &kp C                &lt 4 V  &kp B                                &kp N            &lt 4 M  &kp COMMA             &kp DOT             &to 3
-                                                 &none    &lt 5 SPACE  &lt 7 ESC    &kp ENTER  &lt 6 BACKSPACE  &none
+  &none  &kp Q              &kp E                &kp R                &kp T                                &kp Y            &kp U                 &kp I                 &kp P               &none
+  &kp Z  &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &hml LEFT_COMMAND F  &kp G                                &kp H            &hmr RIGHT_COMMAND J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
+  &to 0  &kp X              &kp C                &lt 3 V              &kp B                                &kp N            &lt 3 M               &kp COMMA             &kp DOT             &to 2
+                                                 &none                &lt 4 SPACE  &lt 6 ESC    &kp ENTER  &lt 5 BACKSPACE  &none
             >;
         };
 
@@ -103,9 +94,9 @@
 
         ru_symbols {
             bindings = <
-  &trans  &trans  &trans  &trans  &trans                    &kp QUESTION      &kp LS(RIGHT_BRACKET)  &kp MINUS         &kp RIGHT_BRACKET  &none
-  &trans  &trans  &trans  &trans  &trans                    &kp FSLH          &kp LS(NUMBER_5)       &kp PLUS          &kp LS(NUMBER_8)   &kp EQUAL
-  &trans  &trans  &trans  &trans  &trans                    &kp LA(NUMBER_4)  &kp LS(NUMBER_6)       &kp LS(NUMBER_7)  &none              &none
+  &trans  &trans  &trans  &trans  &trans                    &kp QUESTION      &kp LS(LA(RIGHT_BRACKET))  &kp MINUS         &kp RA(RIGHT_BRACKET)  &none
+  &trans  &trans  &trans  &trans  &trans                    &kp FSLH          &kp LS(NUMBER_5)           &kp PLUS          &kp LS(NUMBER_8)       &kp EQUAL
+  &trans  &trans  &trans  &trans  &trans                    &kp LA(NUMBER_4)  &kp LS(NUMBER_6)           &kp LS(NUMBER_7)  &none                  &none
                           &trans  &trans  &trans    &trans  &trans            &trans
             >;
         };
