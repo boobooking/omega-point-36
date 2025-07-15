@@ -67,10 +67,10 @@
 
         en_symbols {
             bindings = <
-  &trans  &trans  &trans  &trans  &trans                    &kp QUESTION  &kp LEFT_BRACKET  &kp MINUS  &kp RIGHT_BRACKET  &trans
-  &trans  &trans  &trans  &trans  &trans                    &kp FSLH      &kp COLON         &kp PLUS   &kp SEMI           &kp EQUAL
-  &trans  &trans  &trans  &trans  &trans                    &kp DOLLAR    &kp COMMA         &kp DOT    &kp BSLH           &trans
-                          &trans  &trans  &trans    &trans  &trans        &trans
+  &trans  &trans  &kp LG(TAB)  &trans  &trans                    &kp QUESTION  &kp LEFT_BRACKET  &kp MINUS  &kp RIGHT_BRACKET  &trans
+  &trans  &trans  &trans       &trans  &trans                    &kp FSLH      &kp COLON         &kp PLUS   &kp SEMI           &kp EQUAL
+  &trans  &trans  &trans       &trans  &trans                    &kp DOLLAR    &kp COMMA         &kp DOT    &kp BSLH           &trans
+                               &trans  &trans  &trans    &trans  &trans        &trans
             >;
         };
 
