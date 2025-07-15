@@ -67,10 +67,10 @@
 
         cmd_en {
             bindings = <
-  &none      &kp LG(W)  &kp LG(F)  &kp LG(P)  &kp LG(B)                               &kp RG(Z)        &kp RG(L)  &kp RG(U)  &kp RG(Y)  &none
-  &kp LG(A)  &kp LG(R)  &kp LG(S)  &kp LG(T)  &kp LG(G)                               &kp RG(M)        &kp RG(N)  &kp RG(E)  &kp RG(I)  &kp RG(O)
-  &none      &kp LG(X)  &kp LG(C)  &kp LG(D)  &kp LG(V)                               &kp RG(K)        &kp RG(H)  &kp RG(J)  &kp RG(Q)  &none
-                                   &mo 8      &lt 2 SPACE  &lt 7 ESCAPE    &kp ENTER  &lt 6 BACKSPACE  &none
+  &none      &kp LG(W)  &kp LG(F)  &kp LG(P)  &kp LG(B)                               &kp RG(Z)            &kp RG(L)  &kp RG(U)  &kp RG(Y)  &none
+  &kp LG(A)  &kp LG(R)  &kp LG(S)  &kp LG(T)  &kp LG(G)                               &kp RG(M)            &kp RG(N)  &kp RG(E)  &kp RG(I)  &kp RG(O)
+  &none      &kp LG(X)  &kp LG(C)  &kp LG(D)  &kp LG(V)                               &kp RG(K)            &kp RG(H)  &kp RG(J)  &kp RG(Q)  &none
+                                   &mo 8      &lt 2 SPACE  &lt 7 ESCAPE    &kp ENTER  &lt 6 RG(BACKSPACE)  &none
             >;
         };
 
@@ -85,10 +85,10 @@
 
         ru {
             bindings = <
-  &trans  &kp Q              &kp E                &kp R    &kp T                     &kp Y   &kp U    &kp I                 &kp P               &trans
-  &kp Z   &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &lt 1 F  &kp G                     &kp H   &lt 1 J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
-  &to 0   &kp X              &kp C                &lt 4 V  &kp B                     &kp N   &lt 4 M  &kp COMMA             &kp DOT             &to 3
-                                                  &trans   &trans  &trans    &trans  &trans  &trans
+  &none  &kp Q              &kp E                &kp R    &kp T                                &kp Y            &kp U    &kp I                 &kp P               &none
+  &kp Z  &hml LEFT_SHIFT S  &hml LEFT_CONTROL D  &lt 1 F  &kp G                                &kp H            &lt 1 J  &hmr RIGHT_CONTROL K  &hmr RIGHT_SHIFT L  &kp SEMI
+  &to 0  &kp X              &kp C                &lt 4 V  &kp B                                &kp N            &lt 4 M  &kp COMMA             &kp DOT             &to 3
+                                                 &none    &lt 5 SPACE  &lt 7 ESC    &kp ENTER  &lt 6 BACKSPACE  &none
             >;
         };
 
