@@ -94,6 +94,8 @@
   &trans  &trans  &trans       &trans  &trans                    &kp LA(NUMBER_4)  &kp LS(NUMBER_6)  &kp LS(NUMBER_7)  &none             &none
                                &trans  &trans  &trans    &trans  &trans            &trans
             >;
+
+            display-name = "Base";
         };
 
         nav {
@@ -103,6 +105,8 @@
   &trans  &trans                &trans          &trans                 &trans                     &trans  &trans  &trans  &trans  &trans
                                                 &trans                 &trans   &trans    &trans  &trans  &trans
             >;
+
+            display-name = "Navigation";
         };
 
         numbers {
@@ -112,6 +116,8 @@
   &trans  &trans  &trans  &trans  &trans                    &trans        &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &trans
                           &trans  &trans  &trans    &trans  &trans        &trans
             >;
+
+            display-name = "Symbols";
         };
 
         adj {
@@ -121,6 +127,8 @@
   &none        &kp F9        &kp F10        &kp F11        &kp F12                    &out OUT_USB  &kp C_PREV           &kp C_PP           &kp C_NEXT          &studio_unlock
                                             &trans         &trans   &trans    &trans  &trans        &trans
             >;
+
+            display-name = "Adjust";
         };
     };
 };
