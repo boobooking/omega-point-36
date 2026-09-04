@@ -117,9 +117,10 @@ Positions are 0-9 / 10-19 / 20-29 for the three rows, then 30-32 (left thumbs) a
 
 **Home row mods** sit on `en`, `ru` and (as plain `&kp`) the right hand of `nav`:
 Alt on A/`;`, Shift on S/L, Ctrl on D/K, **Cmd on F/J**. `hml`/`hmr` carry
-`hold-trigger-key-positions` listing the whole opposite hand, so a right-hand mod only engages when
-the next key is on the left half and vice versa. Those lists are position-based — changing key count
-or ordering invalidates them, but moving a mod between positions inside the same half does not.
+`hold-trigger-key-positions` listing the whole opposite hand **plus all six thumb positions**, so a
+mod engages when the next key is on the other hand or on any thumb. Those lists are position-based —
+changing key count or ordering invalidates them, but moving a mod between positions inside the same
+half does not. See "Positional hold-tap" below for why the thumbs are in both lists.
 
 On `nav` the right-hand mods are deliberately **plain `&kp RGUI/RCTRL/RSHFT/LALT`, not hold-taps**:
 the arrows moved to the left hand, so there is nothing to tap, and `require-prior-idle-ms` would
@@ -168,6 +169,38 @@ Space and Enter running through a hold-tap is the main ergonomic risk in this ke
 first parameter to the hold binding and the second to the tap binding, so `&hml_en LGUI DLLR` gives
 Cmd on hold and `$` through the language-switching macro on tap. It exists because `$` cannot be
 reached with a plain `&kp` on the Cyrillic layout.
+
+## Positional hold-tap: how it actually decides
+
+All from `app/src/behaviors/behavior_hold_tap.c` in the fork. This was the source of a real bug —
+same-hand `Cmd+Space` was impossible by construction, and the workaround people find ("hold the
+modifier, wait, then press") hides it, so the symptom reads as "the timing is too slow".
+
+- **`decide_positional_hold()` only consults the list if another key was pressed before the
+  decision.** It returns early when `position_of_first_other_key_pressed == -1`. A hold resolved by
+  the timer alone therefore **bypasses the positional check entirely** — which is exactly why
+  holding and waiting appears to work while the fast chord does not.
+- **A position not in the list forces a tap**, it does not merely decline the hold. So a modifier
+  chorded with a key outside its list can never work, at any speed.
+- **The thumbs must be in both lists.** The list's purpose is to stop same-hand letter rolls from
+  raising a modifier; thumbs never take part in letter rolls, so restricting them buys nothing and
+  makes every same-hand modifier+thumb chord (`Cmd+Space`, `Cmd+Backspace`, `Shift+Space`)
+  impossible.
+- **What guards mid-typing false triggers is `require-prior-idle-ms`, not the position list.**
+  `is_quick_tap()` resolves the hold-tap as a tap immediately when *any* key was tapped within the
+  window (150 ms here), which is what keeps "if " and "of " from raising Cmd. Raise that value if
+  false triggers appear; do not narrow the position lists.
+- **Flavor semantics:** `balanced` decides hold on the other key's **release**, `hold-preferred` on
+  its **press**, `tap-preferred` on the **timer only**. With `hold-trigger-on-release` the position
+  is recorded on the other key's release rather than its press.
+- **Only one hold-tap may be undecided at a time.** `on_hold_tap_binding_pressed()` returns
+  immediately when `undecided_hold_tap != NULL`, so a second hold-tap pressed during that window is
+  dropped whole — no modifier, no tap, nothing. With hold-taps on both the home row and the thumbs,
+  pressing the thumb even slightly first swallows the modifier entirely and yields a bare Space.
+  Press the modifier first; this is not tunable.
+- `hold-while-undecided` (with optional `-linger`) presses the hold binding on key-down before any
+  decision. Not used on the home row here — it would flicker a modifier on every letter — but the
+  trackball keymap uses it, and it is the escape hatch if chord timing ever needs to be instant.
 
 ## The RU/EN dual-layout system
 
@@ -241,6 +274,13 @@ All checked against the fork's source or the build's own output:
   brightness usage at all, `ZMK_HID_INDICATORS` is off, and the device identifies as VID `0x1D50` /
   "ZMK Project", not as Apple hardware. An iPad "Keyboard Brightness" setting comes from a Smart
   Connector accessory, not from this keyboard.
+
+## Keeping this file current
+
+Write new findings here as they are worked out, in the same turn, without being asked. The hard part
+of this repo is not the devicetree — it is the accumulated knowledge about ZMK internals and host
+behavior, each item of which cost a source dive or an on-device test. Record the evidence trail
+(which source file, which check) so the next instance can re-verify rather than trust prose.
 
 ## Known gaps
 
