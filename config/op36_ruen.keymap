@@ -175,7 +175,7 @@
   &none     &kp LPAR          &kp LBRC   &kp RPAR        &kp PIPE                       &kp QMARK  &kp LBKT   &kp PLUS   &kp RBKT  &none
   &kp STAR  &hml LSHFT UNDER  &kp RBRC   &hml LGUI DLLR  &none                          &kp FSLH   &kp SQT    &kp MINUS  &kp DQT   &kp EQUAL
   &none     &kp TILDE         &kp GRAVE  &kp COLON       &kp SEMI                       &kp PRCNT  &kp COMMA  &kp DOT    &kp BSLH  &none
-                                         &none           &lt 5 SPACE  &trans    &trans  &none      &none
+                                         &trans          &lt 5 SPACE  &trans    &trans  &trans     &trans
             >;
 
             display-name = "Symbols";
@@ -186,7 +186,7 @@
   &none        &kp RU_LPAR          &en LBRC   &kp RU_RPAR        &en PIPE                       &kp RU_QMARK  &en LBKT      &kp RU_PLUS   &en RBKT     &none
   &kp RU_STAR  &hml LSHFT RU_UNDER  &en RBRC   &hml_en LGUI DLLR  &none                          &kp RU_FSLH   &en SQT       &kp RU_MINUS  &kp RU_DQT   &kp RU_EQUAL
   &none        &en TILDE            &en GRAVE  &kp RU_COLON       &kp RU_SEMI                    &kp RU_PRCNT  &kp RU_COMMA  &kp RU_DOT    &kp RU_BSLH  &none
-                                               &none              &lt 5 SPACE  &trans    &trans  &none         &none
+                                               &trans             &lt 5 SPACE  &trans    &trans  &trans        &trans
             >;
 
             display-name = "Symbols";
@@ -197,7 +197,7 @@
   &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                      &none            &to 0     &to 1      &none      &none
   &none  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                    &none            &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
   &none  &none             &none     &none             &none                      &none            &none     &none      &none      &none
-                                     &none             &none    &trans    &trans  &lt 5 BACKSPACE  &none
+                                     &trans            &trans   &trans    &trans  &lt 5 BACKSPACE  &trans
             >;
 
             display-name = "Nav";
@@ -205,10 +205,10 @@
 
         adj {
             bindings = <
-  &none        &none  &none  &none  &none                        &bt BT_SEL 0   &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &none
-  &bootloader  &none  &none  &none  &none                        &out OUT_BLE   &bt BT_CLR    &none         &none         &studio_unlock
-  &none        &none  &none  &none  &none                        &out OUT_USB   &none         &none         &none         &none
-                             &none  &kp SPACE  &trans    &trans  &kp BACKSPACE  &none
+  &none        &none  &none  &none   &none                     &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &none
+  &bootloader  &none  &none  &none   &none                     &out OUT_BLE  &bt BT_CLR    &none         &none         &studio_unlock
+  &none        &none  &none  &none   &none                     &out OUT_USB  &none         &none         &none         &none
+                             &trans  &trans  &trans    &trans  &trans        &trans
             >;
 
             display-name = "Adjust";
