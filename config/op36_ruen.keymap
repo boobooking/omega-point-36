@@ -124,10 +124,10 @@
 
         en {
             bindings = <
-  &kp Q        &kp W        &kp E         &kp R          &kp T                          &kp Y  &kp U         &kp I         &kp O        &kp P
-  &hml LGUI A  &hml LALT S  &hml LSHFT D  &hml LCTRL F   &kp G                          &kp H  &hmr RCTRL J  &hmr RSHFT K  &hmr LALT L  &hmr RGUI SEMICOLON
-  &kp Z        &kp X        &kp C         &kp V          &kp B                          &kp N  &kp M         &kp COMMA     &kp DOT      &kp SQT
-                                          &kp BACKSPACE  &mo 4  &kp SPACE    &kp ENTER  &mo 2  &kp TAB
+  &kp Q  &kp W         &kp E         &kp R          &kp T                          &kp Y  &kp U        &kp I         &kp O         &kp P
+  &kp A  &hml LSHFT S  &hml LCTRL D  &hml LGUI F    &kp G                          &kp H  &hmr RGUI J  &hmr RCTRL K  &hmr RSHFT L  &kp SEMICOLON
+  &kp Z  &kp X         &kp C         &hml LALT V    &kp B                          &kp N  &hmr LALT M  &kp COMMA     &kp DOT       &kp SQT
+                                     &kp BACKSPACE  &mo 4  &kp SPACE    &kp ENTER  &mo 2  &kp TAB
             >;
 
             display-name = "Base";
@@ -135,9 +135,9 @@
 
         ru {
             bindings = <
-  &kp RU_CYRILLIC_SHORT_I   &kp RU_CYRILLIC_TSE         &kp RU_CYRILLIC_U          &kp RU_CYRILLIC_KA        &kp RU_CYRILLIC_IE                          &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE        &kp RU_CYRILLIC_SHA        &kp RU_CYRILLIC_SHCHA     &kp RU_CYRILLIC_ZE
-  &hml LGUI RU_CYRILLIC_EF  &hml LALT RU_CYRILLIC_YERU  &hml LSHFT RU_CYRILLIC_VE  &hml LCTRL RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                          &kp RU_CYRILLIC_ER  &hmr RCTRL RU_CYRILLIC_O   &hmr RSHFT RU_CYRILLIC_EL  &hmr LALT RU_CYRILLIC_DE  &hmr RGUI RU_CYRILLIC_ZHE
-  &kp RU_CYRILLIC_YA        &kp RU_CYRILLIC_CHE         &kp RU_CYRILLIC_ES         &kp RU_CYRILLIC_EM        &kp RU_CYRILLIC_I                           &kp RU_CYRILLIC_TE  &kp RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE         &kp RU_CYRILLIC_YU        &kp RU_CYRILLIC_E
+  &kp RU_CYRILLIC_SHORT_I  &kp RU_CYRILLIC_TSE          &kp RU_CYRILLIC_U          &kp RU_CYRILLIC_KA        &kp RU_CYRILLIC_IE                          &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE              &kp RU_CYRILLIC_SHA        &kp RU_CYRILLIC_SHCHA      &kp RU_CYRILLIC_ZE
+  &kp RU_CYRILLIC_EF       &hml LSHFT RU_CYRILLIC_YERU  &hml LCTRL RU_CYRILLIC_VE  &hml LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                          &kp RU_CYRILLIC_ER  &hmr RGUI RU_CYRILLIC_O          &hmr RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &kp RU_CYRILLIC_ZHE
+  &kp RU_CYRILLIC_YA       &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES         &hml LALT RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                           &kp RU_CYRILLIC_TE  &hmr LALT RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE         &kp RU_CYRILLIC_YU         &kp RU_CYRILLIC_E
                                                                                    &kp BACKSPACE             &mo 4               &kp SPACE    &kp ENTER  &mo 3               &kp TAB
             >;
 
@@ -146,10 +146,10 @@
 
         sym_en {
             bindings = <
-  &kp TILDE       &kp LT          &kp EQUAL         &kp GT           &kp GRAVE                    &kp CARET  &kp LBKT         &kp UNDER        &kp RBKT        &kp DLLR
-  &hml LGUI BSLH  &hml LALT LPAR  &hml LSHFT MINUS  &hml LCTRL RPAR  &kp PLUS                     &kp PRCNT  &hmr RCTRL LBRC  &hmr RSHFT SEMI  &hmr LALT RBRC  &hmr RGUI EXCL
-  &kp HASH        &kp STAR        &kp COLON         &kp FSLH         &kp AMPS                     &kp AT     &kp PIPE         &kp COMMA        &kp DOT         &kp QMARK
-                                                    &trans           &mo 5      &trans    &trans  &none      &trans
+  &kp TILDE  &kp LT    &kp EQUAL  &kp GT    &kp GRAVE                    &kp CARET  &kp LBKT  &kp UNDER  &kp RBKT  &kp DLLR
+  &kp BSLH   &kp LPAR  &kp MINUS  &kp RPAR  &kp PLUS                     &kp PRCNT  &kp LBRC  &kp SEMI   &kp RBRC  &kp EXCL
+  &kp HASH   &kp STAR  &kp COLON  &kp FSLH  &kp AMPS                     &kp AT     &kp PIPE  &kp COMMA  &kp DOT   &kp QMARK
+                                  &trans    &mo 5      &trans    &trans  &none      &trans
             >;
 
             display-name = "Symbols";
@@ -157,10 +157,10 @@
 
         sym_ru {
             bindings = <
-  &en TILDE               &en LT          &kp EQUAL         &en GT           &en GRAVE                    &en CARET  &en LBKT  &kp UNDER           &en RBKT    &en DLLR
-  &hml LGUI RU_BACKSLASH  &hml LALT LPAR  &hml LSHFT MINUS  &hml LCTRL RPAR  &kp PLUS                     &kp PRCNT  &en LBRC  &hmr RSHFT RU_SEMI  &en RBRC    &hmr RGUI EXCL
-  &en HASH                &kp STAR        &kp RU_COLON      &kp RU_FSLH      &en AMPS                     &en AT     &en PIPE  &kp RU_COMMA        &kp RU_DOT  &kp RU_QMARK
-                                                            &trans           &mo 5      &trans    &trans  &none      &trans
+  &en TILDE         &en LT    &kp EQUAL     &en GT       &en GRAVE                    &en CARET  &en LBKT  &kp UNDER     &en RBKT    &en DLLR
+  &kp RU_BACKSLASH  &kp LPAR  &kp MINUS     &kp RPAR     &kp PLUS                     &kp PRCNT  &en LBRC  &kp RU_SEMI   &en RBRC    &kp EXCL
+  &en HASH          &kp STAR  &kp RU_COLON  &kp RU_FSLH  &en AMPS                     &en AT     &en PIPE  &kp RU_COMMA  &kp RU_DOT  &kp RU_QMARK
+                                            &trans       &mo 5      &trans    &trans  &none      &trans
             >;
 
             display-name = "Symbols";
@@ -168,10 +168,10 @@
 
         nav {
             bindings = <
-  &kp N1         &kp N2    &kp N3     &kp N4     &kp N5                        &kp N6           &kp N7           &kp N8           &kp N9        &kp N0
-  &hml LGUI ESC  &kp LALT  &kp LSHFT  &kp LCTRL  &kp ENTER                     &kp PRINTSCREEN  &hmr RCTRL LEFT  &hmr RSHFT DOWN  &hmr LALT UP  &hmr RGUI RIGHT
-  &to 0          &kp HOME  &kp INS    &kp END    &kp DELETE                    &none            &none            &kp PG_DN        &kp PG_UP     &to 1
-                                      &trans     &none       &trans    &trans  &mo 5            &trans
+  &kp N1   &kp N2     &kp N3     &kp N4         &kp N5                        &kp N6           &kp N7          &kp N8           &kp N9         &kp N0
+  &kp ESC  &kp LSHFT  &kp LCTRL  &kp LGUI       &kp ENTER                     &kp PRINTSCREEN  &hmr RGUI LEFT  &hmr RCTRL DOWN  &hmr RSHFT UP  &kp RIGHT
+  &to 0    &kp HOME   &kp INS    &hml LALT END  &kp DELETE                    &none            &kp LALT        &kp PG_DN        &kp PG_UP      &to 1
+                                 &trans         &none       &trans    &trans  &mo 5            &trans
             >;
 
             display-name = "Nav";
