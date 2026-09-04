@@ -201,9 +201,30 @@ modifier, wait, then press") hides it, so the symptom reads as "the timing is to
   dropped whole — no modifier, no tap, nothing. With hold-taps on both the home row and the thumbs,
   pressing the thumb even slightly first swallows the modifier entirely and yields a bare Space.
   Press the modifier first; this is not tunable.
-- `hold-while-undecided` (with optional `-linger`) presses the hold binding on key-down before any
-  decision. Not used on the home row here — it would flicker a modifier on every letter — but the
-  trackball keymap uses it, and it is the escape hatch if chord timing ever needs to be instant.
+- **`hold-while-undecided` is set on `hml`, `hmr` and `hml_en`.** It presses the hold binding at
+  `HT_KEY_DOWN` before any flavor decision and returns, so the modifier reaches the host the instant
+  the key goes down. Do **not** add `-linger`: without it the modifier is released before the tap is
+  sent, with it the tap would come out modified (`Cmd+j` instead of `j`).
+- The usual objection to `hold-while-undecided` — a modifier flickering on every home-row letter —
+  does not apply here, because `is_quick_tap()` is evaluated *before* `HT_KEY_DOWN`. When it fires
+  the status is no longer `UNDECIDED`, so `decide_hold_tap()` returns at its first guard and the
+  modifier is never pressed. With `require-prior-idle-ms = 150` that covers ordinary typing, and the
+  instant modifier only appears after a pause — exactly the deliberate-chord case. The flip side:
+  a chord started within 150 ms of the last keystroke still gets no modifier at all.
+
+### An open question
+
+`Cmd+Space` with right-hand Cmd (`J`, position 16) and left-hand Space (position 31) has been
+reported as frequently producing a bare space — **no `j` and no modifier**, which rules out both an
+ordinary tap resolution and a positional rejection, since either would emit `j`. The only path in
+the source that produces nothing at all is the `undecided_hold_tap != NULL` early return.
+
+A plausible cause specific to this chord: `J` is on the **peripheral** half and its events cross BLE,
+while Space is on the central and is handled locally, so Space can win the race and claim the
+undecided slot even when `J` was pressed first. If that is what is happening, no timing parameter
+fixes it. The discriminating test is the same chord with left-hand Cmd (`F`), where both keys are on
+the central half: if that is reliable while the right-hand version is not, the split latency is the
+cause.
 
 ## The RU/EN dual-layout system
 
