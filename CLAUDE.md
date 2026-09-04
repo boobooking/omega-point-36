@@ -168,7 +168,10 @@ Space and Enter running through a hold-tap is the main ergonomic risk in this ke
 `hml_en` is `hml` with `bindings = <&kp>, <&en>` instead of `<&kp>, <&kp>`. A hold-tap passes its
 first parameter to the hold binding and the second to the tap binding, so `&hml_en LGUI DLLR` gives
 Cmd on hold and `$` through the language-switching macro on tap. It exists because `$` cannot be
-reached with a plain `&kp` on the Cyrillic layout.
+reached with a plain `&kp` on the Cyrillic layout. Note that it references `&en` from the
+`behaviors` block while the macro is defined further down in `macros` — devicetree resolves labels
+after parsing the whole tree, so referring forward like this is fine (verified in the built
+devicetree, where the node comes out as `bindings = < &kp >, < &en >`).
 
 ## Positional hold-tap: how it actually decides
 
