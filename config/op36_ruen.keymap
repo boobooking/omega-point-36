@@ -153,7 +153,7 @@
   &kp Q        &kp W         &kp E         &kp R        &kp T                                  &kp Y            &kp U        &kp I         &kp O         &kp P
   &hml LALT A  &hml LSHFT S  &hml LCTRL D  &hml LGUI F  &kp G                                  &kp H            &hmr RGUI J  &hmr RCTRL K  &hmr RSHFT L  &hmr LALT SEMICOLON
   &kp Z        &kp X         &kp C         &kp V        &kp B                                  &kp N            &kp M        &kp COMMA     &kp DOT       &kp SQT
-                                           &none        &lt 4 SPACE  &lt 2 ESC    &lt 2 ENTER  &lt 2 BACKSPACE  &none
+                                           &none        &lt 4 SPACE  &lt 2 ESC    &lt 2 ENTER  &lt 4 BACKSPACE  &none
             >;
 
             display-name = "Base";
@@ -164,7 +164,7 @@
   &kp RU_CYRILLIC_SHORT_I   &kp RU_CYRILLIC_TSE          &kp RU_CYRILLIC_U          &kp RU_CYRILLIC_KA       &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE        &kp RU_CYRILLIC_SHA        &kp RU_CYRILLIC_SHCHA      &kp RU_CYRILLIC_ZE
   &hml LALT RU_CYRILLIC_EF  &hml LSHFT RU_CYRILLIC_YERU  &hml LCTRL RU_CYRILLIC_VE  &hml LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                            &kp RU_CYRILLIC_ER  &hmr RGUI RU_CYRILLIC_O    &hmr RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr LALT RU_CYRILLIC_ZHE
   &kp RU_CYRILLIC_YA        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES         &kp RU_CYRILLIC_EM       &kp RU_CYRILLIC_I                             &kp RU_CYRILLIC_TE  &kp RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE         &kp RU_CYRILLIC_YU         &kp RU_CYRILLIC_E
-                                                                                    &none                    &lt 4 SPACE         &lt 3 ESC    &lt 3 ENTER  &lt 3 BACKSPACE     &none
+                                                                                    &none                    &lt 4 SPACE         &lt 3 ESC    &lt 3 ENTER  &lt 4 BACKSPACE     &none
             >;
 
             display-name = "Ru";
