@@ -212,19 +212,36 @@ modifier, wait, then press") hides it, so the symptom reads as "the timing is to
   instant modifier only appears after a pause — exactly the deliberate-chord case. The flip side:
   a chord started within 150 ms of the last keystroke still gets no modifier at all.
 
-### An open question
+### Chords across the split, and why hold-tap timing is the wrong suspect
 
-`Cmd+Space` with right-hand Cmd (`J`, position 16) and left-hand Space (position 31) has been
-reported as frequently producing a bare space — **no `j` and no modifier**, which rules out both an
-ordinary tap resolution and a positional rejection, since either would emit `j`. The only path in
-the source that produces nothing at all is the `undecided_hold_tap != NULL` early return.
+A modifier chorded with a thumb key was unreliable, and the decisive evidence was an **asymmetry
+between the halves**, not any timing value:
 
-A plausible cause specific to this chord: `J` is on the **peripheral** half and its events cross BLE,
-while Space is on the central and is handled locally, so Space can win the race and claim the
-undecided slot even when `J` was pressed first. If that is what is happening, no timing parameter
-fixes it. The discriminating test is the same chord with left-hand Cmd (`F`), where both keys are on
-the central half: if that is reliable while the right-hand version is not, the split latency is the
-cause.
+| modifier | other key | result |
+|---|---|---|
+| left `F` (central) | right Backspace (peripheral) | mostly works |
+| right `J` (peripheral) | left Space/Enter (central) | essentially never works |
+
+The failure emitted **no `j` at all** — neither a modifier nor a tap. That rules out an ordinary tap
+resolution and a positional rejection alike, since both emit the tap. The only path in the source
+producing nothing is the `undecided_hold_tap != NULL` early return.
+
+The cause is event **ordering**, not hold-tap timing: the peripheral half's key events cross BLE
+while the central's are handled locally, so a central key can reach the keymap first even when the
+peripheral key was physically pressed first — and then it claims the single undecided-hold-tap slot
+and the modifier is dropped whole.
+
+The lever is `CONFIG_BT_PERIPHERAL_PREF_LATENCY`, which ZMK ships at **30**: the split peripheral may
+skip up to thirty connection intervals before it has to be heard. `config/op36.conf` sets it to 0.
+Note that `BT_PERIPHERAL_PREF_*` applies to whichever link the board is a peripheral on — for the
+right half that is the split, for the left half it is the host — and the CI log confirms only
+`config/op36.conf` is merged for both halves, so there is no way to scope this to one of them
+without a half-specific conf whose merge behavior is unverified. The cost is battery: neither half
+sleeps between connection events any more. Raise it toward 5-10 if that trade turns out badly.
+
+**When a chord misbehaves, check which half each key is on before touching any timing parameter.**
+Three successive hypotheses about `require-prior-idle-ms`, positional lists and tapping terms were
+all wrong here; the asymmetry between hands is what actually identified the cause.
 
 ## The RU/EN dual-layout system
 
