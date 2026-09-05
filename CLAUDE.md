@@ -268,6 +268,34 @@ right half that is the split, for the left half it is the host — and the CI lo
 without a half-specific conf whose merge behavior is unverified. The cost is battery: neither half
 sleeps between connection events any more. Raise it toward 5-10 if that trade turns out badly.
 
+### require-prior-idle-ms is the knob that loses modifiers on repeats
+
+`is_quick_tap()` compares against the last tap of **any** key, not a neighbouring one, so repeating a
+chord suppresses its own modifier: the previous keystroke is still inside the window when the next
+modifier goes down, and the hold-tap resolves to a tap. Measured with `tests/chord-repeat-fast`
+(right Cmd + left Space, the chord that prompted this):
+
+| `require-prior-idle-ms` | chord repeats surviving | `"of "` typed as a roll |
+|---|---|---|
+| 150 | 6 of 8 | `o f space` |
+| 100 | 8 of 8 | `o f space` (opposite-hand lists) / **`o Cmd space`** (thumbs in own-hand lists) |
+| 50 | 8 of 8 | same as 100 |
+
+The middle column is why the value was lowered to 100; the right column is why the thumb positions
+were taken back out of the own-hand lists at the same time. Leaving both changes in would have made
+typing "of" open Spotlight — a worse bug than the one being fixed. **Change one of these two without
+re-running `typing-roll` and `chord-repeat-fast` and you will trade one bug for the other.**
+
+The combo guards (`cmben`/`cmbru`) keep their own `require-prior-idle-ms = 150`; they protect against
+a different accident and were deliberately left alone.
+
+### Same-hand chords are refused by design
+
+Position 33 (Enter) and 34 (Backspace) are on the **right** half, 30-32 (Space, Esc) on the left. So
+right-hand Cmd (`J`) with Enter is a same-hand chord and the positional lists turn it into a bare
+`j` — see `tests/cmd-enter-twice`. Enter and Backspace must be chorded with the **left** modifiers,
+Space and Esc with the right ones. This is the opposite-hand rule working, not a defect.
+
 ### Still unexplained
 
 The chord failing **on exactly every second attempt** — as if a broken state survives one press and
