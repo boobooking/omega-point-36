@@ -51,6 +51,37 @@ west build -s zmk/app -d build/op36_left -b ergohaven -S studio-rpc-usb-uart -- 
 `west init -l` clones `zmk/`, `zephyr/`, `modules/`, `bootloader/` and `tools/` into the repo root
 and none of them are gitignored — build outside the repo, or just push and let CI do it.
 
+## Simulating the keymap
+
+`./tests/run.sh` builds `config/op36_ruen.keymap` for ZMK's `native_posix_64`
+board — the firmware becomes an ordinary Linux binary whose key matrix is a mock
+scanner replaying timed events — and diffs the resulting log against a snapshot.
+It runs in `zmkfirmware/zmk-build-arm:stable`; the first run clones ZMK and its
+west dependencies into `$WS` (default `$TMPDIR/zmk-sim-ws`, ~1.5 GB), later runs
+reuse it. See `tests/README.md` for the shape of a case.
+
+**Reach for this before theorizing about any hold-tap, layer, combo or macro
+timing question.** The log carries not just the HID output but the decision
+itself — `ht_decide: 16 decided hold-interrupt (balanced decision moment
+other-key-up)` — so questions that were answered here by three successive wrong
+guesses are answered by one run. Cases mount `config/` into the container and
+`#include` the real keymap, so they test the file that ships.
+
+Two gotchas worth knowing before writing a case:
+
+- **Start with a lead-in press and a pause of 200 ms or more.** At t=0 the
+  "last tapped" timestamp is zero, so `require-prior-idle-ms` sees the very first
+  key as a quick tap and collapses every hold-tap to its tap.
+- Positions map straight onto the matrix: position N is `RC(N/10, N%10)`, so
+  thumbs 30-35 are simply row 3. No translation layer is needed.
+
+**It cannot model the split.** One node, no peripheral half, no BLE — so anything
+caused by event ordering between the halves is out of reach, and so is host
+behavior (Caps Lock switching, Spotlight, the Latin fallback for Cmd shortcuts).
+`tests/cmd-space-reordered` illustrates that class of bug by hand-ordering the
+events; it does not reproduce the hardware faithfully, and the difference is
+visible — the simulator emits a `j` there where the real keyboard emits none.
+
 ## Flashing and the split
 
 The op36 shield's `Kconfig.defconfig` in the fork gives `ZMK_SPLIT_ROLE_CENTRAL` to
@@ -239,9 +270,15 @@ right half that is the split, for the left half it is the host — and the CI lo
 without a half-specific conf whose merge behavior is unverified. The cost is battery: neither half
 sleeps between connection events any more. Raise it toward 5-10 if that trade turns out badly.
 
-**When a chord misbehaves, check which half each key is on before touching any timing parameter.**
-Three successive hypotheses about `require-prior-idle-ms`, positional lists and tapping terms were
-all wrong here; the asymmetry between hands is what actually identified the cause.
+**When a chord misbehaves, check which half each key is on before touching any timing parameter,
+and run it through `./tests/run.sh` before theorizing.** Three successive hypotheses about
+`require-prior-idle-ms`, positional lists and tapping terms were all wrong here; the asymmetry
+between hands is what identified the cause, and a simulator run would have shown the decision
+directly. The simulator also revealed what actually happens to the losing key: it is not dropped
+but **captured** by the winner's undecided hold-tap and replayed afterwards — by which time the
+other key has been sent and `store_last_tapped` updated, so `require-prior-idle-ms` resolves the
+modifier to a tap. The split reorders the chord; `require-prior-idle-ms` then makes the loss
+permanent.
 
 ## The RU/EN dual-layout system
 
