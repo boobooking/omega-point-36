@@ -11,6 +11,10 @@
 #   ./tests/run.sh cmd-space-in-order         run one
 #   ACCEPT=1 ./tests/run.sh cmd-space-...     overwrite the snapshot
 #
+# Cases build one at a time; four parallel Zephyr builds in one container run
+# out of memory and report as "did not build". Override with J=<n> if you have
+# the headroom.
+#
 # The first run clones ZMK and its west dependencies into $WS (about 1.5 GB)
 # and takes several minutes; later runs reuse it.
 set -e
@@ -34,4 +38,5 @@ exec docker run --rm \
     -v "$REPO/tests":/tests \
     -w /ws/zmk/app \
     -e ZMK_TESTS_AUTO_ACCEPT="${ACCEPT:+1}" \
+    -e J="${J:-1}" \
     "$IMAGE" sh -c "./run-test.sh /tests${1:+/$1}"
