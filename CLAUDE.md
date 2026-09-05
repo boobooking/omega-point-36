@@ -232,16 +232,14 @@ modifier, wait, then press") hides it, so the symptom reads as "the timing is to
   dropped whole — no modifier, no tap, nothing. With hold-taps on both the home row and the thumbs,
   pressing the thumb even slightly first swallows the modifier entirely and yields a bare Space.
   Press the modifier first; this is not tunable.
-- **`hold-while-undecided` is set on `hml`, `hmr` and `hml_en`.** It presses the hold binding at
-  `HT_KEY_DOWN` before any flavor decision and returns, so the modifier reaches the host the instant
-  the key goes down. Do **not** add `-linger`: without it the modifier is released before the tap is
-  sent, with it the tap would come out modified (`Cmd+j` instead of `j`).
-- The usual objection to `hold-while-undecided` — a modifier flickering on every home-row letter —
-  does not apply here, because `is_quick_tap()` is evaluated *before* `HT_KEY_DOWN`. When it fires
-  the status is no longer `UNDECIDED`, so `decide_hold_tap()` returns at its first guard and the
-  modifier is never pressed. With `require-prior-idle-ms = 150` that covers ordinary typing, and the
-  instant modifier only appears after a pause — exactly the deliberate-chord case. The flip side:
-  a chord started within 150 ms of the last keystroke still gets no modifier at all.
+- **`hold-while-undecided` was tried and removed** — do not add it back without new evidence. It
+  presses the hold binding at `HT_KEY_DOWN` before any decision, which sounds like what a sluggish
+  chord needs, but the simulator showed it changes nothing for a modifier-plus-thumb chord: the tap
+  is replayed *after* the hold-tap resolves either way, so the modifier already precedes it in the
+  HID stream. What it did add was an unbalanced release — when `is_quick_tap()` wins, the modifier
+  was never pressed yet `release_binding()` still releases it, which the log shows as
+  `kp_released: ... 0xE7` followed by `Unable to release keycode`. Both lines disappear from
+  `tests/cmd-space-reordered` when the option is off.
 
 ### Chords across the split, and why hold-tap timing is the wrong suspect
 
@@ -269,6 +267,17 @@ right half that is the split, for the left half it is the host — and the CI lo
 `config/op36.conf` is merged for both halves, so there is no way to scope this to one of them
 without a half-specific conf whose merge behavior is unverified. The cost is battery: neither half
 sleeps between connection events any more. Raise it toward 5-10 if that trade turns out badly.
+
+### Still unexplained
+
+The chord failing **on exactly every second attempt** — as if a broken state survives one press and
+the next press clears it — is not reproduced by the simulator. Running the same chord twice in a row
+gives byte-identical traces, in the correct order and in the reordered one alike
+(`tests/cmd-enter-twice`, `tests/cmd-enter-reordered-twice`). Nothing in the keymap carries state
+between attempts, so the cause lies below it: the split transport or the host. A period of two fits
+a lost release event leaving a key logically held on the central until the next press/release pair
+clears it, but that has not been confirmed. The observation that would settle it: whether the
+keyboard behaves as though the modifier is stuck during the failing attempt.
 
 **When a chord misbehaves, check which half each key is on before touching any timing parameter,
 and run it through `./tests/run.sh` before theorizing.** Three successive hypotheses about
