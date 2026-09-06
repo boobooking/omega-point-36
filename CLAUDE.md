@@ -176,6 +176,27 @@ make a hold-tap resolve as a useless tap right after typing. `numbers` carries i
 the same way and for the same reason — the digits are on the right hand, and there is no letter
 under the mod worth tapping.
 
+**Hyper sits on the top row of `en`**, positions 2 and 7 — `F` and `U` — through `hyl`/`hyr`. Those
+are `hml`/`hmr` with the hold binding swapped, same flavour, same guards, same hand-scoped trigger
+lists; only the row differs, which is a reminder that those lists describe hands, not rows. `ru` does
+not carry Hyper.
+
+**The hold binding has to be the `&hyper` macro, and `&kp LS(LC(LA(LGUI)))` will not do.** That form
+registers `LGUI` as an *explicit* modifier, which persists, but Shift/Ctrl/Alt only as *implicit*
+ones — and `hid_listener_keycode_pressed` calls `zmk_hid_implicit_modifiers_press(ev->implicit_modifiers)`
+on every keypress, so the next key overwrites the implicit set with its own (usually zero). Hyper
+would reach the host as a bare Cmd. Four separate `&kp` modifier keycodes each go through
+`zmk_hid_register_mod` (`zmk_hid_keyboard_press` routes the whole `LEFTCONTROL..RIGHT_GUI` range
+there) and accumulate until released. `tests/hyper` shows all four as `0xE0`-`0xE3` still down while
+the chorded key is sent.
+
+`&hyl 0 F` looks odd: the `0` is the hold parameter, unused because the macro takes none, but the
+hold-tap schema includes `two_param.yaml` and demands two cells regardless.
+
+Position 2 also carries the `cmbru` combo. Combos are resolved before behaviors, so the combo still
+wins on a 2+3 press — verified in `tests/hyper`, which ends with the switch firing and emitting
+neither `f` nor `p`.
+
 The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on `$`.
 
 ## The thumb row
@@ -468,6 +489,12 @@ keystroke suppresses exactly the cases you need.
 
 All checked against the fork's source or the build's own output:
 
+- **Implicit modifiers are a single global that the next keypress overwrites.** `hid.c` keeps one
+  `static zmk_mod_flags_t implicit_modifiers`, and `hid_listener_keycode_pressed` assigns the
+  incoming event's set to it unconditionally. Explicit modifiers, registered when a modifier keycode
+  is pressed on its own, accumulate instead. So `LS(LC(LA(X)))` is right for a one-shot chord like
+  `&kp LA(LC(LG(LS(N2))))` on `numbers`, and wrong for anything meant to be *held* across other
+  keys. The released path even carries a comment admitting the tracking is approximate.
 - **Macro `wait-ms` is only charged for real bindings**, not for control bindings like
   `&macro_press` (`app/src/behaviors/behavior_macro.c`). `&macro_wait_time <ms>` sets it inline when
   a pause is needed at one point only.
