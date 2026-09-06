@@ -39,6 +39,21 @@ gh run view <run-id> --log | grep -oE "CONFIG_ZMK_STUDIO[A-Z_]*=[^ ]*" | sort -u
 Always confirm the grep works by checking a symbol you know is set (`CONFIG_ZMK_STUDIO=y`) — the
 workflow filters out `# ... is not set` lines, so an empty result and a broken pipeline look alike.
 
+Reading the **devicetree** out of that log needs one more step: every line carries a job name and
+timestamp in front, so anchored patterns silently match nothing. Strip the prefix and pick the one
+build you care about first — several jobs share the log:
+
+```sh
+gh run view <run-id> --log > /tmp/ci.log
+grep "op36_left" /tmp/ci.log | sed -E 's/^.*[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z //' > /tmp/dt.txt
+sed -n '/: en_mod {/,/};/p' /tmp/dt.txt
+```
+
+This is how the forward references were confirmed on real firmware rather than in the simulator:
+`hml_ru` comes out as `bindings = < &en_mod >, < &kp >`, and `hyper_en` as
+`< &macro_press &kp 0x700e0 &kp 0x700e1 &kp 0x700e2 &kp 0x700e3 >` — usages 0xE0-0xE3, the four
+modifiers.
+
 To reproduce the main entry locally:
 
 ```sh
