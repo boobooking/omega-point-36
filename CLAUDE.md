@@ -197,6 +197,36 @@ Position 2 also carries the layout-switch combo on both layers — `cmbru` on `e
 Combos are resolved before behaviors, so the combo still wins on a 2+3 press: `tests/hyper` and
 `tests/hyper-ru` each end with the switch firing and emitting only its Caps Lock, no letters.
 
+### Modifiers on `ru` drop to `en` for the duration of the hold
+
+`ru` is positional ЙЦУКЕН, so the scancode under a physical key differs from Colemak-DH: position 4
+sends `B` on `en` and `T` on `ru`. Shortcuts are matched on the scancode — through the Latin fallback
+for Cmd, and straight through the virtual keycode for anything a hotkey daemon registers — so
+`Cmd+B` fired from the same finger worked before the Colemak-DH rework and stopped afterwards.
+
+So on `ru`, **holding Cmd, Ctrl, Alt or Hyper runs `&to 0` first and `&to 1` on release**, which puts
+the letters back where `en` has them for as long as the modifier is down. `hml_ru`/`hmr_ru` and
+`hyl_ru`/`hyr_ru` are the `hml`/`hmr` and `hyl`/`hyr` pairs with the hold binding swapped for the
+`en_mod` / `hyper_en` macros; flavour, guards and trigger lists are untouched. Verified end to end in
+`tests/ru-mod-switch`.
+
+**Shift is deliberately excluded**, on positions 11 and 18, and must stay that way. It is what types
+capital Cyrillic: switching would make Shift plus position 1 emit `W` instead of `Й` and break
+Russian input outright. Nothing is lost, because `Cmd+Shift+…` still resolves on `en` — Cmd does the
+switching and Shift only contributes a modifier bit.
+
+Two things this rests on, both checked in `app/src/keymap.c`:
+
+- `set_layer_state` refuses to deactivate the default layer ("Default layer should *always* remain
+  active"), so `&to 1` leaves both 0 and 1 active with 1 on top — which is why `&trans` on `ru` falls
+  through to `en` at all — and `&to 0` from `ru` cleanly drops back to just `en`.
+- **`&to` does not touch flash.** Every `settings_save_one` in that file belongs to a Studio keymap
+  edit, not to layer activation, so paying `&to` on each modifier press costs nothing.
+
+`&to 1` on the way out is absolute rather than a toggle, so the layer ends up right however the hold
+ended. The one failure mode left: if the release never runs — the peripheral half dropping mid-chord,
+say — the firmware stays on `en` under a Russian host. `nav` positions 6 and 7 are the resync.
+
 The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on `$`.
 
 ## The thumb row
