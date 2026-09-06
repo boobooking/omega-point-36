@@ -135,9 +135,9 @@ first attempt; without it the diff would have been full of spurious realignment.
 
 ## Layers
 
-Seven layers, and the index order matters: `en`=0, `ru`=1, `sym_en`=2, `sym_ru`=3, `nav`=4,
-`numbers`=5, `adj`=6. The other (unbuilt) `_ruen` keymaps use a different order, so never copy a
-`&mo N` across files.
+Eight layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3, `sym_ru`=4,
+`nav`=5, `numbers`=6, `adj`=7. The other (unbuilt) `_ruen` keymaps use a different order, so never
+copy a `&mo N` across files.
 
 ```
 en ──Space─────> numbers ──Bspc───┐
@@ -145,6 +145,7 @@ en ──Space─────> numbers ──Bspc───┐
  ├──Bspc───────> nav     ──Space──┘
  └──Esc/Enter──> sym_en
 ru behaves identically, except Esc/Enter reach sym_ru
+ru ──hold pos 23 or 26──> ru_ext        (the seven letters that did not fit)
 nav has &to 0 / &to 1 for language resync
 ```
 
@@ -160,7 +161,7 @@ four higher layers never used them.
 
 **Letters move, positions do not**: the mods, the positional hold-trigger lists and the combos are
 all addressed by position, so a layout change touches none of them. The `ru` rework is the proof —
-`cmben` still lands on `У`+`К` and `kha` still on `Г`+`Ш` without either combo being edited.
+`cmben` still lands on `У`+`К` without the combo being edited.
 
 **Home row mods** sit on `en`, `ru` and — as plain `&kp` — the right hand of `nav` and the left hand
 of `numbers`: Alt on A/O, Shift on R/I, Ctrl on S/E, **Cmd on T/N**. `hml`/`hmr` carry
@@ -191,10 +192,10 @@ Four keys, and which one you hold picks the layer. Each leaves one hand free:
 Positions 30 and 35 are deliberately unused.
 
 `adj` is reached by holding both Space and Backspace, and **the order must not matter**. That is why
-`numbers` and `nav` each carry the other thumb: on `numbers`, position 34 is `&lt 6 BACKSPACE`; on
-`nav`, position 31 is `&lt 6 SPACE`. Space first goes `en → numbers → adj`, Backspace first goes
+`numbers` and `nav` each carry the other thumb: on `numbers`, position 34 is `&lt 7 BACKSPACE`; on
+`nav`, position 31 is `&lt 7 SPACE`. Space first goes `en → numbers → adj`, Backspace first goes
 `en → nav → adj`, and both arrive at the same layer — `tests/adj-both-orders` logs
-`mo_pressed: position 34 layer 6` on one route and `mo_pressed: position 31 layer 6` on the other.
+`mo_pressed: position 34 layer 7` on one route and `mo_pressed: position 31 layer 7` on the other.
 The symbol layers deliberately lead nowhere.
 
 The chain of two `&lt` works because the second thumb's press is **captured, not delivered**:
@@ -208,7 +209,7 @@ Backspace or a Space instead of `adj`.
 
 **The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** There
 are exactly two exceptions, both mandatory because the target must differ: position 34 on `numbers`
-and position 31 on `nav` are `&lt 6 …` into `adj`.
+and position 31 on `nav` are `&lt 7 …` into `adj`.
 
 This rule is load-bearing, not cosmetic. Because a layer can be entered by more than one route, a
 thumb position is no longer guaranteed to be the held key, and an `&none` left over from when it was
@@ -217,8 +218,8 @@ resolve every position against every reachable layer stack — `en`/`ru` alone, 
 `nav` or its symbol layer, and `adj` by both routes — accounting for which key is held in each case.
 
 One stack is reachable and worth knowing about: on `sym_en`/`sym_ru` position 31 is `&trans` and
-falls through to the base `&lt 5 SPACE`, so holding Esc and then Space raises `numbers` on top of the
-symbol layer (5 beats 2). Harmless, and `&none` is not an alternative there — it would kill the space
+falls through to the base `&lt 6 SPACE`, so holding Esc and then Space raises `numbers` on top of the
+symbol layer (6 beats 3). Harmless, and `&none` is not an alternative there — it would kill the space
 tap.
 
 ## Timing and hold-tap behaviors
@@ -419,6 +420,31 @@ before assuming.
 `keys_ru.h` itself is a generated Unicode-licensed header — vendored, don't hand-edit. Every keymap
 in the repo includes it, even ones with no Cyrillic bindings.
 
+## ru_ext, and why it is not a plain `&lt`
+
+Seven Cyrillic letters do not fit on 26 keys, so `ru_ext` (layer 2) holds them and is reachable
+**only from `ru`**, by holding one of two letter keys — positions 23 and 26, which are `V` and `M` in
+QWERTY terms and `м` and `ь` on this layer:
+
+```
+_  ц  _  _  ё  |  _  _  щ  э  _
+ф  _  _  _  _  |  _  _  х  _  _
+_  _  _  _  _  |  _  ъ  _  _  _
+```
+
+Two entrances, one per half, and the letters divide the same way: holding 23 (left) frees the right
+hand for `щ э х ъ`, holding 26 (right) frees the left for `ц ё ф`. That is also why `ъ` may sit on
+position 26 — you never reach it from the entrance it lives on.
+
+**These keys must not use this file's `&lt`.** That behavior is re-tuned to `balanced`, which decides
+hold as soon as the next key is released; on a letter key that is fatal. Rolling `м` into `о` would
+raise the layer and resolve `о` against `ru_ext`'s `&none`, losing **both** letters, and `быть ` would
+lose its `ь`. `lt_ext` keeps ZMK's stock `tap-preferred`, where only the `tapping-term-ms` timer
+raises the layer, so a roll always taps (`tests/ru-ext-rolls` proves both shapes). There is
+deliberately **no** `require-prior-idle-ms` and no positional list: those would suppress the trigger
+right after a keystroke, which is precisely when `ъ` and `х` are wanted. `tapping-term-ms` is the
+only knob here.
+
 ## Combos
 
 Bounded by `config/op36.conf`: `CONFIG_ZMK_COMBO_MAX_KEYS_PER_COMBO=3`,
@@ -433,9 +459,10 @@ combo scoped to `ru` therefore does not fire while `nav` is held on top of it.
 guard is for. On `en` those positions are `F`+`P` under Colemak-DH, where no such roll exists, so the
 guard now earns its keep on the Cyrillic side only — keep it anyway, it costs nothing and `en` is not
 finished changing.
-`kha` (Х, positions 6+7 = `Г`+`Ш`) and `hrdsgn` (Ъ, positions 7+8 = `Ш`+`З`) deliberately do **not**
-have that guard: Х and Ъ are needed mid-word ("плохо", "объект"), and it would suppress exactly those
-cases. Neither pair is a roll in ordinary Russian, so nothing is lost by leaving them unguarded.
+Those two are the only combos left. `kha` (Х) and `hrdsgn` (Ъ) were deleted when `ru_ext` arrived —
+see below — but the reason they never carried a prior-idle guard still governs that layer: Х and Ъ
+are wanted mid-word ("плохо", "объект"), so anything that suppresses a trigger right after a
+keystroke suppresses exactly the cases you need.
 
 ## ZMK internals worth not re-deriving
 
@@ -472,10 +499,6 @@ Deliberate, pending later work — do not "fix" them unprompted:
 - **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
   four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
-- **Five Cyrillic letters are unreachable: `ё ф ц щ э`.** The `ru` layer holds 26 and the
-  `kha`/`hrdsgn` combos add Х and Ъ, for 28 of 33. Four of the five went missing when `ru` was
-  squeezed onto 26 keys, and they are not rare — `это`, `цена`, `ещё`, `кофе` cannot be typed. The
-  header has `RU_CYRILLIC_IO`, `_EF`, `_TSE`, `_SHCHA` and `_E` ready for whatever gets them back.
 - `adj` is stripped to `&bootloader`, the four `&bt BT_SEL`, `&bt BT_CLR`, both `&out` and
   `&studio_unlock`; everything else on it is `&none` by intent.
 
