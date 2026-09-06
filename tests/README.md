@@ -45,21 +45,52 @@ of bug that `cmd-space-reordered` exists to illustrate rather than reproduce
 faithfully. Host behavior (Caps Lock language switching, Spotlight, the Latin
 fallback for Cmd shortcuts) is equally out of scope.
 
-## Some of the cases
+## The cases
+
+Every case starts with a lead-in press and a 400 ms pause, so the counts below
+exclude the `0x14` that produces.
 
 - **`cmd-space-in-order`** — right Cmd (`J`, position 16) pressed, then left Space
-  (position 31). Cmd reaches the host immediately via `hold-while-undecided`, and
-  the chord comes out as `0xE7` + `0x2C`. This is the configuration working.
+  (position 31). Releasing Space decides position 16 as `hold-interrupt`, so
+  `0xE7` goes down before the captured Space is replayed and the chord comes out
+  as `0xE7` + `0x2C`. This is the configuration working.
 - **`cmd-space-reordered`** — the same chord with Space arriving first, which is
   what BLE latency on the peripheral half does to the ordering. Space claims the
   single undecided-hold-tap slot, a bare space is emitted, `J` is captured and
-  replayed too late, and `require-prior-idle-ms` then resolves it to a tap. Note
-  the `Unable to release keycode` line: with `hold-while-undecided` set, ZMK
-  releases a modifier it never pressed when quick-tap wins.
-- **`numbers-layer`** — holds Space (position 31) past the tapping term and checks
-  what `numbers` resolves to: `1` on position 26, Prev Win as `0x38` with
-  `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain `&kp LGUI` on
-  position 13 held over a digit, and Space still tapping afterwards.
+  replayed too late, and `is_quick_tap` resolves it to a tap: `0x2C` then `0x0D`.
+- **`chord-repeat-fast`** — that chord five times over, the gaps between chords
+  shrinking to 30 ms. Counts how many repeats keep their modifier: at the current
+  100 ms guard four do and the fifth falls inside the window, so the snapshot
+  ends in a bare `0x0D`. This is the case to re-run before touching
+  `require-prior-idle-ms`.
+- **`typing-roll`** — `"of "` typed as a roll, Space going down while `f` is still
+  held. Must stay `0x12 0x09 0x2C` and never raise `0xE7`; this is what stops a
+  narrower guard from turning ordinary typing into Spotlight. The other case to
+  re-run before touching `require-prior-idle-ms`.
+- **`spotlight-loop`** — Cmd+Space, Esc, Cmd+Space, Cmd+Space: the loop as
+  reported on hardware, where the second attempt fails. All three succeed here
+  (`0xE7` + `0x2C` three times, with one `0x29` for the Esc). The simulator not
+  reproducing it is the finding — the remaining gap lives below the keymap.
+- **`cmd-enter-crosshand`** — Enter (position 33, right half) chorded with the
+  LEFT Cmd (`F`, position 13), four times with shrinking gaps. All four give
+  `0xE3` + `0x28`: the opposite-hand rule satisfied.
+- **`cmd-enter-twice`** — right Cmd (`J`) with Enter, both on the right half. A
+  same-hand chord, which `hmr`'s hold-trigger list refuses by forcing a tap, so
+  the output is `0x0D` + `0x28` — `j` and Enter, no modifier. Kept as
+  documentation of that rule, not as a bug.
+- **`cmd-enter-reordered-twice`** — the same pair with Enter arriving first. Same
+  keycodes as `cmd-enter-twice` but a different route to them: the hold is lost
+  to `quick-tap` rather than refused positionally, and `j` lands after Enter
+  instead of before. Within each of the two cases the second attempt reproduces
+  the first line for line, which is how the keymap was shown to be deterministic
+  where the hardware is not.
+- **`enter-repeat-under-cmd`** — `J` held down while Enter is tapped five times.
+  Both keys are on the right half, so the same refusal applies: `J` resolves to a
+  bare `0x0D` and the five `0x28` arrive unmodified.
+- **`numbers-layer`** — holds Space (position 31) past the tapping term to raise
+  `numbers`, then checks what that layer resolves to: `0x1E` on position 26, Prev
+  Win as `0x38` with `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain
+  `&kp LGUI` on position 13 held over a digit, and Space still tapping afterwards.
 - **`adj-both-orders`** — the two routes into `adj`. Space first raises `numbers`
   and Backspace lifts it to layer 6; Backspace first raises `nav` and Space does
   the same. The `layer N position: …` lines are the point: position 5 must

@@ -29,7 +29,10 @@
         ZMK_MOCK_RELEASE(0,0,400)
 
         /* The whole chord repeated, gaps between chords shrinking:
-           300, 120, 60, 30 ms. Five chords, so five 0xE7+0x2C pairs. */
+           300, 120, 60, 30 ms. Five chords; how many keep their modifier
+           depends on require-prior-idle-ms, and the snapshot is the record
+           rather than an expectation. At the current 100 ms the last chord
+           falls inside the guard window and comes out as a bare 0x0D. */
         ZMK_MOCK_PRESS(1,6,20)
         ZMK_MOCK_PRESS(3,1,30)
         ZMK_MOCK_RELEASE(3,1,20)

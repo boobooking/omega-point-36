@@ -307,9 +307,13 @@ modifier goes down, and the hold-tap resolves to a tap. Measured with `tests/cho
 
 | `require-prior-idle-ms` | chord repeats surviving | `"of "` typed as a roll |
 |---|---|---|
-| 150 | 6 of 8 | `o f space` |
-| 100 | 8 of 8 | `o f space` (opposite-hand lists) / **`o Cmd space`** (thumbs in own-hand lists) |
-| 50 | 8 of 8 | same as 100 |
+| 150 | 3 of 5 | `o f space` |
+| 100 | 4 of 5 | `o f space` (opposite-hand lists) / **`o Cmd space`** (thumbs in own-hand lists) |
+| 50 | 5 of 5 | same as 100 |
+
+Those counts are `tests/chord-repeat-fast`'s five chords, read off the `0xE7` and `0x0D` lines of
+its snapshot with the value set to each of the three settings in turn. A lost modifier shows up as
+`16 decided tap (balanced decision moment quick-tap)` followed by a bare `0x0D`.
 
 The middle column is why the value was lowered to 100; the right column is why the thumb positions
 were taken back out of the own-hand lists at the same time. Leaving both changes in would have made
@@ -339,7 +343,11 @@ keystroke (the earlier Space, or the Esc dismissing Spotlight) sat inside it —
 window reduced it. One detail never matched, though: the simulator emits `j` on a failed chord,
 while the real keyboard emits neither `j` nor a space. Whatever accounts for that gap is still
 unknown, and it lives below the keymap, since the keymap's own trace is byte-identical across
-repeated attempts (`tests/cmd-enter-twice`, `tests/cmd-enter-reordered-twice`).
+repeated attempts: in both `tests/cmd-enter-twice` and `tests/cmd-enter-reordered-twice` the second
+attempt reproduces the first line for line. The two cases do differ **from each other** — in-order
+refuses the hold positionally (`decided tap … other-key-up`, `j` before Enter) while reordered loses
+it to the guard window (`decided tap … quick-tap`, `j` after Enter) — which is the split's reordering
+showing up in the decision itself.
 
 **When a chord misbehaves, check which half each key is on before touching any timing parameter,
 and run it through `./tests/run.sh` before theorizing.** Three successive hypotheses about

@@ -29,8 +29,11 @@
         ZMK_MOCK_RELEASE(0,0,400)
 
         /* Cmd (J, pos 16) held down throughout, Enter (pos 33) tapped five
-           times with shrinking gaps: 300, 150, 80, 50 ms. Every tap should
-           produce one 0x28 under 0xE7. */
+           times with shrinking gaps: 300, 150, 80, 50 ms. Both keys are on
+           the RIGHT half, so hmr's hold-trigger list refuses the hold and
+           forces a tap: pos 16 comes out as a bare 0x0D and the five 0x28
+           arrive unmodified. The same rule as cmd-enter-twice, held across
+           a repeat rather than pressed once. */
         ZMK_MOCK_PRESS(1,6,60)
 
         ZMK_MOCK_PRESS(3,3,30)
