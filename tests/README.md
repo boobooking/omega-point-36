@@ -45,7 +45,7 @@ of bug that `cmd-space-reordered` exists to illustrate rather than reproduce
 faithfully. Host behavior (Caps Lock language switching, Spotlight, the Latin
 fallback for Cmd shortcuts) is equally out of scope.
 
-## The two cases
+## Some of the cases
 
 - **`cmd-space-in-order`** — right Cmd (`J`, position 16) pressed, then left Space
   (position 31). Cmd reaches the host immediately via `hold-while-undecided`, and
@@ -56,3 +56,11 @@ fallback for Cmd shortcuts) is equally out of scope.
   replayed too late, and `require-prior-idle-ms` then resolves it to a tap. Note
   the `Unable to release keycode` line: with `hold-while-undecided` set, ZMK
   releases a modifier it never pressed when quick-tap wins.
+- **`numbers-layer`** — holds Space (position 31) past the tapping term and checks
+  what `numbers` resolves to: `1` on position 26, Prev Win as `0x38` with
+  `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain `&kp LGUI` on
+  position 13 held over a digit, and Space still tapping afterwards.
+- **`adj-both-orders`** — the two routes into `adj`. Space first raises `numbers`
+  and Backspace lifts it to layer 6; Backspace first raises `nav` and Space does
+  the same. The `layer N position: …` lines are the point: position 5 must
+  resolve on layer 6 either way.

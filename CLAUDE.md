@@ -133,21 +133,23 @@ first attempt; without it the diff would have been full of spurious realignment.
 
 ## Layers
 
-Six layers, and the index order matters: `en`=0, `ru`=1, `sym_en`=2, `sym_ru`=3, `nav`=4, `adj`=5.
-The other (unbuilt) `_ruen` keymaps use a different order, so never copy a `&mo N` across files.
+Seven layers, and the index order matters: `en`=0, `ru`=1, `sym_en`=2, `sym_ru`=3, `nav`=4,
+`numbers`=5, `adj`=6. The other (unbuilt) `_ruen` keymaps use a different order, so never copy a
+`&mo N` across files.
 
 ```
-en ──Space/Bspc──> nav ──Bspc──> adj
- │                                ▲
- └───Esc/Enter───> sym_en ─Space──┘
-ru ──Esc/Enter───> sym_ru ─Space──┘   (ru reaches nav the same way as en)
+en ──Space─────> numbers ──Bspc───┐
+ │                                ├──> adj
+ ├──Bspc───────> nav     ──Space──┘
+ └──Esc/Enter──> sym_en
+ru behaves identically, except Esc/Enter reach sym_ru
 nav has &to 0 / &to 1 for language resync
 ```
 
 Positions are 0-9 / 10-19 / 20-29 for the three rows, then 30-32 (left thumbs) and 33-35 (right).
 
-**Home row mods** sit on `en`, `ru` and (as plain `&kp`) the right hand of `nav`:
-Alt on A/`;`, Shift on S/L, Ctrl on D/K, **Cmd on F/J**. `hml`/`hmr` carry
+**Home row mods** sit on `en`, `ru` and — as plain `&kp` — the right hand of `nav` and the left hand
+of `numbers`: Alt on A/`;`, Shift on S/L, Ctrl on D/K, **Cmd on F/J**. `hml`/`hmr` carry
 `hold-trigger-key-positions` listing the whole opposite hand **plus all six thumb positions**, so a
 mod engages when the next key is on the other hand or on any thumb. Those lists are position-based —
 changing key count or ordering invalidates them, but moving a mod between positions inside the same
@@ -155,31 +157,55 @@ half does not. See "Positional hold-tap" below for why the thumbs are in both li
 
 On `nav` the right-hand mods are deliberately **plain `&kp RGUI/RCTRL/RSHFT/LALT`, not hold-taps**:
 the arrows moved to the left hand, so there is nothing to tap, and `require-prior-idle-ms` would
-make a hold-tap resolve as a useless tap right after typing.
+make a hold-tap resolve as a useless tap right after typing. `numbers` carries its left-hand mods
+the same way and for the same reason — the digits are on the right hand, and there is no letter
+under the mod worth tapping.
 
 The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on `$`.
 
 ## The thumb row
 
-Four actions, one pair per layer target, each pair giving you one free hand:
+Four keys, and which one you hold picks the layer. Each leaves one hand free:
 
-| | left | right | leads to |
-|---|---|---|---|
-| **nav** | 31 Space | 34 Backspace | `nav` |
-| **symbols** | 32 Esc | 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` |
+| held | leads to | free hand |
+|---|---|---|
+| 31 Space | `numbers` | right, where the digits are |
+| 34 Backspace | `nav` | left, where the arrows are |
+| 32 Esc / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
+| **31 and 34 together, in either order** | `adj` | — |
 
 Positions 30 and 35 are deliberately unused.
 
-**The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** There
-are exactly two exceptions, both mandatory because the target must differ: position 31 on the symbol
-layers and position 34 on `nav` are `&lt 5 …` into `adj`.
+`adj` is reached by holding both Space and Backspace, and **the order must not matter**. That is why
+`numbers` and `nav` each carry the other thumb: on `numbers`, position 34 is `&lt 6 BACKSPACE`; on
+`nav`, position 31 is `&lt 6 SPACE`. Space first goes `en → numbers → adj`, Backspace first goes
+`en → nav → adj`, and both arrive at the same layer — `tests/adj-both-orders` logs
+`mo_pressed: position 34 layer 6` on one route and `mo_pressed: position 31 layer 6` on the other.
+The symbol layers deliberately lead nowhere.
 
-This rule is load-bearing, not cosmetic. Because each layer now has two entrances, a thumb position
-is no longer guaranteed to be the held key, and an `&none` left over from when it was **silently
-kills that key**. Two such dead keys already shipped this way. After any thumb-row change, resolve
-every position against every reachable layer stack — `en`/`ru` alone, each with `nav` (entered both
-ways), each with its symbol layer (entered both ways), and `adj` by both routes — accounting for
-which key is held in each case.
+The chain of two `&lt` works because the second thumb's press is **captured, not delivered**:
+`position_state_changed_listener` returns `ZMK_EV_EVENT_CAPTURED` while the first hold-tap is
+undecided, so `on_hold_tap_binding_pressed` — and its "another hold-tap is undecided" early return —
+is never reached (`app/src/behaviors/behavior_hold_tap.c`). `decide_balanced` ignores
+`HT_OTHER_KEY_DOWN`, so each step resolves on its own `tapping-term-ms` timer and the captured event
+replays against the layer that just came up. Consequence: **both thumbs must stay down**. Releasing
+the second one early decides the first as `hold-interrupt` and replays the second as a tap, giving a
+Backspace or a Space instead of `adj`.
+
+**The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** There
+are exactly two exceptions, both mandatory because the target must differ: position 34 on `numbers`
+and position 31 on `nav` are `&lt 6 …` into `adj`.
+
+This rule is load-bearing, not cosmetic. Because a layer can be entered by more than one route, a
+thumb position is no longer guaranteed to be the held key, and an `&none` left over from when it was
+**silently kills that key**. Two such dead keys already shipped this way. After any thumb-row change,
+resolve every position against every reachable layer stack — `en`/`ru` alone, each with `numbers`,
+`nav` or its symbol layer, and `adj` by both routes — accounting for which key is held in each case.
+
+One stack is reachable and worth knowing about: on `sym_en`/`sym_ru` position 31 is `&trans` and
+falls through to the base `&lt 5 SPACE`, so holding Esc and then Space raises `numbers` on top of the
+symbol layer (5 beats 2). Harmless, and `&none` is not an alternative there — it would kill the space
+tap.
 
 ## Timing and hold-tap behaviors
 
@@ -355,6 +381,14 @@ command shortcuts. Bind them directly as `&kp LG(LS(LBKT))`. Splitting `nav` per
 been pointless anyway — the firmware sends a scancode, and `[` has no Cyrillic scancode to send
 instead.
 
+**The digit row is layout-independent by construction**, not by that fallback: `keys_ru.h` defines
+`RU_N0`..`RU_N9` as the very same HID usages as `N0`..`N9`, because ЙЦУКЕН leaves the number row
+alone. So `numbers` needs no `&en` wrapper anywhere, and neither do its digit-based shortcuts —
+`&kp LA(LC(LG(LS(N2))))` (Term) and `&kp LA(LC(LG(LS(N1))))` (qTerm) send the same thing on either
+layout. Of the four shortcuts on that layer only Prev Win, `&kp LC(LG(LS(FSLH)))`, leans on the
+Latin fallback: `RU_FSLH` is `LS(BACKSLASH)`, so the bare FSLH scancode yields `.` in Cyrillic and
+only the Cmd in the chord rescues it. Prev App is `&kp LG(TAB)` and carries no character at all.
+
 **Glyphs with no Cyrillic equivalent**, i.e. the ones that must go through `&en` on `sym_ru`:
 `[ ] ' | { } $ ~ ` ` — `keys_ru.h` has no `RU_LBKT`, `RU_RBKT`, `RU_SQT`, `RU_PIPE`, `RU_LBRC`,
 `RU_RBRC`, `RU_DLLR`, `RU_TILDE` or `RU_GRAVE`. Everything else has an `RU_*` form; check the header
@@ -409,7 +443,6 @@ behavior, each item of which cost a source dive or an on-device test. Record the
 
 Deliberate, pending later work — do not "fix" them unprompted:
 
-- **Digits 0-9 are not bound anywhere.** They left `nav` when the arrows moved in.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
 - **`RU_CYRILLIC_IO` (ё) is not bound.** The `ru` layer holds 30 letters and the `kha`/`hrdsgn`
   combos add Х and Ъ, for 32 of 33.
