@@ -7,12 +7,15 @@ kp_released: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 2, binding name: hyper_left_ru
 ht_binding_pressed: 2 new undecided hold_tap
 ht_decide: 2 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 2 layer 8
 kp_pressed: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
+layer 8 position: 15, binding name: transparent
 layer 0 position: 15, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x10 implicit_mods 0x00 explicit_mods 0x00
+layer 8 position: 15, binding name: transparent
 layer 0 position: 15, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x10 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 2, binding name: hyper_left_ru
@@ -20,6 +23,7 @@ kp_released: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
+mo_released: position 2 layer 8
 ht_binding_released: 2 cleaning up hold-tap
 layer 1 position: 2, binding name: hyper_left_ru
 ht_binding_pressed: 2 new undecided hold_tap
@@ -31,12 +35,15 @@ ht_binding_released: 2 cleaning up hold-tap
 layer 1 position: 7, binding name: hyper_right_ru
 ht_binding_pressed: 7 new undecided hold_tap
 ht_decide: 7 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 7 layer 8
 kp_pressed: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
+layer 8 position: 14, binding name: transparent
 layer 0 position: 14, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x0A implicit_mods 0x00 explicit_mods 0x00
+layer 8 position: 14, binding name: transparent
 layer 0 position: 14, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x0A implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 7, binding name: hyper_right_ru
@@ -44,6 +51,7 @@ kp_released: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
+mo_released: position 7 layer 8
 ht_binding_released: 7 cleaning up hold-tap
 kp_pressed: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00

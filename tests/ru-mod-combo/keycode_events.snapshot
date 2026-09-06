@@ -1,0 +1,34 @@
+layer 0 position: 1, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 1, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
+kp_pressed: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
+layer 1 position: 16, binding name: home_row_mod_right_ru
+ht_binding_pressed: 16 new undecided hold_tap
+ht_decide: 16 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 16 layer 8
+kp_pressed: usage_page 0x07 keycode 0xE7 implicit_mods 0x00 explicit_mods 0x00
+layer 8 position: 2, binding name: transparent
+layer 0 position: 2, binding name: hyper_left
+ht_binding_pressed: 2 new undecided hold_tap
+layer 8 position: 2, binding name: transparent
+layer 0 position: 2, binding name: hyper_left
+ht_decide: 2 decided tap (balanced decision moment key-up)
+kp_pressed: usage_page 0x07 keycode 0x09 implicit_mods 0x00 explicit_mods 0x00
+layer 8 position: 3, binding name: transparent
+layer 0 position: 3, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x13 implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x09 implicit_mods 0x00 explicit_mods 0x00
+ht_binding_released: 2 cleaning up hold-tap
+layer 8 position: 3, binding name: transparent
+layer 0 position: 3, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x13 implicit_mods 0x00 explicit_mods 0x00
+layer 1 position: 16, binding name: home_row_mod_right_ru
+kp_released: usage_page 0x07 keycode 0xE7 implicit_mods 0x00 explicit_mods 0x00
+mo_released: position 16 layer 8
+ht_binding_released: 16 cleaning up hold-tap
+layer 1 position: 1, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
+layer 1 position: 1, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00

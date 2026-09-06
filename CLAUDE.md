@@ -150,9 +150,13 @@ first attempt; without it the diff would have been full of spurious realignment.
 
 ## Layers
 
-Eight layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3, `sym_ru`=4,
-`nav`=5, `numbers`=6, `adj`=7. The other (unbuilt) `_ruen` keymaps use a different order, so never
-copy a `&mo N` across files.
+Nine layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3, `sym_ru`=4,
+`nav`=5, `numbers`=6, `adj`=7, `en_hold`=8. The other (unbuilt) `_ruen` keymaps use a different
+order, so never copy a `&mo N` across files.
+
+`en_hold` is not a keymap: it is 36 `&trans` and exists only to be the highest active layer while a
+modifier is held on `ru` — see below for what that is worth. It is last so that adding it renumbered
+nothing.
 
 ```
 en ──Space─────> numbers ──Bspc───┐
@@ -220,7 +224,8 @@ for Cmd, and straight through the virtual keycode for anything a hotkey daemon r
 `Cmd+B` fired from the same finger worked before the Colemak-DH rework and stopped afterwards.
 
 So on `ru`, **holding Cmd, Ctrl, Alt or Hyper runs `&to 0` first and `&to 1` on release**, which puts
-the letters back where `en` has them for as long as the modifier is down. `hml_ru`/`hmr_ru` and
+the letters back where `en` has them for as long as the modifier is down. It also raises `en_hold`
+(`&mo 8`) for the same span, which is load-bearing and explained two paragraphs down. `hml_ru`/`hmr_ru` and
 `hyl_ru`/`hyr_ru` are the `hml`/`hmr` and `hyl`/`hyr` pairs with the hold binding swapped for the
 `en_mod` / `hyper_en` macros; flavour, guards and trigger lists are untouched. Verified end to end in
 `tests/ru-mod-switch`.
@@ -237,6 +242,16 @@ Two things this rests on, both checked in `app/src/keymap.c`:
   through to `en` at all — and `&to 0` from `ru` cleanly drops back to just `en`.
 - **`&to` does not touch flash.** Every `settings_save_one` in that file belongs to a Studio keymap
   edit, not to layer activation, so paying `&to` on each modifier press costs nothing.
+
+**`en_hold` exists because `&to 0` would otherwise re-arm the wrong layout-switch combo.**
+`combo.c:164` tests `combo_active_on_layer(combo, zmk_keymap_highest_layer_active())` — a single
+layer, the highest, not the whole stack. On `ru` the highest is 1, so `cmben` is armed and `cmbru` is
+not. The moment `&to 0` lands, the highest becomes 0 and that flips: `cmbru` — "go to ru", from ru —
+becomes live. Firing it there taps Caps Lock without moving the firmware, so the host ends up in
+English while the layer stays `ru`: exactly the desync CLAUDE.md warns about under the RU/EN section.
+Raising `en_hold` keeps the highest layer at 8, where neither combo is scoped, while `&trans` lets
+every position fall through to `en` as before. `tests/ru-mod-combo` is the regression: one Caps Lock,
+not two.
 
 `&to 1` on the way out is absolute rather than a toggle, so the layer ends up right however the hold
 ended. The one failure mode left: if the release never runs — the peripheral half dropping mid-chord,

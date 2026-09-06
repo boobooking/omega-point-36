@@ -105,6 +105,16 @@ lead-in: it is `&none` on `en`.
   chorded key is sent; that is what fails if Hyper is ever rewritten as
   `&kp LS(LC(LA(LGUI)))`. It ends by firing `cmbru` on positions 2+3 to show the
   combo still beats the hold-tap now sharing position 2.
+- **`ru-symbols`** — proves the keymap side of the symbol layers is right: from
+  `ru`, Esc and Enter both raise **layer 4**, and positions 5, 26 and 27 send
+  `LS(0x24)`, `LS(0x38)` and `0x38` — `?`, `,` and `.` as a Russian host reads
+  them. Position 26 is the `ru_ext` entrance on `ru`, so `sym_ru` has to win over
+  it. Written to separate a keymap fault from a host-language desync; those
+  scancodes on an *English* host read `&`, `?` and `/`.
+- **`ru-mod-combo`** — the regression for `en_hold`. Holding a modifier on `ru`
+  runs `&to 0`, which used to make the highest active layer 0 and re-arm `cmbru`;
+  firing positions 2+3 then emitted a second Caps Lock and desynced the host.
+  Exactly one `0x39` may appear in this snapshot.
 - **`ru-mod-switch`** — the reason `hml_ru`/`hyl_ru` exist. On `ru`, right Cmd
   over position 4 must resolve on layer 0 and send `0x05` (B), not `0x17`; right
   Alt and left Hyper must do the same; right **Shift** must not, so position 1

@@ -262,10 +262,12 @@
             bindings =
                 <&to 0>,
                 <&macro_press>,
+                <&mo 8>,
                 <&macro_param_1to1 &kp MACRO_PLACEHOLDER>,
                 <&macro_pause_for_release>,
                 <&macro_release>,
                 <&macro_param_1to1 &kp MACRO_PLACEHOLDER>,
+                <&mo 8>,
                 <&macro_tap>,
                 <&to 1>;
 
@@ -278,9 +280,9 @@
             #binding-cells = <0>;
             bindings =
                 <&to 0>,
-                <&macro_press &kp LCTRL &kp LSHFT &kp LALT &kp LGUI>,
+                <&macro_press &mo 8 &kp LCTRL &kp LSHFT &kp LALT &kp LGUI>,
                 <&macro_pause_for_release>,
-                <&macro_release &kp LCTRL &kp LSHFT &kp LALT &kp LGUI>,
+                <&macro_release &kp LCTRL &kp LSHFT &kp LALT &kp LGUI &mo 8>,
                 <&macro_tap>,
                 <&to 1>;
 
@@ -378,6 +380,17 @@
             >;
 
             display-name = "Adjust";
+        };
+
+        en_hold {
+            bindings = <
+  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans
+  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans
+  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans
+                          &trans  &trans  &trans    &trans  &trans  &trans
+            >;
+
+            display-name = "En hold";
         };
     };
 };
