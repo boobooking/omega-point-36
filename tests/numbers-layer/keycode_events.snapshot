@@ -5,29 +5,29 @@ kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 31, binding name: layer_tap
 ht_binding_pressed: 31 new undecided hold_tap
 ht_decide: 31 decided hold-timer (balanced decision moment timer)
-mo_pressed: position 31 layer 5
-layer 5 position: 26, binding name: key_press
+mo_pressed: position 31 layer 6
+layer 6 position: 26, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x1E implicit_mods 0x00 explicit_mods 0x00
-layer 5 position: 26, binding name: key_press
+layer 6 position: 26, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1E implicit_mods 0x00 explicit_mods 0x00
-layer 5 position: 3, binding name: key_press
+layer 6 position: 3, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x38 implicit_mods 0x0B explicit_mods 0x00
-layer 5 position: 3, binding name: key_press
+layer 6 position: 3, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x38 implicit_mods 0x0B explicit_mods 0x00
-layer 5 position: 1, binding name: key_press
+layer 6 position: 1, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x1F implicit_mods 0x0F explicit_mods 0x00
-layer 5 position: 1, binding name: key_press
+layer 6 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1F implicit_mods 0x0F explicit_mods 0x00
-layer 5 position: 13, binding name: key_press
+layer 6 position: 13, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
-layer 5 position: 16, binding name: key_press
+layer 6 position: 16, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x21 implicit_mods 0x00 explicit_mods 0x00
-layer 5 position: 16, binding name: key_press
+layer 6 position: 16, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x21 implicit_mods 0x00 explicit_mods 0x00
-layer 5 position: 13, binding name: key_press
+layer 6 position: 13, binding name: key_press
 kp_released: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 31, binding name: layer_tap
-mo_released: position 31 layer 5
+mo_released: position 31 layer 6
 ht_binding_released: 31 cleaning up hold-tap
 layer 0 position: 31, binding name: layer_tap
 ht_binding_pressed: 31 new undecided hold_tap

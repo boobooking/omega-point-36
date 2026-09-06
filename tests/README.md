@@ -96,6 +96,14 @@ lead-in: it is `&none` on `en`.
   Win as `0x38` with `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain
   `&kp LGUI` on position 13 held over a digit, and Space still tapping afterwards.
 - **`adj-both-orders`** — the two routes into `adj`. Space first raises `numbers`
-  and Backspace lifts it to layer 6; Backspace first raises `nav` and Space does
+  and Backspace lifts it to layer 7; Backspace first raises `nav` and Space does
   the same. The `layer N position: …` lines are the point: position 5 must
-  resolve on layer 6 either way.
+  resolve on layer 7 either way.
+- **`ru-ext`** — switches to `ru` with the `cmbru` combo, then reaches all seven
+  letters of `ru_ext` through both entrances: holding position 23 for `щ э х ъ`
+  and position 26 for `ц ё ф`. Both decide `hold-timer (tap-preferred …)`, and
+  `ф` lands on position 10, where `ru_ext` has to beat a home row mod.
+- **`ru-ext-rolls`** — the counterpart: `мо` and `ть ` rolled at typing speed.
+  Neither may raise `ru_ext`, so the snapshot has no `mo_pressed` line at all and
+  every letter survives. This is the case that fails if `lt_ext` is ever changed
+  to the file's `balanced` flavour.

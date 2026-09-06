@@ -63,22 +63,25 @@
             hold-trigger-key-positions = <5 6 7 8 9 15 16 17 18 19 25 26 27 28 29 33 34 35>;
             hold-trigger-on-release;
         };
+
+        // ru_ext hangs off two letter keys, so it must NOT use this file's &lt.
+        // That one is "balanced", which decides hold as soon as the next key is
+        // released — a roll through м or ь ("мо", "быть ") would raise the layer
+        // and swallow the letter. Only the timer raises this one. There is no
+        // require-prior-idle-ms for the same reason the kha/hrdsgn combos never
+        // had one: х and ъ are wanted mid-word.
+        lt_ext: layer_tap_ru_ext {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <200>;
+            bindings = <&mo>, <&kp>;
+        };
     };
 
     combos {
         compatible = "zmk,combos";
-
-        kha {
-            bindings = <&kp RU_CYRILLIC_HA>;
-            key-positions = <6 7>;
-            layers = <1>;
-        };
-
-        hrdsgn {
-            bindings = <&kp RU_CYRILLIC_HARD_SIGN>;
-            key-positions = <7 8>;
-            layers = <1>;
-        };
 
         cmben {
             bindings = <&layer_en>;
@@ -153,7 +156,7 @@
   &none        &kp W         &kp F         &kp P        &kp B                                  &kp Z            &kp L        &kp U         &kp Y         &none
   &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                  &kp M            &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
   &none        &kp X         &kp C         &kp D        &kp V                                  &kp K            &kp H        &kp J         &kp Q         &none
-                                           &none        &lt 5 SPACE  &lt 2 ESC    &lt 2 ENTER  &lt 4 BACKSPACE  &none
+                                           &none        &lt 6 SPACE  &lt 3 ESC    &lt 3 ENTER  &lt 5 BACKSPACE  &none
             >;
 
             display-name = "Base";
@@ -161,13 +164,24 @@
 
         ru {
             bindings = <
-  &none                     &kp RU_CYRILLIC_SHORT_I      &kp RU_CYRILLIC_U          &kp RU_CYRILLIC_KA       &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE        &kp RU_CYRILLIC_SHA        &kp RU_CYRILLIC_ZE         &none
-  &hml LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml LCTRL RU_CYRILLIC_VE  &hml LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                            &kp RU_CYRILLIC_ER  &hmr RGUI RU_CYRILLIC_O    &hmr RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr LALT RU_CYRILLIC_ZHE
-  &none                     &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES         &kp RU_CYRILLIC_EM       &kp RU_CYRILLIC_I                             &kp RU_CYRILLIC_TE  &kp RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE         &kp RU_CYRILLIC_YU         &none
-                                                                                    &none                    &lt 5 SPACE         &lt 3 ESC    &lt 3 ENTER  &lt 4 BACKSPACE     &none
+  &none                     &kp RU_CYRILLIC_SHORT_I      &kp RU_CYRILLIC_U          &kp RU_CYRILLIC_KA        &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE              &kp RU_CYRILLIC_SHA        &kp RU_CYRILLIC_ZE         &none
+  &hml LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml LCTRL RU_CYRILLIC_VE  &hml LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                            &kp RU_CYRILLIC_ER  &hmr RGUI RU_CYRILLIC_O          &hmr RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr LALT RU_CYRILLIC_ZHE
+  &none                     &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES         &lt_ext 2 RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                             &kp RU_CYRILLIC_TE  &lt_ext 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE         &kp RU_CYRILLIC_YU         &none
+                                                                                    &none                     &lt 6 SPACE         &lt 4 ESC    &lt 4 ENTER  &lt 5 BACKSPACE     &none
             >;
 
             display-name = "Ru";
+        };
+
+        ru_ext {
+            bindings = <
+  &none               &kp RU_CYRILLIC_TSE  &none  &none   &kp RU_CYRILLIC_IO                    &none   &none                      &kp RU_CYRILLIC_SHCHA  &kp RU_CYRILLIC_E  &none
+  &kp RU_CYRILLIC_EF  &none                &none  &none   &none                                 &none   &none                      &kp RU_CYRILLIC_HA     &none              &none
+  &none               &none                &none  &none   &none                                 &none   &kp RU_CYRILLIC_HARD_SIGN  &none                  &none              &none
+                                                  &trans  &trans              &trans    &trans  &trans  &trans
+            >;
+
+            display-name = "Ru ext";
         };
 
         sym_en {
@@ -197,7 +211,7 @@
   &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                          &none   &to 0     &to 1      &none      &none
   &none  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                        &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
   &none  &none             &none     &none             &none                          &none   &none     &none      &none      &none
-                                     &trans            &lt 6 SPACE  &trans    &trans  &trans  &trans
+                                     &trans            &lt 7 SPACE  &trans    &trans  &trans  &trans
             >;
 
             display-name = "Nav";
@@ -208,7 +222,7 @@
   &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none            &kp N7  &kp N8  &kp N9  &none
   &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none            &kp N4  &kp N5  &kp N6  &none
   &none     &none                   &none        &none                 &none                                     &kp N0           &kp N1  &kp N2  &kp N3  &none
-                                                 &trans                &trans                  &trans    &trans  &lt 6 BACKSPACE  &trans
+                                                 &trans                &trans                  &trans    &trans  &lt 7 BACKSPACE  &trans
             >;
 
             display-name = "Numbers";
