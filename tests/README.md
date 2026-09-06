@@ -99,6 +99,12 @@ lead-in: it is `&none` on `en`.
   and Backspace lifts it to layer 7; Backspace first raises `nav` and Space does
   the same. The `layer N position: …` lines are the point: position 5 must
   resolve on layer 7 either way.
+- **`hyper`** — holds `F` (position 2) past the term and chords `M`, then taps
+  `F`, then holds `U` (position 7) and chords `G`. Each hold must emit all four
+  modifiers as separate `0xE0`-`0xE3` keycodes that are still down when the
+  chorded key is sent; that is what fails if Hyper is ever rewritten as
+  `&kp LS(LC(LA(LGUI)))`. It ends by firing `cmbru` on positions 2+3 to show the
+  combo still beats the hold-tap now sharing position 2.
 - **`ru-ext`** — switches to `ru` with the `cmbru` combo, then reaches all seven
   letters of `ru_ext` through both entrances: holding position 23 for `щ э х ъ`
   and position 26 for `ц ё ф`. Both decide `hold-timer (tap-preferred …)`, and
