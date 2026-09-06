@@ -210,7 +210,7 @@
 
         ru {
             bindings = <
-  &none                     &kp RU_CYRILLIC_SHORT_I      &kp RU_CYRILLIC_U          &kp RU_CYRILLIC_KA        &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE              &kp RU_CYRILLIC_SHA        &kp RU_CYRILLIC_ZE         &none
+  &none                     &kp RU_CYRILLIC_SHORT_I      &hyl 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA        &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE              &hyr 0 RU_CYRILLIC_SHA     &kp RU_CYRILLIC_ZE         &none
   &hml LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml LCTRL RU_CYRILLIC_VE  &hml LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                            &kp RU_CYRILLIC_ER  &hmr RGUI RU_CYRILLIC_O          &hmr RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr LALT RU_CYRILLIC_ZHE
   &none                     &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES         &lt_ext 2 RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                             &kp RU_CYRILLIC_TE  &lt_ext 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE         &kp RU_CYRILLIC_YU         &none
                                                                                     &none                     &lt 6 SPACE         &lt 4 ESC    &lt 4 ENTER  &lt 5 BACKSPACE     &none

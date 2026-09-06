@@ -105,6 +105,11 @@ lead-in: it is `&none` on `en`.
   chorded key is sent; that is what fails if Hyper is ever rewritten as
   `&kp LS(LC(LA(LGUI)))`. It ends by firing `cmbru` on positions 2+3 to show the
   combo still beats the hold-tap now sharing position 2.
+- **`hyper-ru`** — the same three checks on `ru`, where positions 2 and 7 are
+  `у` and `ш`: the hold emits `0xE0`-`0xE3` around `0x0B`, the tap gives `0x08`,
+  and both `cmbru` (entering) and `cmben` (leaving) fire from under the hold-tap.
+  Positions 6+7 and 7+8 once held the kha/hrdsgn combos, so this also records
+  that nothing competes for that key any more.
 - **`ru-ext`** — switches to `ru` with the `cmbru` combo, then reaches all seven
   letters of `ru_ext` through both entrances: holding position 23 for `щ э х ъ`
   and position 26 for `ц ё ф`. Both decide `hold-timer (tap-preferred …)`, and
