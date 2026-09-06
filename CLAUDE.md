@@ -176,10 +176,10 @@ make a hold-tap resolve as a useless tap right after typing. `numbers` carries i
 the same way and for the same reason — the digits are on the right hand, and there is no letter
 under the mod worth tapping.
 
-**Hyper sits on the top row of `en`**, positions 2 and 7 — `F` and `U` — through `hyl`/`hyr`. Those
-are `hml`/`hmr` with the hold binding swapped, same flavour, same guards, same hand-scoped trigger
-lists; only the row differs, which is a reminder that those lists describe hands, not rows. `ru` does
-not carry Hyper.
+**Hyper sits on the top row of both letter layers**, positions 2 and 7 — `F`/`U` on `en`, `у`/`ш` on
+`ru` — through `hyl`/`hyr`. Those are `hml`/`hmr` with the hold binding swapped, same flavour, same
+guards, same hand-scoped trigger lists; only the row differs, which is a reminder that those lists
+describe hands, not rows.
 
 **The hold binding has to be the `&hyper` macro, and `&kp LS(LC(LA(LGUI)))` will not do.** That form
 registers `LGUI` as an *explicit* modifier, which persists, but Shift/Ctrl/Alt only as *implicit*
@@ -193,9 +193,9 @@ the chorded key is sent.
 `&hyl 0 F` looks odd: the `0` is the hold parameter, unused because the macro takes none, but the
 hold-tap schema includes `two_param.yaml` and demands two cells regardless.
 
-Position 2 also carries the `cmbru` combo. Combos are resolved before behaviors, so the combo still
-wins on a 2+3 press — verified in `tests/hyper`, which ends with the switch firing and emitting
-neither `f` nor `p`.
+Position 2 also carries the layout-switch combo on both layers — `cmbru` on `en`, `cmben` on `ru`.
+Combos are resolved before behaviors, so the combo still wins on a 2+3 press: `tests/hyper` and
+`tests/hyper-ru` each end with the switch firing and emitting only its Caps Lock, no letters.
 
 The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on `$`.
 
