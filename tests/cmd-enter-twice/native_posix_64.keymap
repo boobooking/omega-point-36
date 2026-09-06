@@ -25,10 +25,10 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Right Cmd (J, pos 16) with Enter (pos 33) — both on the RIGHT half,
+        /* Right Cmd (N, pos 16) with Enter (pos 33) — both on the RIGHT half,
            so this is a same-hand chord and the positional lists deliberately
            refuse it: the snapshot shows `j` + Enter, not Cmd + Enter. Kept as
            documentation of that rule. Enter must be chorded with the LEFT Cmd,

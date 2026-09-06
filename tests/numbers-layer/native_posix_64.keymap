@@ -23,8 +23,8 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
         /* hold Space (pos 31) past the tapping term to raise numbers */
         ZMK_MOCK_PRESS(3,1,300)

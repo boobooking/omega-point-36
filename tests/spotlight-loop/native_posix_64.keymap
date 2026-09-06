@@ -25,12 +25,12 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
         /* The reported loop: Cmd+Space, Esc to dismiss, Cmd+Space (fails on
            hardware), Cmd+Space (works again).
-           J = pos 16 = RC(1,6), Space = pos 31 = RC(3,1), Esc = pos 32 = RC(3,2) */
+           N = pos 16 = RC(1,6), Space = pos 31 = RC(3,1), Esc = pos 32 = RC(3,2) */
 
         /* --- attempt 1 --- */
         ZMK_MOCK_PRESS(1,6,20)

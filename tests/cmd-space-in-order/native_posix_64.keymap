@@ -25,10 +25,10 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
-        /* right Cmd (J, pos 16) then left Space (pos 31) */
+        /* right Cmd (N, pos 16) then left Space (pos 31) */
         ZMK_MOCK_PRESS(1,6,20)
         ZMK_MOCK_PRESS(3,1,30)
         ZMK_MOCK_RELEASE(3,1,20)

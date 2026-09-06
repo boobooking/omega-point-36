@@ -1,7 +1,7 @@
-layer 0 position: 0, binding name: key_press
-kp_pressed: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
-layer 0 position: 0, binding name: key_press
-kp_released: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 1, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 1, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 31, binding name: layer_tap
 ht_binding_pressed: 31 new undecided hold_tap
 ht_decide: 31 decided hold-timer (balanced decision moment timer)

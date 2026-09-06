@@ -25,8 +25,8 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
         /* The whole chord repeated, gaps between chords shrinking:
            300, 120, 60, 30 ms. Five chords; how many keep their modifier

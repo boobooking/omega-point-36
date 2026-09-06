@@ -25,11 +25,11 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
         /* Same chord, but Space arrives first - what BLE latency on the
-           peripheral half does to the ordering when J is pressed first. */
+           peripheral half does to the ordering when N is pressed first. */
         ZMK_MOCK_PRESS(3,1,5)
         ZMK_MOCK_PRESS(1,6,30)
         ZMK_MOCK_RELEASE(3,1,20)

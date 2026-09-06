@@ -25,14 +25,16 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
-        /* "of " typed as a roll: space goes down while f is still held, which
-           is what balanced flavour needs to decide hold. o->f gap ~120 ms.
-           Must still come out as o f space, never Cmd+Space. */
-        ZMK_MOCK_PRESS(0,8,60)
-        ZMK_MOCK_RELEASE(0,8,60)
+        /* "at " typed as a roll: space goes down while t is still held, which
+           is what balanced flavour needs to decide hold. a->t gap ~120 ms.
+           Both letters carry a home row mod here — a is Alt (pos 10), t is Cmd
+           (pos 13) — so this is the roll that must still come out as
+           a t space, never as a modifier. */
+        ZMK_MOCK_PRESS(1,0,60)
+        ZMK_MOCK_RELEASE(1,0,60)
         ZMK_MOCK_PRESS(1,3,40)
         ZMK_MOCK_PRESS(3,1,40)
         ZMK_MOCK_RELEASE(3,1,20)

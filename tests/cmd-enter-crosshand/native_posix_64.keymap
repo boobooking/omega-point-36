@@ -25,11 +25,11 @@
     columns = <10>;
     events = <
         /* lead-in so require-prior-idle-ms sees real idle time */
-        ZMK_MOCK_PRESS(0,0,10)
-        ZMK_MOCK_RELEASE(0,0,400)
+        ZMK_MOCK_PRESS(0,1,10)
+        ZMK_MOCK_RELEASE(0,1,400)
 
         /* Enter (pos 33) is on the RIGHT half, so it must be chorded with the
-           LEFT Cmd (F, pos 13) to satisfy the opposite-hand rule. Repeated at
+           LEFT Cmd (T, pos 13) to satisfy the opposite-hand rule. Repeated at
            300, 150, 80 ms. */
         ZMK_MOCK_PRESS(1,3,20)
         ZMK_MOCK_PRESS(3,3,30)

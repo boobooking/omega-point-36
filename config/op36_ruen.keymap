@@ -150,9 +150,9 @@
 
         en {
             bindings = <
-  &kp Q        &kp W         &kp E         &kp R        &kp T                                  &kp Y            &kp U        &kp I         &kp O         &kp P
-  &hml LALT A  &hml LSHFT S  &hml LCTRL D  &hml LGUI F  &kp G                                  &kp H            &hmr RGUI J  &hmr RCTRL K  &hmr RSHFT L  &hmr LALT SEMICOLON
-  &kp Z        &kp X         &kp C         &kp V        &kp B                                  &kp N            &kp M        &kp COMMA     &kp DOT       &kp SQT
+  &none        &kp W         &kp F         &kp P        &kp B                                  &kp Z            &kp L        &kp U         &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                  &kp M            &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                  &kp K            &kp H        &kp J         &kp Q         &none
                                            &none        &lt 5 SPACE  &lt 2 ESC    &lt 2 ENTER  &lt 4 BACKSPACE  &none
             >;
 

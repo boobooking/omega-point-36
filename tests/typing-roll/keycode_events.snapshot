@@ -1,14 +1,17 @@
-kp_pressed: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
-kp_released: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
-kp_pressed: usage_page 0x07 keycode 0x12 implicit_mods 0x00 explicit_mods 0x00
-kp_released: usage_page 0x07 keycode 0x12 implicit_mods 0x00 explicit_mods 0x00
+kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
+ht_binding_pressed: 10 new undecided hold_tap
+ht_decide: 10 decided tap (balanced decision moment key-up)
+kp_pressed: usage_page 0x07 keycode 0x04 implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x04 implicit_mods 0x00 explicit_mods 0x00
+ht_binding_released: 10 cleaning up hold-tap
 ht_binding_pressed: 13 new undecided hold_tap
 ht_decide: 13 decided tap (balanced decision moment other-key-up)
-kp_pressed: usage_page 0x07 keycode 0x09 implicit_mods 0x00 explicit_mods 0x00
+kp_pressed: usage_page 0x07 keycode 0x17 implicit_mods 0x00 explicit_mods 0x00
 ht_binding_pressed: 31 new undecided hold_tap
 ht_decide: 31 decided tap (balanced decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
 ht_binding_released: 31 cleaning up hold-tap
-kp_released: usage_page 0x07 keycode 0x09 implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x17 implicit_mods 0x00 explicit_mods 0x00
 ht_binding_released: 13 cleaning up hold-tap
