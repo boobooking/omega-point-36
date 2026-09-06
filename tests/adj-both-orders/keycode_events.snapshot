@@ -1,0 +1,40 @@
+layer 0 position: 0, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 0, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 31, binding name: layer_tap
+ht_binding_pressed: 31 new undecided hold_tap
+ht_decide: 31 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 31 layer 5
+layer 5 position: 34, binding name: layer_tap
+ht_binding_pressed: 34 new undecided hold_tap
+ht_decide: 34 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 34 layer 6
+layer 6 position: 5, binding name: bluetooth
+layer 5 position: 5, binding name: none
+layer 6 position: 5, binding name: bluetooth
+layer 5 position: 5, binding name: none
+layer 5 position: 34, binding name: layer_tap
+mo_released: position 34 layer 6
+ht_binding_released: 34 cleaning up hold-tap
+layer 0 position: 31, binding name: layer_tap
+mo_released: position 31 layer 5
+ht_binding_released: 31 cleaning up hold-tap
+layer 0 position: 34, binding name: layer_tap
+ht_binding_pressed: 34 new undecided hold_tap
+ht_decide: 34 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 34 layer 4
+layer 4 position: 31, binding name: layer_tap
+ht_binding_pressed: 31 new undecided hold_tap
+ht_decide: 31 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 31 layer 6
+layer 6 position: 5, binding name: bluetooth
+layer 4 position: 5, binding name: none
+layer 6 position: 5, binding name: bluetooth
+layer 4 position: 5, binding name: none
+layer 4 position: 31, binding name: layer_tap
+mo_released: position 31 layer 6
+ht_binding_released: 31 cleaning up hold-tap
+layer 0 position: 34, binding name: layer_tap
+mo_released: position 34 layer 4
+ht_binding_released: 34 cleaning up hold-tap
