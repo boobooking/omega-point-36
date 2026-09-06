@@ -260,13 +260,17 @@ while the central's are handled locally, so a central key can reach the keymap f
 peripheral key was physically pressed first — and then it claims the single undecided-hold-tap slot
 and the modifier is dropped whole.
 
-The lever is `CONFIG_BT_PERIPHERAL_PREF_LATENCY`, which ZMK ships at **30**: the split peripheral may
-skip up to thirty connection intervals before it has to be heard. `config/op36.conf` sets it to 0.
-Note that `BT_PERIPHERAL_PREF_*` applies to whichever link the board is a peripheral on — for the
-right half that is the split, for the left half it is the host — and the CI log confirms only
-`config/op36.conf` is merged for both halves, so there is no way to scope this to one of them
-without a half-specific conf whose merge behavior is unverified. The cost is battery: neither half
-sleeps between connection events any more. Raise it toward 5-10 if that trade turns out badly.
+`CONFIG_BT_PERIPHERAL_PREF_LATENCY` looks like the lever — ZMK ships it at **30**, letting the split
+peripheral skip up to thirty connection intervals before it has to be heard — and it was set to 0
+for a while on that reasoning. **It did not help, and it has been reverted.** The chord kept failing
+on that firmware, and the real cause was `require-prior-idle-ms` in the keymap. All it bought was
+battery drain: `BT_PERIPHERAL_PREF_*` applies to whichever link the board is a peripheral on, so
+zero stopped the right half sleeping on the split link *and* the left half sleeping on the host
+link. Note also that only `config/op36.conf` is merged for both halves (the CI log shows it twice),
+so this cannot be scoped to one half without a half-specific conf whose merge behavior is unverified.
+
+The asymmetry that pointed here was real, but it was explained by the ordering of the chord rather
+than by any delay long enough to matter.
 
 ### require-prior-idle-ms is the knob that loses modifiers on repeats
 
