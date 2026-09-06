@@ -71,7 +71,9 @@ Two gotchas worth knowing before writing a case:
 
 - **Start with a lead-in press and a pause of 200 ms or more.** At t=0 the
   "last tapped" timestamp is zero, so `require-prior-idle-ms` sees the very first
-  key as a quick tap and collapses every hold-tap to its tap.
+  key as a quick tap and collapses every hold-tap to its tap. The lead-in has to
+  land on a key that actually emits something — the cases use position 1, since
+  position 0 is `&none`.
 - Positions map straight onto the matrix: position N is `RC(N/10, N%10)`, so
   thumbs 30-35 are simply row 3. No translation layer is needed.
 
@@ -148,8 +150,15 @@ nav has &to 0 / &to 1 for language resync
 
 Positions are 0-9 / 10-19 / 20-29 for the three rows, then 30-32 (left thumbs) and 33-35 (right).
 
+`en` carries Colemak-DH with `Q`, `Z` and `J` pulled off the pinky columns into the grid, while `ru`
+is still positional ЙЦУКЕН. The layers are independent — each sends the scancodes its own host
+layout expects — so the asymmetry costs nothing. Positions 0, 9, 20 and 29 are `&none` on `en`; they
+still hold Cyrillic letters on `ru` and are meant to become `&none` there too when that layer is
+reworked. **Letters move, positions do not**: the mods, the positional hold-trigger lists and the
+combos are all addressed by position, so a layout change touches none of them.
+
 **Home row mods** sit on `en`, `ru` and — as plain `&kp` — the right hand of `nav` and the left hand
-of `numbers`: Alt on A/`;`, Shift on S/L, Ctrl on D/K, **Cmd on F/J**. `hml`/`hmr` carry
+of `numbers`: Alt on A/O, Shift on R/I, Ctrl on S/E, **Cmd on T/N**. `hml`/`hmr` carry
 `hold-trigger-key-positions` listing the whole opposite hand **plus all six thumb positions**, so a
 mod engages when the next key is on the other hand or on any thumb. Those lists are position-based —
 changing key count or ordering invalidates them, but moving a mod between positions inside the same
@@ -274,11 +283,11 @@ between the halves**, not any timing value:
 
 | modifier | other key | result |
 |---|---|---|
-| left `F` (central) | right Backspace (peripheral) | mostly works |
-| right `J` (peripheral) | left Space/Enter (central) | essentially never works |
+| left Cmd, position 13 (central) | right Backspace (peripheral) | mostly works |
+| right Cmd, position 16 (peripheral) | left Space/Enter (central) | essentially never works |
 
-The failure emitted **no `j` at all** — neither a modifier nor a tap. That rules out an ordinary tap
-resolution and a positional rejection alike, since both emit the tap. The only path in the source
+The failure emitted **nothing at all** — neither a modifier nor the letter that position taps. That
+rules out an ordinary tap resolution and a positional rejection alike, since both emit the tap. The only path in the source
 producing nothing is the `undecided_hold_tap != NULL` early return.
 
 The cause is event **ordering**, not hold-tap timing: the peripheral half's key events cross BLE
@@ -332,8 +341,8 @@ remaining options all cost typing safety, and the table above is what they cost.
 ### Same-hand chords are refused by design
 
 Position 33 (Enter) and 34 (Backspace) are on the **right** half, 30-32 (Space, Esc) on the left. So
-right-hand Cmd (`J`) with Enter is a same-hand chord and the positional lists turn it into a bare
-`j` — see `tests/cmd-enter-twice`. Enter and Backspace must be chorded with the **left** modifiers,
+right-hand Cmd (position 16) with Enter is a same-hand chord and the positional lists turn it into a
+bare tap of that position — see `tests/cmd-enter-twice`. Enter and Backspace must be chorded with the **left** modifiers,
 Space and Esc with the right ones. This is the opposite-hand rule working, not a defect.
 
 ### Still unexplained
@@ -415,7 +424,10 @@ A combo's `layers = <N>` is checked against `zmk_keymap_highest_layer_active()` 
 combo scoped to `ru` therefore does not fire while `nav` is held on top of it.
 
 `cmben`/`cmbru` (layout switch) carry `require-prior-idle-ms = <150>` because they sit on positions
-2+3 — `E`+`R` in Latin, `У`+`К` in Cyrillic, both same-hand rolls occurring in ordinary words.
+2+3. On `ru` that is `У`+`К`, a same-hand roll in ordinary words ("рука", "наука"), which is what the
+guard is for. On `en` those positions are `F`+`P` under Colemak-DH, where no such roll exists, so the
+guard now earns its keep on the Cyrillic side only — keep it anyway, it costs nothing and `en` is not
+finished changing.
 `kha`/`hrdsgn` deliberately do **not** have that guard: Х and Ъ are needed mid-word ("плохо",
 "объект"), and it would suppress exactly those cases.
 
@@ -451,6 +463,8 @@ behavior, each item of which cost a source dive or an on-device test. Record the
 
 Deliberate, pending later work — do not "fix" them unprompted:
 
+- **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
+  four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
 - **`RU_CYRILLIC_IO` (ё) is not bound.** The `ru` layer holds 30 letters and the `kha`/`hrdsgn`
   combos add Х and Ъ, for 32 of 33.
