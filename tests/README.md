@@ -105,6 +105,11 @@ lead-in: it is `&none` on `en`.
   chorded key is sent; that is what fails if Hyper is ever rewritten as
   `&kp LS(LC(LA(LGUI)))`. It ends by firing `cmbru` on positions 2+3 to show the
   combo still beats the hold-tap now sharing position 2.
+- **`ru-mod-switch`** — the reason `hml_ru`/`hyl_ru` exist. On `ru`, right Cmd
+  over position 4 must resolve on layer 0 and send `0x05` (B), not `0x17`; right
+  Alt and left Hyper must do the same; right **Shift** must not, so position 1
+  stays `0x14` (й) rather than `0x1A` (W). Between and after every hold, position
+  1 has to be back on layer 1 — that is the `&to 1` restore.
 - **`hyper-ru`** — the same three checks on `ru`, where positions 2 and 7 are
   `у` and `ш`: the hold emits `0xE0`-`0xE3` around `0x0B`, the tap gives `0x08`,
   and both `cmbru` (entering) and `cmben` (leaving) fire from under the hold-tap.
