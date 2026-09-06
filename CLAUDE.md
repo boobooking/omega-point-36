@@ -150,12 +150,17 @@ nav has &to 0 / &to 1 for language resync
 
 Positions are 0-9 / 10-19 / 20-29 for the three rows, then 30-32 (left thumbs) and 33-35 (right).
 
-`en` carries Colemak-DH with `Q`, `Z` and `J` pulled off the pinky columns into the grid, while `ru`
-is still positional ЙЦУКЕН. The layers are independent — each sends the scancodes its own host
-layout expects — so the asymmetry costs nothing. Positions 0, 9, 20 and 29 are `&none` on `en`; they
-still hold Cyrillic letters on `ru` and are meant to become `&none` there too when that layer is
-reworked. **Letters move, positions do not**: the mods, the positional hold-trigger lists and the
-combos are all addressed by position, so a layout change touches none of them.
+`en` carries Colemak-DH with `Q`, `Z` and `J` pulled off the pinky columns into the grid. `ru` is
+ЙЦУКЕН squeezed onto the same 26 keys: `ц`, `щ`, `ф` and `э` are dropped and `я` moves from the
+bottom-left corner up to position 10. The layers are independent — each sends the scancodes its own
+host layout expects — so the asymmetry costs nothing.
+
+**Positions 0, 9, 20 and 29 are `&none` on every layer.** Both letter layers gave them up, and the
+four higher layers never used them.
+
+**Letters move, positions do not**: the mods, the positional hold-trigger lists and the combos are
+all addressed by position, so a layout change touches none of them. The `ru` rework is the proof —
+`cmben` still lands on `У`+`К` and `kha` still on `Г`+`Ш` without either combo being edited.
 
 **Home row mods** sit on `en`, `ru` and — as plain `&kp` — the right hand of `nav` and the left hand
 of `numbers`: Alt on A/O, Shift on R/I, Ctrl on S/E, **Cmd on T/N**. `hml`/`hmr` carry
@@ -428,8 +433,9 @@ combo scoped to `ru` therefore does not fire while `nav` is held on top of it.
 guard is for. On `en` those positions are `F`+`P` under Colemak-DH, where no such roll exists, so the
 guard now earns its keep on the Cyrillic side only — keep it anyway, it costs nothing and `en` is not
 finished changing.
-`kha`/`hrdsgn` deliberately do **not** have that guard: Х and Ъ are needed mid-word ("плохо",
-"объект"), and it would suppress exactly those cases.
+`kha` (Х, positions 6+7 = `Г`+`Ш`) and `hrdsgn` (Ъ, positions 7+8 = `Ш`+`З`) deliberately do **not**
+have that guard: Х and Ъ are needed mid-word ("плохо", "объект"), and it would suppress exactly those
+cases. Neither pair is a roll in ordinary Russian, so nothing is lost by leaving them unguarded.
 
 ## ZMK internals worth not re-deriving
 
@@ -466,8 +472,10 @@ Deliberate, pending later work — do not "fix" them unprompted:
 - **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
   four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
-- **`RU_CYRILLIC_IO` (ё) is not bound.** The `ru` layer holds 30 letters and the `kha`/`hrdsgn`
-  combos add Х and Ъ, for 32 of 33.
+- **Five Cyrillic letters are unreachable: `ё ф ц щ э`.** The `ru` layer holds 26 and the
+  `kha`/`hrdsgn` combos add Х and Ъ, for 28 of 33. Four of the five went missing when `ru` was
+  squeezed onto 26 keys, and they are not rare — `это`, `цена`, `ещё`, `кофе` cannot be typed. The
+  header has `RU_CYRILLIC_IO`, `_EF`, `_TSE`, `_SHCHA` and `_E` ready for whatever gets them back.
 - `adj` is stripped to `&bootloader`, the four `&bt BT_SEL`, `&bt BT_CLR`, both `&out` and
   `&studio_unlock`; everything else on it is `&none` by intent.
 
