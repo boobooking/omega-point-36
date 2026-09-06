@@ -289,6 +289,12 @@ re-running `typing-roll` and `chord-repeat-fast` and you will trade one bug for 
 The combo guards (`cmben`/`cmbru`) keep their own `require-prior-idle-ms = 150`; they protect against
 a different accident and were deliberately left alone.
 
+**Outcome: reduced, not eliminated, and accepted.** At 100 the symptom is still reachable if the
+chord is repeated fast enough — it is inherent to the mechanism, since any guard window at all will
+swallow a modifier pressed inside it. Tim's call was that the residue does not matter because the
+gesture is not repeated at that rate in real use. Do not reopen this expecting a clean fix; the
+remaining options all cost typing safety, and the table above is what they cost.
+
 ### Same-hand chords are refused by design
 
 Position 33 (Enter) and 34 (Backspace) are on the **right** half, 30-32 (Space, Esc) on the left. So
@@ -298,14 +304,12 @@ Space and Esc with the right ones. This is the opposite-hand rule working, not a
 
 ### Still unexplained
 
-The chord failing **on exactly every second attempt** — as if a broken state survives one press and
-the next press clears it — is not reproduced by the simulator. Running the same chord twice in a row
-gives byte-identical traces, in the correct order and in the reordered one alike
-(`tests/cmd-enter-twice`, `tests/cmd-enter-reordered-twice`). Nothing in the keymap carries state
-between attempts, so the cause lies below it: the split transport or the host. A period of two fits
-a lost release event leaving a key logically held on the central until the next press/release pair
-clears it, but that has not been confirmed. The observation that would settle it: whether the
-keyboard behaves as though the modifier is stuck during the failing attempt.
+The alternating failure turned out to be the `require-prior-idle-ms` window above — the previous
+keystroke (the earlier Space, or the Esc dismissing Spotlight) sat inside it — and shrinking the
+window reduced it. One detail never matched, though: the simulator emits `j` on a failed chord,
+while the real keyboard emits neither `j` nor a space. Whatever accounts for that gap is still
+unknown, and it lives below the keymap, since the keymap's own trace is byte-identical across
+repeated attempts (`tests/cmd-enter-twice`, `tests/cmd-enter-reordered-twice`).
 
 **When a chord misbehaves, check which half each key is on before touching any timing parameter,
 and run it through `./tests/run.sh` before theorizing.** Three successive hypotheses about
