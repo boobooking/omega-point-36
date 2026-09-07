@@ -4,9 +4,9 @@ layer 0 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
-layer 1 position: 23, binding name: layer_tap_ru_ext
+layer 1 position: 23, binding name: layer_tap
 ht_binding_pressed: 23 new undecided hold_tap
-layer 1 position: 23, binding name: layer_tap_ru_ext
+layer 1 position: 23, binding name: layer_tap
 ht_decide: 23 decided tap (tap-preferred decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x19 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 16, binding name: home_row_mod_right_ru
@@ -22,14 +22,14 @@ layer 1 position: 25, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x11 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 25, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x11 implicit_mods 0x00 explicit_mods 0x00
-layer 1 position: 26, binding name: layer_tap_ru_ext
+layer 1 position: 26, binding name: layer_tap
 ht_binding_pressed: 26 new undecided hold_tap
-layer 1 position: 26, binding name: layer_tap_ru_ext
+layer 1 position: 26, binding name: layer_tap
 ht_decide: 26 decided tap (tap-preferred decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x10 implicit_mods 0x00 explicit_mods 0x00
-layer 1 position: 31, binding name: layer_tap
+layer 1 position: 31, binding name: layer_tap_thumb
 ht_binding_pressed: 31 new undecided hold_tap
-layer 1 position: 31, binding name: layer_tap
+layer 1 position: 31, binding name: layer_tap_thumb
 ht_decide: 31 decided tap (balanced decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00

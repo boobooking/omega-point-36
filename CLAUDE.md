@@ -299,14 +299,22 @@ tap.
 
 ## Timing and hold-tap behaviors
 
-`&mt` and `&lt` are both re-tuned at the top of the file; `hml`, `hmr` and `hml_en` are defined in
+`&lt` gets one narrow override at the top of the file; every other hold-tap is a named behavior in
 the behaviors block.
 
-**`&lt` must be overridden.** ZMK ships it as `flavor = "tap-preferred"`, `tapping-term-ms = 200`,
-no `quick-tap-ms`, and tap-preferred only reaches the layer once the term expires — a fast
-opposite-hand press would beat the layer to it. This config uses `balanced` plus
-`quick-tap-ms = 200`, the latter so tap-then-hold repeats Space and Backspace instead of switching
-layers.
+**The deviation is named, not the default.** ZMK ships `&lt` as `flavor = "tap-preferred"`,
+`tapping-term-ms = 200`, no `quick-tap-ms`, and that is exactly right for a layer hanging off a
+letter key: tap-preferred reaches the layer only when the term expires, so a roll always taps. The
+`ru_ext` entrances use it as shipped. The thumbs want the opposite — with tap-preferred a fast
+opposite-hand press would beat the layer to it — so they use **`&ltt`**, which is the same behavior
+with `flavor = "balanced"`.
+
+The one property `&lt` does have overridden is `quick-tap-ms = <200>`, so tap-then-hold repeats the
+key instead of raising a layer. `&ltt` carries it too.
+
+This file used to re-tune `&lt` itself to `balanced` and give `ru_ext` the named exception, which is
+backwards: `&lt N X` then silently meant something other than what the ZMK docs say, and that cost a
+detour. `&mt` was re-tuned in the same block and **never used by any binding** — it is gone.
 
 Space and Enter running through a hold-tap is the main ergonomic risk in this keymap: with
 `balanced`, pressing and releasing the next key before releasing the thumb hands the layer the win.
@@ -511,14 +519,13 @@ Two entrances, one per half, and the letters divide the same way: holding 23 (le
 hand for `щ э х ъ`, holding 26 (right) frees the left for `ц ё ф`. That is also why `ъ` may sit on
 position 26 — you never reach it from the entrance it lives on.
 
-**These keys must not use this file's `&lt`.** That behavior is re-tuned to `balanced`, which decides
-hold as soon as the next key is released; on a letter key that is fatal. Rolling `м` into `о` would
-raise the layer and resolve `о` against `ru_ext`'s `&none`, losing **both** letters, and `быть ` would
-lose its `ь`. `lt_ext` keeps ZMK's stock `tap-preferred`, where only the `tapping-term-ms` timer
-raises the layer, so a roll always taps (`tests/ru-ext-rolls` proves both shapes). There is
-deliberately **no** `require-prior-idle-ms` and no positional list: those would suppress the trigger
-right after a keystroke, which is precisely when `ъ` and `х` are wanted. `tapping-term-ms` is the
-only knob here.
+**These keys use the stock `&lt`, and must not be switched to `&ltt`.** `&ltt` is `balanced`, which
+decides hold as soon as the next key is released; on a letter key that is fatal. Rolling `м` into
+`о` would raise the layer and resolve `о` against `ru_ext`'s `&none`, losing **both** letters, and
+`быть ` would lose its `ь`. Stock tap-preferred raises the layer only on the `tapping-term-ms`
+timer, so a roll always taps (`tests/ru-ext-rolls` proves both shapes). There is deliberately **no**
+`require-prior-idle-ms` and no positional list: those would suppress the trigger right after a
+keystroke, which is precisely when `ъ` and `х` are wanted. `tapping-term-ms` is the only knob here.
 
 ## Combos
 

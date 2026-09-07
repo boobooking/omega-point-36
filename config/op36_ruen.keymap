@@ -4,19 +4,11 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/outputs.h>
 
-&mt {
-    quick-tap-ms = <200>;
-    flavor = "tap-preferred";
-    require-prior-idle-ms = <125>;
-};
-
-// The stock "tap-preferred" flavor only reaches the layer after the tapping
-// term expires, which would make the layer lag behind a fast opposite-hand
-// press. "balanced" lets the layer win as soon as another key is used, while
-// quick-tap-ms keeps tap-then-hold repeating the tapped key.
+// &lt keeps ZMK's own "tap-preferred": the layer waits for the tapping term and
+// a roll always taps, which is what a layer hanging off a letter key needs. The
+// only change is quick-tap-ms, so tap-then-hold repeats the letter instead of
+// raising the layer. The thumbs want the opposite and use &ltt below.
 &lt {
-    flavor = "balanced";
-    tapping-term-ms = <200>;
     quick-tap-ms = <200>;
 };
 
@@ -64,16 +56,14 @@
             hold-trigger-on-release;
         };
 
-        // ru_ext hangs off two letter keys, so it must NOT use this file's &lt.
-        // That one is "balanced", which decides hold as soon as the next key is
-        // released — a roll through м or ь ("мо", "быть ") would raise the layer
-        // and swallow the letter. Only the timer raises this one. There is no
-        // require-prior-idle-ms for the same reason the kha/hrdsgn combos never
-        // had one: х and ъ are wanted mid-word.
-        lt_ext: layer_tap_ru_ext {
+        // The thumbs, and only the thumbs, want the layer to win as soon as
+        // another key is used: with "tap-preferred" a fast opposite-hand press
+        // would beat the layer to it. Everything hanging off a letter key stays
+        // on the stock &lt, where a roll always taps.
+        ltt: layer_tap_thumb {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
-            flavor = "tap-preferred";
+            flavor = "balanced";
             tapping-term-ms = <200>;
             quick-tap-ms = <200>;
             bindings = <&mo>, <&kp>;
@@ -296,10 +286,10 @@
 
         en {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                  &kp Z            &kp L        &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                  &kp M            &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                  &kp K            &kp H        &kp J         &kp Q         &none
-                                           &mo 7        &lt 6 SPACE  &lt 3 ESC    &lt 3 ENTER  &lt 5 BACKSPACE  &none
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                     &kp Z             &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                     &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                     &kp K             &kp H        &kp J         &kp Q         &none
+                                           &mo 7        &ltt 6 SPACE  &ltt 3 ESC    &ltt 3 ENTER  &ltt 5 BACKSPACE  &none
             >;
 
             display-name = "Base";
@@ -307,10 +297,10 @@
 
         ru {
             bindings = <
-  &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA          &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE              &hyr_ru 0 RU_CYRILLIC_SHA     &kp RU_CYRILLIC_ZE         &none
-  &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                            &kp RU_CYRILLIC_ER  &hmr_ru RGUI RU_CYRILLIC_O       &hmr_ru RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
-  &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt_ext 2 RU_CYRILLIC_EM    &kp RU_CYRILLIC_I                             &kp RU_CYRILLIC_TE  &lt_ext 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE            &kp RU_CYRILLIC_YU         &none
-                                                                                          &mo 7                       &lt 6 SPACE         &lt 4 ESC    &lt 4 ENTER  &lt 5 BACKSPACE     &none
+  &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA          &kp RU_CYRILLIC_IE                              &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE          &hyr_ru 0 RU_CYRILLIC_SHA     &kp RU_CYRILLIC_ZE         &none
+  &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                              &kp RU_CYRILLIC_ER  &hmr_ru RGUI RU_CYRILLIC_O   &hmr_ru RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
+  &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt 2 RU_CYRILLIC_EM        &kp RU_CYRILLIC_I                               &kp RU_CYRILLIC_TE  &lt 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE            &kp RU_CYRILLIC_YU         &none
+                                                                                          &mo 7                       &ltt 6 SPACE        &ltt 4 ESC    &ltt 4 ENTER  &ltt 5 BACKSPACE    &none
             >;
 
             display-name = "Ru";
