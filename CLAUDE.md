@@ -204,8 +204,12 @@ nothing to do with letters.
 
 **Home row mods** sit on `en`, `ru` and — as plain `&kp` — the right hand of `nav` and the left hand
 of `numbers`: Alt on A/O, Shift on R/I, Ctrl on S/E, **Cmd on T/N**. `hml`/`hmr` carry
-`hold-trigger-key-positions` listing the whole opposite hand **plus all six thumb positions**, so a
-mod engages when the next key is on the other hand or on any thumb. Those lists are position-based —
+`hold-trigger-key-positions` listing the whole opposite hand **plus that hand's three thumbs** —
+`hml*` and `hyl*` list `5..29` and `33 34 35`, `hmr*` and `hyr*` list `0..24` and `30 31 32` — so a
+mod engages when the next key is on the other hand or on one of the other half's thumbs. The own
+half's thumbs are deliberately absent; see the `require-prior-idle-ms` table below for what putting
+them back costs. On `ru`, position 17 is the exception: it uses `hmr_pfx`, same lists, different
+hold binding, for herdr's prefix. Those lists are position-based —
 changing key count or ordering invalidates them, but moving a mod between positions inside the same
 half does not. See "Positional hold-tap" below for why the thumbs are in both lists.
 
@@ -410,10 +414,13 @@ modifier, wait, then press") hides it, so the symptom reads as "the timing is to
   holding and waiting appears to work while the fast chord does not.
 - **A position not in the list forces a tap**, it does not merely decline the hold. So a modifier
   chorded with a key outside its list can never work, at any speed.
-- **The thumbs must be in both lists.** The list's purpose is to stop same-hand letter rolls from
-  raising a modifier; thumbs never take part in letter rolls, so restricting them buys nothing and
-  makes every same-hand modifier+thumb chord (`Cmd+Space`, `Cmd+Backspace`, `Shift+Space`)
-  impossible.
+- **Putting the thumbs in both lists was tried and reversed.** The argument for it is real: the
+  list's purpose is to stop same-hand letter rolls from raising a modifier, thumbs never take part in
+  letter rolls, and leaving them out makes every same-hand modifier+thumb chord (`Cmd+Space`,
+  `Cmd+Backspace`, `Shift+Space`) impossible. It was still reversed, because with the thumbs in the
+  own-hand lists typing "of" opened Spotlight — see the `require-prior-idle-ms` table below. Each mod
+  therefore lists only the opposite half's three thumbs, and same-hand modifier+thumb chords stay
+  impossible on purpose.
 - **What guards mid-typing false triggers is `require-prior-idle-ms`, not the position list.**
   `is_quick_tap()` resolves the hold-tap as a tap immediately when *any* key was tapped within the
   window (150 ms here), which is what keeps "if " and "of " from raising Cmd. Raise that value if
