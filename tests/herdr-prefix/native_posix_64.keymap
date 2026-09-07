@@ -29,8 +29,8 @@
         ZMK_MOCK_RELEASE(0,1,400)
 
         /* position 30 leaves en for ru */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
 
         /* The herdr prefix, exactly as it is typed: hold the right Ctrl
            (pos 17) long enough for the hold to resolve on the timer, then tap

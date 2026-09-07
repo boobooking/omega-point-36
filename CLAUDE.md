@@ -172,7 +172,8 @@ re-rendering silently breaks alignment. The layout algorithm is:
   come the two middle thumb tokens (separated by 4 spaces, not 2), and column 5 starts after them.
 
 **Layer 8 (`en_letters`) is a copy of the `en` layer** — rows 0-2 verbatim, plus `en`'s thumb row
-with position 30 replaced by `&trans`. Change one and you must change the other in the same commit;
+with the layout switch position replaced by `&trans`. Change one and you must change the other in the
+same commit;
 `tests/check-en-letters.py` fails the run and names the drifting position if you forget. See
 "Modifiers on `ru` raise the English letters over it" for why the copy exists.
 
@@ -191,13 +192,13 @@ scancodes — see below, including why it must be kept in sync by hand and what 
 so that adding it renumbered nothing.
 
 ```
-en ──hold pos 35──> adj
+en ──hold pos 35──> adj                 (tap gives Tab)
  ├──Space────────> numbers
  ├──Bspc─────────> nav
  └──Esc/Enter────> sym_en
 ru behaves identically, except Esc/Enter reach sym_ru
 ru ──hold pos 23 or 26──> ru_ext        (the seven letters that did not fit)
-en <──tap pos 30──> ru                  (layer_ru / layer_en, and the host follows)
+en <──tap pos 32──> ru                  (layer_ru / layer_en, and the host follows)
 nav has &to 0 / &to 1 for language resync
 ```
 
@@ -266,8 +267,8 @@ modifier is down, which puts the letters back where `en` has them. `hml_ru`/`hmr
 `en_mod` / `hyper_en` macros; flavour, guards and trigger lists are untouched. Verified end to end in
 `tests/ru-mod-switch`.
 
-**`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with position
-30 replaced by `&trans`. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
+**`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with the
+layout switch position (32) replaced by `&trans`. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
 straight back through to `ru`, which is the thing being overridden. Position 30 is the exception
 precisely because falling through is what is wanted there — see below.
 
@@ -292,7 +293,7 @@ one layer and not the whole stack, so `&to 0` flipped which combo was armed and 
 layer 8 disarmed both.
 
 Raising a layer instead of switching the base removes the cause rather than the symptom. The base
-never stops being `ru`, so position 30 always reads the true language: pressed mid-chord it now
+never stops being `ru`, so the switch key always reads the true language: pressed mid-chord it now
 **does** the switch, correctly, and the firmware lands on `en` with the host agreeing — where the
 marker layer could only refuse. `tests/switch-under-mod` pins that, and the whole change moved no
 HID output at all, only which layer resolved each key.
@@ -379,13 +380,25 @@ Five keys, and which one you hold picks the layer. Each leaves one hand free:
 
 | held | leads to | free hand |
 |---|---|---|
-| 35 | `adj` | left, and `adj` lives on the right hand |
+| 35 Tab | `adj` | left, and `adj` lives on the right hand |
 | 31 Space | `numbers` | right, where the digits are |
 | 34 Backspace | `nav` | left, where the arrows are |
-| 32 Esc / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
-| **tap 30** | the layout switch, not a layer | — |
+| 30 Esc / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
+| **tap 32** | the layout switch, not a layer | — |
 
 Every thumb position now carries something; none is spare.
+
+**The switch sits on 32, an inner thumb, and Esc on 30, the outer one.** They were the other way
+round at first, which put the one gesture you cannot undo on the key most easily brushed. Brushing 30
+now types an Esc. Read any "position 30" below that talks about the layout switch as history from
+before that swap.
+
+**Position 35 is `&lt 7 TAB`, deliberately the stock tap-preferred `&lt` and not `&ltt`.** Every other
+thumb is balanced, but `adj` carries `&bootloader` and `&bt BT_CLR`, and Tab is frequent: with
+balanced, a fast Tab-then-letter roll would raise `adj` and drop that letter onto one of them.
+Tap-preferred waits for the tapping term, so a roll always taps. `tests/adj-key` pins both halves —
+held 250 ms it reaches layer 7, tapped it emits `0x2B` and layer 7 never comes up. Tab left `nav`
+(position 14, now `&none`) when it arrived here.
 
 `adj` is a plain `&mo 7` on position 35 — no chain, no combo. It was on the Space+Backspace hold
 until a tap on those two became the layout switch, which made the gesture ambiguous by construction:
@@ -536,7 +549,7 @@ re-running `typing-roll` and `chord-repeat-fast` and you will trade one bug for 
 
 The layout switch used to carry its own `require-prior-idle-ms = 150` for a different accident — a
 fast space-then-backspace correction firing the combo mid-word. That guard went with the combo: a
-dedicated key on position 30 cannot be hit by a correction, so there is nothing left to suppress.
+dedicated key cannot be hit by a correction, so there is nothing left to suppress.
 
 **Outcome: reduced, not eliminated, and accepted.** At 100 the symptom is still reachable if the
 chord is repeated fast enough — it is inherent to the mechanism, since any guard window at all will
@@ -638,10 +651,10 @@ nothing on iPadOS. Everything below follows from that.
 - `os_lang` sends `&kp CAPS` and nothing else. `to_en`/`to_ru` no longer exist, because under a
   toggle they would be the same action.
 - `layer_en` / `layer_ru` are `&to 0 &os_lang` / `&to 1 &os_lang`, correct **only when invoked from
-  the layer they are leaving**. They are bound directly at position 30 — `&layer_en` on `ru`,
+  the layer they are leaving**. They are bound directly at position 32 — `&layer_en` on `ru`,
   `&layer_ru` on `en` — so the ordinary top-down layer lookup picks the right direction. Never bind
   these to anything unconditional, and never let a layer make the base stop reflecting the user's
-  language while position 30 can still be pressed: reading a base that lies is what made "go to RU"
+  language while the switch key can still be pressed: reading a base that lies is what made "go to RU"
   fire from RU and desynchronize the host. `en_letters` sits *over* `ru` rather than replacing it
   precisely so the base never lies.
 - **`nav` positions 6 and 7 are `&to 0` / `&to 1`** — firmware-only resync, deliberately sending no
@@ -704,7 +717,7 @@ permanent desync, and any host-side change is undetectable.
 | 2 | Host switched by itself — menu bar, another shortcut, a secure-input field | **irreducible** |
 | 3 | Switch key pressed while a modifier is held on `ru`, running the wrong direction | fixed: modifiers raise `en_letters` instead of switching the base, so the direction is never wrong |
 | 4 | Unintended switch — a fast space-then-backspace firing the old combo | fixed: the switch is a dedicated key |
-| 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: position 30 is on the central half |
+| 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: the switch key is on the central half |
 | 6 | A modifier hold's release never runs, so `&to 1` never restores `ru` | reduced only; recovery is one keystroke |
 | 7 | Boot — layer 0 is the hardcoded default and layer state is not persisted, so every reflash and every battery pull starts on `en` regardless of the host | **irreducible** |
 | 8 | A third keyboard layout enabled on the host — Caps Lock then cycles through three, and the binary model breaks silently | avoid; currently ABC + Russian only |

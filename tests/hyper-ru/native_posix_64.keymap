@@ -28,8 +28,8 @@
 
         /* position 30 leaves en for ru. Position 2 is a Hyper hold-tap on both
            layers now, so this press also re-checks that the combo wins. */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
 
         /* Hold у (pos 2) past the term and chord р (pos 15, opposite hand). */
         ZMK_MOCK_PRESS(0,2,350)
@@ -50,8 +50,8 @@
         ZMK_MOCK_RELEASE(0,7,300)
 
         /* position 30 goes back to en. */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,200)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,200)
     >;
 };
 

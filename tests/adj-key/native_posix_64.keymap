@@ -28,12 +28,22 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Position 35 is a plain &mo 7. Held, pos 6 must resolve on layer 7
-           as the bluetooth behavior; released, ordinary letters come back. */
-        ZMK_MOCK_PRESS(3,5,30)
+        /* Position 35 is &lt 7 TAB: tap-preferred, so adj only comes up once
+           the 200 ms tapping term has passed. Held that long, pos 6 must
+           resolve on layer 7 as the bluetooth behavior; released, ordinary
+           letters come back. */
+        ZMK_MOCK_PRESS(3,5,250)
         ZMK_MOCK_PRESS(0,6,30)
         ZMK_MOCK_RELEASE(0,6,30)
         ZMK_MOCK_RELEASE(3,5,300)
+
+        /* Tapped instead of held, position 35 is Tab (0x2B) and adj never
+           comes up. This is what tap-preferred buys: a roll cannot drop a
+           letter onto &bootloader or &bt BT_CLR. */
+        ZMK_MOCK_PRESS(3,5,30)
+        ZMK_MOCK_RELEASE(3,5,30)
+        ZMK_MOCK_PRESS(0,6,30)
+        ZMK_MOCK_RELEASE(0,6,300)
 
         /* Pos 6 is L on en once the key is up. */
         ZMK_MOCK_PRESS(0,6,30)

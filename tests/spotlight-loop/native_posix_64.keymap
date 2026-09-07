@@ -39,8 +39,8 @@
         ZMK_MOCK_RELEASE(1,6,300)
 
         /* --- Esc --- */
-        ZMK_MOCK_PRESS(3,2,40)
-        ZMK_MOCK_RELEASE(3,2,300)
+        ZMK_MOCK_PRESS(3,0,40)
+        ZMK_MOCK_RELEASE(3,0,300)
 
         /* --- attempt 2 (the one that fails) --- */
         ZMK_MOCK_PRESS(1,6,20)

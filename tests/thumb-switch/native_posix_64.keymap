@@ -30,14 +30,14 @@
 
         /* Tap thumbs 31+34 together: cmbru, one Caps Lock, and pos 1 must
            read as й (0x14) afterwards rather than W (0x1A). */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 
         /* And back: cmben, one more Caps Lock, pos 1 is W again. */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 

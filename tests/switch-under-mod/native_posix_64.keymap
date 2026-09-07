@@ -29,8 +29,8 @@
         ZMK_MOCK_RELEASE(0,1,400)
 
         /* position 30 leaves en for ru: one Caps Lock. */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
 
         /* Hold right Cmd (pos 16). en_mod raises en_letters over ru without
            touching the base, so position 30 falls through to ru and still means
@@ -43,8 +43,8 @@
            the firmware and desynchronised the host. That needed a marker layer
            with &none at position 30 to refuse the press outright. */
         ZMK_MOCK_PRESS(1,6,350)
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,200)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,200)
         ZMK_MOCK_RELEASE(1,6,300)
 
         /* Which layer did we end on? pos 1 is й (0x14) on ru, W (0x1A) on en. */

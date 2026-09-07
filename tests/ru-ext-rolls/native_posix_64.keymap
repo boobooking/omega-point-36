@@ -28,8 +28,8 @@
 
         /* position 30 leaves en for ru, and taps Caps Lock so the
            host follows. Everything below therefore resolves on ru. */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
 
         /* "мо" rolled: о goes down and up while м (pos 23) is still held, and
            м is released inside the tapping term. Under the file's balanced

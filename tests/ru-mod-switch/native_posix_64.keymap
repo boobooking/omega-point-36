@@ -27,8 +27,8 @@
         ZMK_MOCK_RELEASE(0,1,400)
 
         /* position 30 leaves en for ru */
-        ZMK_MOCK_PRESS(3,0,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,300)
 
         /* Right Cmd (pos 16) with pos 4. Pos 4 is on the LEFT half, so the
            opposite-hand rule wants the right modifier. It must resolve on en

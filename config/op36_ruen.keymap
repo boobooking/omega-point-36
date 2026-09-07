@@ -361,10 +361,10 @@
 
         en {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                     &kp Z             &kp L        &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                     &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                     &kp K             &kp H        &kp J         &kp Q         &none
-                                           &layer_ru    &ltt 6 SPACE  &ltt 3 ESC    &ltt 3 ENTER  &ltt 5 BACKSPACE  &mo 7
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                    &kp Z             &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                    &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                    &kp K             &kp H        &kp J         &kp Q         &none
+                                           &ltt 3 ESC   &ltt 6 SPACE  &layer_ru    &ltt 3 ENTER  &ltt 5 BACKSPACE  &lt 7 TAB
             >;
 
             display-name = "Base";
@@ -372,10 +372,10 @@
 
         ru {
             bindings = <
-  &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA          &kp RU_CYRILLIC_IE                              &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE          &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
-  &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                              &kp RU_CYRILLIC_ER  &hmr_ru RGUI RU_CYRILLIC_O   &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
-  &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt 2 RU_CYRILLIC_EM        &kp RU_CYRILLIC_I                               &kp RU_CYRILLIC_TE  &lt 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
-                                                                                          &layer_en                   &ltt 6 SPACE        &ltt 4 ESC    &ltt 4 ENTER  &ltt 5 BACKSPACE    &mo 7
+  &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA          &kp RU_CYRILLIC_IE                             &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE          &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
+  &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                             &kp RU_CYRILLIC_ER  &hmr_ru RGUI RU_CYRILLIC_O   &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
+  &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt 2 RU_CYRILLIC_EM        &kp RU_CYRILLIC_I                              &kp RU_CYRILLIC_TE  &lt 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
+                                                                                          &ltt 4 ESC                  &ltt 6 SPACE        &layer_en    &ltt 4 ENTER  &ltt 5 BACKSPACE    &lt 7 TAB
             >;
 
             display-name = "Ru";
@@ -416,10 +416,10 @@
 
         nav {
             bindings = <
-  &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                      &none   &to 0     &to 1      &none      &none
-  &none  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                    &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
-  &none  &none             &none     &none             &none                      &none   &none     &none      &none      &none
-                                     &trans            &trans   &trans    &trans  &trans  &trans
+  &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                     &none   &to 0     &to 1      &none      &none
+  &none  &kp LEFT          &kp DOWN  &kp RIGHT         &none                     &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
+  &none  &none             &none     &none             &none                     &none   &none     &none      &none      &none
+                                     &trans            &trans  &trans    &trans  &trans  &trans
             >;
 
             display-name = "Nav";
@@ -449,10 +449,10 @@
 
         en_letters {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                     &kp Z             &kp L        &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                     &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                     &kp K             &kp H        &kp J         &kp Q         &none
-                                           &trans       &ltt 6 SPACE  &ltt 3 ESC    &ltt 3 ENTER  &ltt 5 BACKSPACE  &mo 7
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                 &kp Z             &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                 &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                 &kp K             &kp H        &kp J         &kp Q         &none
+                                           &ltt 3 ESC   &ltt 6 SPACE  &trans    &ltt 3 ENTER  &ltt 5 BACKSPACE  &lt 7 TAB
             >;
 
             display-name = "En letters";
