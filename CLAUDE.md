@@ -14,11 +14,24 @@ velvet_v3_ui, k03, imperial44 and the trackballs, plus the non-RU `op36.keymap`,
 entry references any of them, so they are never compiled. Treat them as reference material, not as
 code that has to keep working.
 
-Everything builds against the **`ergohaven/ergohaven-zmk`** ZMK fork (`config/west.yml`), which
-supplies the `ergohaven` board, all shields, and pieces the upstream ZMK tree does not have:
-`scroll-snap.dtsi`, `input/processors/sensor_rotation.dtsi`, the `zmk,input-processor-temp-layer`
-compatible, and the `keymap:` build-matrix key. When something referenced by a keymap isn't in this
-repo, it lives in that fork.
+**There is no ZMK fork in this build.** `config/west.yml` imports `ergohaven/ergohaven-zmk`, whose
+own manifest pins **`zmkfirmware/zmk` at tag `v0.3.0`** — stock upstream, confirmed in the CI log
+(`HEAD is now at edf5c081 chore(main): release 0.3.0`). So every ZMK source path quoted in this file
+is upstream v0.3.0, not somebody's patch.
+
+`ergohaven-zmk` is not a fork either (`fork: false`, no parent). It is a ZMK **module** supplying the
+`ergohaven` board, the shields, and a reusable workflow whose one real extension is the `keymap:`
+build-matrix key. `scroll-snap.dtsi` and `input/processors/sensor_rotation.dtsi` come from third
+parties its manifest pulls in (`kot149/zmk-scroll-snap`, `hsgw/zmk-feature-sensor_rotation`), not
+from ergohaven.
+
+A repo named `ergohaven/zmk` does exist and is **not used by anything here**: it carries zero commits
+of its own, sits 217 behind upstream, and was last touched in April 2025. Don't reach for it.
+
+Whether to leave: there is little to leave. v0.3.0 is upstream's **latest release tag** — `main` is
+189 commits past it with no v0.4 — so staying costs no version debt. What ergohaven supplies is
+hardware description for hardware you own: the op36 shield is eight files totalling under 6 KB, and
+vendoring it would mean owning those and losing upstream's fixes to them.
 
 ## Building
 
@@ -73,7 +86,12 @@ board — the firmware becomes an ordinary Linux binary whose key matrix is a mo
 scanner replaying timed events — and diffs the resulting log against a snapshot.
 It runs in `zmkfirmware/zmk-build-arm:stable`; the first run clones ZMK and its
 west dependencies into `$WS` (default `$TMPDIR/zmk-sim-ws`, ~1.5 GB), later runs
-reuse it. See `tests/README.md` for the shape of a case.
+reuse it. **It clones `zmkfirmware/zmk` at tag `v0.3.0`, the same revision the
+firmware ships** — it used to clone `ergohaven/zmk@main`, which was 28 commits
+*behind* v0.3.0, so the simulator was quietly answering questions about a
+different ZMK than the one on the board. If the pin in `ergohaven-zmk`'s
+manifest ever moves, move `tests/run.sh` with it and delete `$WS` so the clone
+is redone. See `tests/README.md` for the shape of a case.
 
 **Reach for this before theorizing about any hold-tap, layer, combo or macro
 timing question.** The log carries not just the HID output but the decision
@@ -101,7 +119,7 @@ visible — the simulator emits a `j` there where the real keyboard emits none.
 
 ## Flashing and the split
 
-The op36 shield's `Kconfig.defconfig` in the fork gives `ZMK_SPLIT_ROLE_CENTRAL` to
+The op36 shield's `Kconfig.defconfig` in `ergohaven-zmk` gives `ZMK_SPLIT_ROLE_CENTRAL` to
 `SHIELD_OP36_LEFT`, so the **left half is central and holds the whole keymap** (confirmed in the
 build's own `.config`). The right half is a peripheral: it scans its matrix and ships key positions
 over BLE, and the central resolves what they mean.
@@ -124,7 +142,7 @@ resolved one session's worth of apparent keymap bugs — do that first, every ti
 - **`config/<shield>.conf`** — Kconfig fragment matched by shield name, so `op36_left` and
   `op36_right` share `op36.conf`.
 - **`config/<keymap>.keymap`** — defaults to the base name; the `keymap:` matrix key (an ergohaven
-  fork extension resolving to `-DKEYMAP_FILE=`) overrides it, which is how `op36_ruen` is built
+  workflow extension resolving to `-DKEYMAP_FILE=`) overrides it, which is how `op36_ruen` is built
   instead of `op36`.
 - **`config/<keymap>.json`** — physical layout for the keymap editor, matched to the **keymap**
   filename, not the shield. The `*_ruen.json` files are symlinks to their base `.json`; keep them
@@ -330,7 +348,7 @@ devicetree, where the node comes out as `bindings = < &kp >, < &en >`).
 
 ## Positional hold-tap: how it actually decides
 
-All from `app/src/behaviors/behavior_hold_tap.c` in the fork. This was the source of a real bug —
+All from `app/src/behaviors/behavior_hold_tap.c` in upstream ZMK v0.3.0. This was the source of a real bug —
 same-hand `Cmd+Space` was impossible by construction, and the workaround people find ("hold the
 modifier, wait, then press") hides it, so the symptom reads as "the timing is too slow".
 
@@ -533,7 +551,7 @@ Bounded by `config/op36.conf`: `CONFIG_ZMK_COMBO_MAX_KEYS_PER_COMBO=3`,
 `CONFIG_ZMK_COMBO_MAX_COMBOS_PER_KEY=7`.
 
 A combo's `layers = <N>` is checked against `zmk_keymap_highest_layer_active()` (see
-`app/src/combo.c` in the fork), **not** against "is that layer active anywhere in the stack". A
+`app/src/combo.c`), **not** against "is that layer active anywhere in the stack". A
 combo scoped to `ru` therefore does not fire while `nav` is held on top of it.
 
 `cmben`/`cmbru` (layout switch) sit on **positions 31+34, a simultaneous tap of Space and
@@ -549,7 +567,7 @@ keystroke suppresses exactly the cases you need.
 
 ## ZMK internals worth not re-deriving
 
-All checked against the fork's source or the build's own output:
+All checked against upstream ZMK v0.3.0 or the build's own output:
 
 - **Implicit modifiers are a single global that the next keypress overwrites.** `hid.c` keeps one
   `static zmk_mod_flags_t implicit_modifiers`, and `hid_listener_keycode_pressed` assigns the

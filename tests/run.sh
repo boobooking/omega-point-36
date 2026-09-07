@@ -16,7 +16,10 @@
 # the headroom.
 #
 # The first run clones ZMK and its west dependencies into $WS (about 1.5 GB)
-# and takes several minutes; later runs reuse it.
+# and takes several minutes; later runs reuse it. The tag has to match what the
+# firmware ships: ergohaven-zmk's manifest pins zmkfirmware/zmk at v0.3.0, so
+# that is what gets cloned here. Bump both together or the simulator stops
+# answering questions about the firmware that actually runs.
 set -e
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -27,7 +30,7 @@ if [ ! -d "$WS/zmk/zephyr" ]; then
     echo "Setting up the ZMK workspace in $WS (one-time, ~1.5 GB)"
     mkdir -p "$WS"
     docker run --rm -v "$WS":/ws -w /ws "$IMAGE" sh -c '
-        git clone --depth 1 https://github.com/ergohaven/zmk.git zmk &&
+        git clone --depth 1 --branch v0.3.0 https://github.com/zmkfirmware/zmk.git zmk &&
         cd zmk && west init -l app &&
         west update --narrow -o=--depth=1 && west zephyr-export'
 fi

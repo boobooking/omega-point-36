@@ -14,6 +14,8 @@ ACCEPT=1 ./tests/run.sh <case>        # rewrite the snapshot after an intended c
 
 Everything runs in `zmkfirmware/zmk-build-arm:stable`; the first run clones ZMK
 and its west dependencies into `$WS` (default `$TMPDIR/zmk-sim-ws`, ~1.5 GB).
+The clone is `zmkfirmware/zmk` at tag **v0.3.0**, matching what the firmware
+ships; keep the two in step or these cases stop describing the real board.
 
 ## What a case looks like
 
