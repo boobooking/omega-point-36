@@ -177,14 +177,14 @@
 
         cmben {
             bindings = <&layer_en>;
-            key-positions = <2 3>;
+            key-positions = <31 34>;
             layers = <1>;
             require-prior-idle-ms = <150>;
         };
 
         cmbru {
             bindings = <&layer_ru>;
-            key-positions = <2 3>;
+            key-positions = <31 34>;
             layers = <0>;
             require-prior-idle-ms = <150>;
         };
@@ -299,7 +299,7 @@
   &none        &kp W         &hyl 0 F      &kp P        &kp B                                  &kp Z            &kp L        &hyr 0 U      &kp Y         &none
   &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                  &kp M            &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
   &none        &kp X         &kp C         &kp D        &kp V                                  &kp K            &kp H        &kp J         &kp Q         &none
-                                           &none        &lt 6 SPACE  &lt 3 ESC    &lt 3 ENTER  &lt 5 BACKSPACE  &none
+                                           &mo 7        &lt 6 SPACE  &lt 3 ESC    &lt 3 ENTER  &lt 5 BACKSPACE  &none
             >;
 
             display-name = "Base";
@@ -310,7 +310,7 @@
   &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA          &kp RU_CYRILLIC_IE                            &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE              &hyr_ru 0 RU_CYRILLIC_SHA     &kp RU_CYRILLIC_ZE         &none
   &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                            &kp RU_CYRILLIC_ER  &hmr_ru RGUI RU_CYRILLIC_O       &hmr_ru RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
   &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt_ext 2 RU_CYRILLIC_EM    &kp RU_CYRILLIC_I                             &kp RU_CYRILLIC_TE  &lt_ext 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE            &kp RU_CYRILLIC_YU         &none
-                                                                                          &none                       &lt 6 SPACE         &lt 4 ESC    &lt 4 ENTER  &lt 5 BACKSPACE     &none
+                                                                                          &mo 7                       &lt 6 SPACE         &lt 4 ESC    &lt 4 ENTER  &lt 5 BACKSPACE     &none
             >;
 
             display-name = "Ru";
@@ -351,10 +351,10 @@
 
         nav {
             bindings = <
-  &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                          &none   &to 0     &to 1      &none      &none
-  &none  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                        &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
-  &none  &none             &none     &none             &none                          &none   &none     &none      &none      &none
-                                     &trans            &lt 7 SPACE  &trans    &trans  &trans  &trans
+  &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                      &none   &to 0     &to 1      &none      &none
+  &none  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                    &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
+  &none  &none             &none     &none             &none                      &none   &none     &none      &none      &none
+                                     &trans            &trans   &trans    &trans  &trans  &trans
             >;
 
             display-name = "Nav";
@@ -362,10 +362,10 @@
 
         numbers {
             bindings = <
-  &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none            &kp N7  &kp N8  &kp N9  &none
-  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none            &kp N4  &kp N5  &kp N6  &none
-  &none     &none                   &none        &none                 &none                                     &kp N0           &kp N1  &kp N2  &kp N3  &none
-                                                 &trans                &trans                  &trans    &trans  &lt 7 BACKSPACE  &trans
+  &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &kp N7  &kp N8  &kp N9  &none
+  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &kp N4  &kp N5  &kp N6  &none
+  &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &kp N2  &kp N3  &none
+                                                 &trans                &trans                  &trans    &trans  &trans  &trans
             >;
 
             display-name = "Numbers";

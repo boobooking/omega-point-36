@@ -26,12 +26,12 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* cmbru leaves en for ru. Position 2 is a Hyper hold-tap on both
+        /* cmbru (tap thumbs 31+34) leaves en for ru. Position 2 is a Hyper hold-tap on both
            layers now, so this press also re-checks that the combo wins. */
-        ZMK_MOCK_PRESS(0,2,5)
-        ZMK_MOCK_PRESS(0,3,30)
-        ZMK_MOCK_RELEASE(0,2,10)
-        ZMK_MOCK_RELEASE(0,3,300)
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
 
         /* Hold у (pos 2) past the term and chord р (pos 15, opposite hand). */
         ZMK_MOCK_PRESS(0,2,350)
@@ -51,11 +51,11 @@
         ZMK_MOCK_RELEASE(1,4,30)
         ZMK_MOCK_RELEASE(0,7,300)
 
-        /* cmben goes back to en from under the same hold-tap. */
-        ZMK_MOCK_PRESS(0,2,5)
-        ZMK_MOCK_PRESS(0,3,30)
-        ZMK_MOCK_RELEASE(0,2,10)
-        ZMK_MOCK_RELEASE(0,3,200)
+        /* cmben goes back to en, now from the thumbs. */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,200)
     >;
 };
 

@@ -159,12 +159,13 @@ modifier is held on `ru` — see below for what that is worth. It is last so tha
 nothing.
 
 ```
-en ──Space─────> numbers ──Bspc───┐
- │                                ├──> adj
- ├──Bspc───────> nav     ──Space──┘
- └──Esc/Enter──> sym_en
+en ──hold pos 30──> adj
+ ├──Space────────> numbers
+ ├──Bspc─────────> nav
+ └──Esc/Enter────> sym_en
 ru behaves identically, except Esc/Enter reach sym_ru
 ru ──hold pos 23 or 26──> ru_ext        (the seven letters that did not fit)
+en <──tap Space+Bspc together──> ru     (cmben / cmbru, and the host follows)
 nav has &to 0 / &to 1 for language resync
 ```
 
@@ -180,7 +181,8 @@ four higher layers never used them.
 
 **Letters move, positions do not**: the mods, the positional hold-trigger lists and the combos are
 all addressed by position, so a layout change touches none of them. The `ru` rework is the proof —
-`cmben` still lands on `У`+`К` without the combo being edited.
+`cmben` survived the `ru` rework untouched, and later moved to the thumbs for reasons that had
+nothing to do with letters.
 
 **Home row mods** sit on `en`, `ru` and — as plain `&kp` — the right hand of `nav` and the left hand
 of `numbers`: Alt on A/O, Shift on R/I, Ctrl on S/E, **Cmd on T/N**. `hml`/`hmr` carry
@@ -212,9 +214,8 @@ the chorded key is sent.
 `&hyl 0 F` looks odd: the `0` is the hold parameter, unused because the macro takes none, but the
 hold-tap schema includes `two_param.yaml` and demands two cells regardless.
 
-Position 2 also carries the layout-switch combo on both layers — `cmbru` on `en`, `cmben` on `ru`.
-Combos are resolved before behaviors, so the combo still wins on a 2+3 press: `tests/hyper` and
-`tests/hyper-ru` each end with the switch firing and emitting only its Caps Lock, no letters.
+Position 2 used to share the layout-switch combo, which has since moved to the thumbs; the key is
+purely Hyper now. `tests/hyper` still presses 2+3 to record that they simply type `f` and `p`.
 
 ### Modifiers on `ru` drop to `en` for the duration of the hold
 
@@ -261,42 +262,35 @@ The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on
 
 ## The thumb row
 
-Four keys, and which one you hold picks the layer. Each leaves one hand free:
+Five keys, and which one you hold picks the layer. Each leaves one hand free:
 
 | held | leads to | free hand |
 |---|---|---|
+| 30 | `adj` | right, where everything on `adj` lives |
 | 31 Space | `numbers` | right, where the digits are |
 | 34 Backspace | `nav` | left, where the arrows are |
 | 32 Esc / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
-| **31 and 34 together, in either order** | `adj` | — |
+| **tap 31 and 34 together** | the layout switch, not a layer | — |
 
-Positions 30 and 35 are deliberately unused.
+Position 35 is the only one left unused.
 
-`adj` is reached by holding both Space and Backspace, and **the order must not matter**. That is why
-`numbers` and `nav` each carry the other thumb: on `numbers`, position 34 is `&lt 7 BACKSPACE`; on
-`nav`, position 31 is `&lt 7 SPACE`. Space first goes `en → numbers → adj`, Backspace first goes
-`en → nav → adj`, and both arrive at the same layer — `tests/adj-both-orders` logs
-`mo_pressed: position 34 layer 7` on one route and `mo_pressed: position 31 layer 7` on the other.
-The symbol layers deliberately lead nowhere.
+`adj` is a plain `&mo 7` on position 30 — no chain, no combo. It used to be reached by holding Space
+and Backspace together, which stopped working once a tap on those two became the layout switch: a
+ZMK combo fires on simultaneous press and cannot tell a tap from the start of a hold, so the gesture
+was ambiguous by construction. Position 30 was free, `adj` is rare, and a dedicated key is cheaper
+than arbitrating that. `tests/adj-key` pins both halves: position 30 raises layer 7, and holding
+Space then Backspace now yields `numbers` over `nav` and never `adj`.
 
-The chain of two `&lt` works because the second thumb's press is **captured, not delivered**:
-`position_state_changed_listener` returns `ZMK_EV_EVENT_CAPTURED` while the first hold-tap is
-undecided, so `on_hold_tap_binding_pressed` — and its "another hold-tap is undecided" early return —
-is never reached (`app/src/behaviors/behavior_hold_tap.c`). `decide_balanced` ignores
-`HT_OTHER_KEY_DOWN`, so each step resolves on its own `tapping-term-ms` timer and the captured event
-replays against the layer that just came up. Consequence: **both thumbs must stay down**. Releasing
-the second one early decides the first as `hold-interrupt` and replays the second as a tap, giving a
-Backspace or a Space instead of `adj`.
+**The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** It now
+holds with **no exceptions at all** — every one of the six thumb positions is `&trans` on all seven
+layers above `ru`. The two `&lt 7 …` exceptions that used to sit on `nav` and `numbers` went away
+with the old `adj` route.
 
-**The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** There
-are exactly two exceptions, both mandatory because the target must differ: position 34 on `numbers`
-and position 31 on `nav` are `&lt 7 …` into `adj`.
-
-This rule is load-bearing, not cosmetic. Because a layer can be entered by more than one route, a
-thumb position is no longer guaranteed to be the held key, and an `&none` left over from when it was
-**silently kills that key**. Two such dead keys already shipped this way. After any thumb-row change,
-resolve every position against every reachable layer stack — `en`/`ru` alone, each with `numbers`,
-`nav` or its symbol layer, and `adj` by both routes — accounting for which key is held in each case.
+This rule is load-bearing, not cosmetic. A thumb position is not guaranteed to be the held key, and
+an `&none` left over from when it was **silently kills that key**. Two such dead keys already shipped
+this way. After any thumb-row change, resolve every position against every reachable layer stack —
+`en`/`ru` alone, each with `adj`, `numbers`, `nav` or its symbol layer — accounting for which key is
+held in each case.
 
 One stack is reachable and worth knowing about: on `sym_en`/`sym_ru` position 31 is `&trans` and
 falls through to the base `&lt 6 SPACE`, so holding Esc and then Space raises `numbers` on top of the
@@ -417,7 +411,7 @@ typing "of" open Spotlight — a worse bug than the one being fixed. **Change on
 re-running `typing-roll` and `chord-repeat-fast` and you will trade one bug for the other.**
 
 The combo guards (`cmben`/`cmbru`) keep their own `require-prior-idle-ms = 150`; they protect against
-a different accident and were deliberately left alone.
+a different accident — now a fast space-then-backspace correction — and were deliberately left alone.
 
 **Outcome: reduced, not eliminated, and accepted.** At 100 the symptom is still reachable if the
 chord is repeated fast enough — it is inherent to the mechanism, since any guard window at all will
@@ -535,11 +529,12 @@ A combo's `layers = <N>` is checked against `zmk_keymap_highest_layer_active()` 
 `app/src/combo.c` in the fork), **not** against "is that layer active anywhere in the stack". A
 combo scoped to `ru` therefore does not fire while `nav` is held on top of it.
 
-`cmben`/`cmbru` (layout switch) carry `require-prior-idle-ms = <150>` because they sit on positions
-2+3. On `ru` that is `У`+`К`, a same-hand roll in ordinary words ("рука", "наука"), which is what the
-guard is for. On `en` those positions are `F`+`P` under Colemak-DH, where no such roll exists, so the
-guard now earns its keep on the Cyrillic side only — keep it anyway, it costs nothing and `en` is not
-finished changing.
+`cmben`/`cmbru` (layout switch) sit on **positions 31+34, a simultaneous tap of Space and
+Backspace**, and keep `require-prior-idle-ms = <150>`. They used to be on 2+3, where the guard
+stopped `У`+`К` ("рука", "наука") from switching mid-word; on the thumbs it stops a fast
+space-then-backspace correction from doing the same. A combo fires on press, so holding those two
+rather than tapping them also switches — there is no way to distinguish the two in ZMK, which is
+why `adj` moved off that gesture and onto position 30.
 Those two are the only combos left. `kha` (Х) and `hrdsgn` (Ъ) were deleted when `ru_ext` arrived —
 see below — but the reason they never carried a prior-idle guard still governs that layer: Х and Ъ
 are wanted mid-word ("плохо", "объект"), so anything that suppresses a trigger right after a

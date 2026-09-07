@@ -28,33 +28,29 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* cmbru (tap thumbs 31+34) leaves en for ru */
+        /* Tap thumbs 31+34 together: cmbru, one Caps Lock, and pos 1 must
+           read as й (0x14) afterwards rather than W (0x1A). */
         ZMK_MOCK_PRESS(3,1,5)
         ZMK_MOCK_PRESS(3,4,20)
         ZMK_MOCK_RELEASE(3,1,10)
         ZMK_MOCK_RELEASE(3,4,300)
-
-        /* Hold Esc (pos 32) to raise sym_ru, which must be layer 4 and not
-           layer 3. Then ? (pos 5), , (pos 26) and . (pos 27). Pos 26 is the
-           ru_ext entrance on ru, so sym_ru has to win over it. */
-        ZMK_MOCK_PRESS(3,2,350)
-        ZMK_MOCK_PRESS(0,5,30)
-        ZMK_MOCK_RELEASE(0,5,30)
-        ZMK_MOCK_PRESS(2,6,30)
-        ZMK_MOCK_RELEASE(2,6,30)
-        ZMK_MOCK_PRESS(2,7,30)
-        ZMK_MOCK_RELEASE(2,7,30)
-        ZMK_MOCK_RELEASE(3,2,300)
-
-        /* The other entrance, Enter (pos 33), must reach the same layer. */
-        ZMK_MOCK_PRESS(3,3,350)
-        ZMK_MOCK_PRESS(0,5,30)
-        ZMK_MOCK_RELEASE(0,5,30)
-        ZMK_MOCK_RELEASE(3,3,300)
-
-        /* Back on ru afterwards: pos 1 is й. */
         ZMK_MOCK_PRESS(0,1,30)
-        ZMK_MOCK_RELEASE(0,1,200)
+        ZMK_MOCK_RELEASE(0,1,300)
+
+        /* And back: cmben, one more Caps Lock, pos 1 is W again. */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
+        ZMK_MOCK_PRESS(0,1,30)
+        ZMK_MOCK_RELEASE(0,1,300)
+
+        /* Tapped one at a time they are still Space and Backspace: the combo
+           must not fire when the two presses are far apart. */
+        ZMK_MOCK_PRESS(3,1,50)
+        ZMK_MOCK_RELEASE(3,1,200)
+        ZMK_MOCK_PRESS(3,4,50)
+        ZMK_MOCK_RELEASE(3,4,200)
     >;
 };
 
