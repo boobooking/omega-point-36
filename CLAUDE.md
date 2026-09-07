@@ -101,7 +101,7 @@ other-key-up)` — so questions that were answered here by three successive wron
 guesses are answered by one run. Cases mount `config/` into the container and
 `#include` the real keymap, so they test the file that ships.
 
-Two gotchas worth knowing before writing a case:
+Three gotchas worth knowing before writing a case:
 
 - **Start with a lead-in press and a pause of 200 ms or more.** At t=0 the
   "last tapped" timestamp is zero, so `require-prior-idle-ms` sees the very first
@@ -110,6 +110,14 @@ Two gotchas worth knowing before writing a case:
   position 0 is `&none`.
 - Positions map straight onto the matrix: position N is `RC(N/10, N%10)`, so
   thumbs 30-35 are simply row 3. No translation layer is needed.
+- **Space the events the way a person would, not the way a machine could.** It is
+  tempting to write 30 ms between every press, and for hold-taps and rolls that
+  is exactly right. But anything gated by a *timeout* — a sticky key's
+  `release-after-ms`, a macro's `wait-ms` — is only exercised if the case waits
+  as long as a human does. `tests/herdr-prefix` pressed the command key 150 ms
+  after the prefix, passed, and shipped a firmware where the feature did not work
+  at all: in real use you read herdr's prompt first, and by then the sticky had
+  expired. Ask what the user is doing between two events and put that number in.
 
 **It cannot model the split.** One node, no peripheral half, no BLE — so anything
 caused by event ordering between the halves is out of reach, and so is host
@@ -320,6 +328,15 @@ to end in `tests/herdr-prefix`.
 **Releasing the modifier is the only moment this can be done, and that is forced.** The window
 between "Ctrl+Space has been sent" and "the command key is pressed" contains exactly one firmware
 event: the Ctrl release.
+
+**`sken` carries `release-after-ms = <30000>`, and the stock 1000 is far too short.** herdr puts a
+prompt on screen and you read it before choosing, so the gap between the prefix and the command key
+is seconds, not milliseconds. At 1000 the sticky expired first and the command key arrived as
+Cyrillic — the prefix appeared to work, herdr showed it was waiting, and nothing matched. This is
+the failure that reached the device, and `tests/herdr-prefix` missed it because the case pressed the
+command key 150 ms after the prefix. It now waits 1500 ms, which is what a person does. A long window
+costs nothing in normal use: any key press consumes the sticky, so the only exposure is arming the
+prefix and then abandoning it, which costs one Latin character.
 
 Two things were checked before settling on this and are not worth re-deriving:
 

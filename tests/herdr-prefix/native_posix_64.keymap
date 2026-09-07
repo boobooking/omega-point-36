@@ -38,10 +38,15 @@
         ZMK_MOCK_PRESS(1,7,350)
         ZMK_MOCK_PRESS(3,1,30)
         ZMK_MOCK_RELEASE(3,1,30)
-        ZMK_MOCK_RELEASE(1,7,150)
+        ZMK_MOCK_RELEASE(1,7,1500)
 
-        /* The command key. Position 1 is W on en and й on ru, so 0x1A proves
-           the prefix held en and 0x14 proves it did not. */
+        /* The command key, 1500 ms after the prefix — herdr shows a prompt and
+           you read it before choosing, so this gap is the realistic one. An
+           earlier version of this case waited 150 ms and therefore never
+           noticed that sken's release-after-ms expired first.
+
+           Position 1 is W on en and й on ru, so 0x1A proves the prefix held en
+           and 0x14 proves it did not. */
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 
