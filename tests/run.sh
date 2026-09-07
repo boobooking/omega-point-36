@@ -35,6 +35,9 @@ if [ ! -d "$WS/zmk/zephyr" ]; then
         west update --narrow -o=--depth=1 && west zephyr-export'
 fi
 
+# en_letters is a hand-kept copy of en; nothing in the devicetree enforces it.
+python3 "$REPO/tests/check-en-letters.py"
+
 exec docker run --rm \
     -v "$WS":/ws \
     -v "$REPO/config":/cfg:ro \

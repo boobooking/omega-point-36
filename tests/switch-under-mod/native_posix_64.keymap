@@ -32,11 +32,16 @@
         ZMK_MOCK_PRESS(3,0,30)
         ZMK_MOCK_RELEASE(3,0,300)
 
-        /* Hold right Cmd (pos 16). en_mod runs &to 0 and raises en_hold, where
-           position 30 is &none. Pressing the switch key now must emit NO second
-           Caps Lock: it would leave the firmware on ru and the host back on
-           English. Without the &none it would fall through to en and run
-           layer_ru, which is the wrong direction entirely. */
+        /* Hold right Cmd (pos 16). en_mod raises en_letters over ru without
+           touching the base, so position 30 falls through to ru and still means
+           layer_en — the true direction. One Caps Lock, and the firmware ends on
+           en with the host agreeing.
+
+           This is what en_letters bought. While en_mod switched ru off instead,
+           the base itself claimed to be en, position 30 read that and ran
+           layer_ru — "go to ru" from ru — which tapped Caps Lock without moving
+           the firmware and desynchronised the host. That needed a marker layer
+           with &none at position 30 to refuse the press outright. */
         ZMK_MOCK_PRESS(1,6,350)
         ZMK_MOCK_PRESS(3,0,30)
         ZMK_MOCK_RELEASE(3,0,200)

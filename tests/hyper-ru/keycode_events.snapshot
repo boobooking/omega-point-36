@@ -14,11 +14,9 @@ kp_pressed: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 15, binding name: transparent
-layer 0 position: 15, binding name: key_press
+layer 8 position: 15, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x10 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 15, binding name: transparent
-layer 0 position: 15, binding name: key_press
+layer 8 position: 15, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x10 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 2, binding name: hyper_left_ru
 kp_released: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
@@ -42,11 +40,9 @@ kp_pressed: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_pressed: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 14, binding name: transparent
-layer 0 position: 14, binding name: key_press
+layer 8 position: 14, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x0A implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 14, binding name: transparent
-layer 0 position: 14, binding name: key_press
+layer 8 position: 14, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x0A implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 7, binding name: hyper_right_ru
 kp_released: usage_page 0x07 keycode 0xE0 implicit_mods 0x00 explicit_mods 0x00

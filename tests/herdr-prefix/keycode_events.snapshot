@@ -11,11 +11,9 @@ ht_binding_pressed: 17 new undecided hold_tap
 ht_decide: 17 decided hold-timer (balanced decision moment timer)
 mo_pressed: position 17 layer 8
 kp_pressed: usage_page 0x07 keycode 0xE4 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 31, binding name: transparent
-layer 0 position: 31, binding name: layer_tap_thumb
+layer 8 position: 31, binding name: layer_tap_thumb
 ht_binding_pressed: 31 new undecided hold_tap
-layer 8 position: 31, binding name: transparent
-layer 0 position: 31, binding name: layer_tap_thumb
+layer 8 position: 31, binding name: layer_tap_thumb
 ht_decide: 31 decided tap (balanced decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
@@ -25,11 +23,9 @@ kp_released: usage_page 0x07 keycode 0xE4 implicit_mods 0x00 explicit_mods 0x00
 mo_released: position 17 layer 8
 mo_pressed: position 17 layer 8
 ht_binding_released: 17 cleaning up hold-tap
-layer 8 position: 1, binding name: transparent
-layer 0 position: 1, binding name: key_press
+layer 8 position: 1, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 1, binding name: transparent
-layer 0 position: 1, binding name: key_press
+layer 8 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 mo_released: position 17 layer 8
 layer 1 position: 1, binding name: key_press
@@ -41,11 +37,9 @@ ht_binding_pressed: 17 new undecided hold_tap
 ht_decide: 17 decided hold-timer (balanced decision moment timer)
 mo_pressed: position 17 layer 8
 kp_pressed: usage_page 0x07 keycode 0xE4 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 31, binding name: transparent
-layer 0 position: 31, binding name: layer_tap_thumb
+layer 8 position: 31, binding name: layer_tap_thumb
 ht_binding_pressed: 31 new undecided hold_tap
-layer 8 position: 31, binding name: transparent
-layer 0 position: 31, binding name: layer_tap_thumb
+layer 8 position: 31, binding name: layer_tap_thumb
 ht_decide: 31 decided tap (balanced decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
@@ -55,23 +49,19 @@ kp_released: usage_page 0x07 keycode 0xE4 implicit_mods 0x00 explicit_mods 0x00
 mo_released: position 17 layer 8
 mo_pressed: position 17 layer 8
 ht_binding_released: 17 cleaning up hold-tap
-layer 8 position: 18, binding name: transparent
-layer 0 position: 18, binding name: home_row_mod_right
+layer 8 position: 18, binding name: home_row_mod_right
 ht_binding_pressed: 18 new undecided hold_tap
 ht_decide: 18 decided hold-interrupt (balanced decision moment other-key-up)
 kp_pressed: usage_page 0x07 keycode 0xE5 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 11, binding name: transparent
-layer 0 position: 11, binding name: home_row_mod_left
+layer 8 position: 11, binding name: home_row_mod_left
 ht_binding_pressed: 11 new undecided hold_tap
-layer 8 position: 11, binding name: transparent
-layer 0 position: 11, binding name: home_row_mod_left
+layer 8 position: 11, binding name: home_row_mod_left
 ht_decide: 11 decided tap (balanced decision moment key-up)
 kp_pressed: usage_page 0x07 keycode 0x15 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x15 implicit_mods 0x00 explicit_mods 0x00
 mo_released: position 17 layer 8
 ht_binding_released: 11 cleaning up hold-tap
-layer 8 position: 18, binding name: transparent
-layer 0 position: 18, binding name: home_row_mod_right
+layer 8 position: 18, binding name: home_row_mod_right
 kp_released: usage_page 0x07 keycode 0xE5 implicit_mods 0x00 explicit_mods 0x00
 ht_binding_released: 18 cleaning up hold-tap
 layer 1 position: 1, binding name: key_press

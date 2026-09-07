@@ -186,22 +186,18 @@
             hold-trigger-on-release;
         };
 
-        // Holds en across exactly one key press, then puts ru back.
+        // Holds en_letters over ru across exactly one key press. This is the
+        // stock &sl in everything but one property: ignore-modifiers, which &sl
+        // does not carry and &sk does. Without it the Shift of a Shift+letter
+        // command would consume the sticky before the letter arrived.
         //
-        // The stock &sl cannot express this. &sl activates a layer, but en is
-        // layer 0: keymap.c pins the default layer at 0, keeps it always active
-        // and makes it the floor of the lookup, so en can never be raised above
-        // ru. The only way to reach en is to switch ru off. So the wrapped
-        // behaviour is a macro that switches ru off when pressed and back on
-        // when released, and the sticky is what holds it across the next key.
-        //
-        // ignore-modifiers is required and the stock &sl lacks it: without it
-        // the Shift of a Shift+letter command would consume the sticky before
-        // the letter arrived.
+        // It only works because en_letters sits above ru. Raising layer 0
+        // itself is impossible — keymap.c pins the default layer at 0, keeps it
+        // always active and makes it the floor of the lookup.
         sken: sticky_en {
             compatible = "zmk,behavior-sticky-key";
             #binding-cells = <1>;
-            bindings = <&prefix_en>;
+            bindings = <&mo>;
             release-after-ms = <1000>;
             ignore-modifiers;
         };
@@ -294,36 +290,31 @@
             wait-ms = <0>;
         };
 
-        // Hold a modifier with en underneath it. &to does not touch flash — the
-        // settings_save_one calls in keymap.c are all Studio keymap edits — so
-        // paying it on every modifier press is free. &to 1 on the way out is
-        // absolute rather than a toggle, so the layer is right however the hold
-        // ended.
+        // Hold a modifier with the English letters under it, by raising
+        // en_letters over ru rather than switching ru off. The layer unwinds
+        // with the key, so the base never stops being ru and nothing has to be
+        // put back afterwards.
         en_mod: en_mod {
             compatible = "zmk,behavior-macro-one-param";
             #binding-cells = <1>;
             bindings =
-                <&to 0>,
                 <&macro_press>,
                 <&mo 8>,
                 <&macro_param_1to1 &kp MACRO_PLACEHOLDER>,
                 <&macro_pause_for_release>,
                 <&macro_release>,
                 <&macro_param_1to1 &kp MACRO_PLACEHOLDER>,
-                <&mo 8>,
-                <&macro_tap>,
-                <&to 1>;
+                <&mo 8>;
 
             label = "EN_MOD";
             wait-ms = <0>;
         };
 
         // en_mod, except that letting the modifier go arms sken instead of
-        // returning to ru, so the key pressed after the chord still resolves on
-        // en. That is the whole herdr prefix fix: releasing Ctrl is the only
-        // moment between "Ctrl+Space has been sent" and "the command key is
-        // pressed", and &to 1 is absolute, so anything armed earlier in the
-        // chord would simply be overwritten here.
+        // dropping en_letters, so the key pressed after the chord still
+        // resolves on en. That is the whole herdr prefix fix: releasing Ctrl is
+        // the only moment between "Ctrl+Space has been sent" and "the command
+        // key is pressed".
         //
         // It cannot tell which key was pressed during the hold, so it arms after
         // any chord made with this modifier. That costs nothing because the
@@ -332,7 +323,6 @@
             compatible = "zmk,behavior-macro-one-param";
             #binding-cells = <1>;
             bindings =
-                <&to 0>,
                 <&macro_press>,
                 <&mo 8>,
                 <&macro_param_1to1 &kp MACRO_PLACEHOLDER>,
@@ -341,28 +331,9 @@
                 <&macro_param_1to1 &kp MACRO_PLACEHOLDER>,
                 <&mo 8>,
                 <&macro_tap>,
-                <&sken 0>;
+                <&sken 8>;
 
             label = "EN_MOD_PREFIX";
-            wait-ms = <0>;
-        };
-
-        // What sken holds down. &mo 8 raises en_hold for the same reason en_mod
-        // raises it: &to 0 alone would leave layer 0 highest and re-arm cmbru.
-        prefix_en: prefix_en {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings =
-                <&to 0>,
-                <&macro_press>,
-                <&mo 8>,
-                <&macro_pause_for_release>,
-                <&macro_release>,
-                <&mo 8>,
-                <&macro_tap>,
-                <&to 1>;
-
-            label = "PREFIX_EN";
             wait-ms = <0>;
         };
 
@@ -370,12 +341,9 @@
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             bindings =
-                <&to 0>,
                 <&macro_press &mo 8 &kp LCTRL &kp LSHFT &kp LALT &kp LGUI>,
                 <&macro_pause_for_release>,
-                <&macro_release &kp LCTRL &kp LSHFT &kp LALT &kp LGUI &mo 8>,
-                <&macro_tap>,
-                <&to 1>;
+                <&macro_release &kp LCTRL &kp LSHFT &kp LALT &kp LGUI &mo 8>;
 
             label = "HYPER_EN";
             wait-ms = <0>;
@@ -473,15 +441,15 @@
             display-name = "Adjust";
         };
 
-        en_hold {
+        en_letters {
             bindings = <
-  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans
-  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans
-  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans
-                          &none   &trans  &trans    &trans  &trans  &trans
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                     &kp Z             &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                     &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                     &kp K             &kp H        &kp J         &kp Q         &none
+                                           &trans       &ltt 6 SPACE  &ltt 3 ESC    &ltt 3 ENTER  &ltt 5 BACKSPACE  &mo 7
             >;
 
-            display-name = "En hold";
+            display-name = "En letters";
         };
     };
 };

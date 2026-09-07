@@ -81,7 +81,8 @@ and none of them are gitignored — build outside the repo, or just push and let
 
 ## Simulating the keymap
 
-`./tests/run.sh` builds `config/op36_ruen.keymap` for ZMK's `native_posix_64`
+`./tests/run.sh` first runs `tests/check-en-letters.py`, a static check that layer 8 has not drifted
+from `en`, and then builds `config/op36_ruen.keymap` for ZMK's `native_posix_64`
 board — the firmware becomes an ordinary Linux binary whose key matrix is a mock
 scanner replaying timed events — and diffs the resulting log against a snapshot.
 It runs in `zmkfirmware/zmk-build-arm:stable`; the first run clones ZMK and its
@@ -162,6 +163,11 @@ re-rendering silently breaks alignment. The layout algorithm is:
 - Columns start at 2 and advance by `w[c] + 2`, except between the halves: after column 4's slot
   come the two middle thumb tokens (separated by 4 spaces, not 2), and column 5 starts after them.
 
+**Layer 8 (`en_letters`) is a copy of the `en` layer** — rows 0-2 verbatim, plus `en`'s thumb row
+with position 30 replaced by `&trans`. Change one and you must change the other in the same commit;
+`tests/check-en-letters.py` fails the run and names the drifting position if you forget. See
+"Modifiers on `ru` raise the English letters over it" for why the copy exists.
+
 When editing programmatically, **write a renderer and first prove it reproduces the file byte for
 byte with no substitutions applied**, then apply changes. That check caught the thumb-row rule on the
 first attempt; without it the diff would have been full of spurious realignment.
@@ -169,12 +175,12 @@ first attempt; without it the diff would have been full of spurious realignment.
 ## Layers
 
 Nine layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3, `sym_ru`=4,
-`nav`=5, `numbers`=6, `adj`=7, `en_hold`=8. The other (unbuilt) `_ruen` keymaps use a different
+`nav`=5, `numbers`=6, `adj`=7, `en_letters`=8. The other (unbuilt) `_ruen` keymaps use a different
 order, so never copy a `&mo N` across files.
 
-`en_hold` is not a keymap: it is 35 `&trans` and a single `&none`, and it exists only to sit on top
-of `en` while a modifier is held on `ru` — see below for what that buys. It is last so that adding it
-renumbered nothing.
+`en_letters` is a copy of `en` raised over `ru` whenever a modifier or the herdr prefix needs Latin
+scancodes — see below, including why it must be kept in sync by hand and what checks that. It is last
+so that adding it renumbered nothing.
 
 ```
 en ──hold pos 35──> adj
@@ -239,52 +245,62 @@ hold-tap schema includes `two_param.yaml` and demands two cells regardless.
 Position 2 used to share the layout-switch combo, which has since moved to the thumbs; the key is
 purely Hyper now. `tests/hyper` still presses 2+3 to record that they simply type `f` and `p`.
 
-### Modifiers on `ru` drop to `en` for the duration of the hold
+### Modifiers on `ru` raise the English letters over it
 
 `ru` is positional ЙЦУКЕН, so the scancode under a physical key differs from Colemak-DH: position 4
 sends `B` on `en` and `T` on `ru`. Shortcuts are matched on the scancode — through the Latin fallback
 for Cmd, and straight through the virtual keycode for anything a hotkey daemon registers — so
 `Cmd+B` fired from the same finger worked before the Colemak-DH rework and stopped afterwards.
 
-So on `ru`, **holding Cmd, Ctrl, Alt or Hyper runs `&to 0` first and `&to 1` on release**, which puts
-the letters back where `en` has them for as long as the modifier is down. It also raises `en_hold`
-(`&mo 8`) for the same span, which is load-bearing and explained two paragraphs down. `hml_ru`/`hmr_ru` and
+So on `ru`, **holding Cmd, Ctrl, Alt or Hyper raises `en_letters` (`&mo 8`)** for as long as the
+modifier is down, which puts the letters back where `en` has them. `hml_ru`/`hmr_ru` and
 `hyl_ru`/`hyr_ru` are the `hml`/`hmr` and `hyl`/`hyr` pairs with the hold binding swapped for the
 `en_mod` / `hyper_en` macros; flavour, guards and trigger lists are untouched. Verified end to end in
 `tests/ru-mod-switch`.
 
+**`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with position
+30 replaced by `&trans`. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
+straight back through to `ru`, which is the thing being overridden. Position 30 is the exception
+precisely because falling through is what is wanted there — see below.
+
+**Editing `en` means editing `en_letters` in the same commit.** Nothing in the devicetree enforces
+the copy, so `tests/check-en-letters.py` does; `tests/run.sh` runs it before building any case and
+names the position that drifted. Trust that check rather than remembering.
+
 **Shift is deliberately excluded**, on positions 11 and 18, and must stay that way. It is what types
 capital Cyrillic: switching would make Shift plus position 1 emit `W` instead of `Й` and break
 Russian input outright. Nothing is lost, because `Cmd+Shift+…` still resolves on `en` — Cmd does the
-switching and Shift only contributes a modifier bit.
+raising and Shift only contributes a modifier bit.
 
-Two things this rests on, both checked in `app/src/keymap.c`:
+**This used to switch the base layer instead, and that is why an empty marker layer existed.** The
+old `en_mod` ran `&to 0` on press and `&to 1` on release, which made `en` the base for the duration —
+so the keymap's own state claimed the language was English while the user was still on `ru`. Position
+30 is direction-specific (`&layer_en` on `ru`, `&layer_ru` on `en`), so it read that lying state and
+ran "go to ru" *from* ru: a Caps Lock with no firmware movement, and a desynchronised host. The fix
+then was a layer of 35 `&trans` and one `&none` at position 30, raised alongside `&to 0`, whose only
+job was to refuse the press. Earlier still, when the switch was a combo, the same marker layer served
+a different purpose — `combo.c:164` tests `combo_active_on_layer(combo, zmk_keymap_highest_layer_active())`,
+one layer and not the whole stack, so `&to 0` flipped which combo was armed and parking the stack on
+layer 8 disarmed both.
+
+Raising a layer instead of switching the base removes the cause rather than the symptom. The base
+never stops being `ru`, so position 30 always reads the true language: pressed mid-chord it now
+**does** the switch, correctly, and the firmware lands on `en` with the host agreeing — where the
+marker layer could only refuse. `tests/switch-under-mod` pins that, and the whole change moved no
+HID output at all, only which layer resolved each key.
+
+Two things worth not re-deriving, both in `app/src/keymap.c`:
 
 - `set_layer_state` refuses to deactivate the default layer ("Default layer should *always* remain
   active"), so `&to 1` leaves both 0 and 1 active with 1 on top — which is why `&trans` on `ru` falls
-  through to `en` at all — and `&to 0` from `ru` cleanly drops back to just `en`.
+  through to `en` at all.
 - **`&to` does not touch flash.** Every `settings_save_one` in that file belongs to a Studio keymap
-  edit, not to layer activation, so paying `&to` on each modifier press costs nothing.
+  edit, not to layer activation. It no longer runs on every modifier press, but the explicit layout
+  switch and the `nav` resync keys still use it.
 
-**`en_hold` exists because `&to 0` would otherwise expose the wrong layout switch**, and it is why
-position 30 is `&none` there rather than `&trans`. The switch is direction-specific: position 30 is
-`&layer_en` on `ru` and `&layer_ru` on `en`. While a modifier is held on `ru`, `&to 0` has made `en`
-the base, so a `&trans` at position 30 would fall through to `en`'s binding and run `layer_ru` — "go
-to ru" — while the user is already on `ru`. That taps Caps Lock without moving the firmware, leaving
-the host English and the layer `ru`: exactly the desync this file warns about under the RU/EN
-section. `&none` on `en_hold` refuses the press instead, which is the right answer because a modifier
-is mid-chord and no layout change can be what the user meant. `tests/ru-mod-noswitch` is the
-regression: one Caps Lock, not two.
-
-This replaced an earlier version of the same hazard. When the switch was a combo, the danger was
-combo scoping — `combo.c:164` tests `combo_active_on_layer(combo, zmk_keymap_highest_layer_active())`,
-a single layer and not the whole stack, so `&to 0` flipped which of `cmben`/`cmbru` was armed, and
-raising `en_hold` to layer 8 parked the stack where neither was scoped. A direct binding does not get
-that protection for free, which is the whole reason for the `&none`.
-
-`&to 1` on the way out is absolute rather than a toggle, so the layer ends up right however the hold
-ended. The one failure mode left: if the release never runs — the peripheral half dropping mid-chord,
-say — the firmware stays on `en` under a Russian host. `nav` positions 6 and 7 are the resync.
+`&mo` unwinds with its own key, so a modifier hold can no longer strand the firmware on `en` the way
+`&to 0` without its `&to 1` could. A lost release still leaves the layer up, but the symptom is the
+same either way and `nav` positions 6 and 7 remain the resync.
 
 The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on `$`.
 
@@ -292,29 +308,29 @@ The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on
 
 herdr takes a prefix — Ctrl+Space — and then a command key: Ctrl+Space then `W` opens Spaces,
 Ctrl+Space then `Shift+R` renames one. On `ru` the prefix itself arrives fine, because Space is
-Space on any layout, but the **command key** used to arrive as Cyrillic: `en_mod` puts `ru` back the
-instant Ctrl is released, which is before the command key is pressed. Position 1 sent `Q` (`й`)
-instead of `W`, and herdr matched nothing.
+Space on any layout, but the **command key** used to arrive as Cyrillic: the modifier hold dropped
+`en_letters` the instant Ctrl was released, which is before the command key is pressed. Position 1
+sent `Q` (`й`) instead of `W`, and herdr matched nothing.
 
 So position 17, the right Ctrl, uses **`hmr_pfx`** — `hmr_ru` with the hold binding swapped for
-`en_mod_prefix`, which is `en_mod` except that its release **arms `sken`** instead of running
-`&to 1`. `sken` is a sticky key wrapping the `prefix_en` macro, and it holds `en` across exactly one
-key press before `ru` comes back on its own. Verified end to end in `tests/herdr-prefix`.
+`en_mod_prefix`, which is `en_mod` except that its release **arms `sken`** instead of dropping the
+layer. `sken` holds `en_letters` across exactly one key press, then it falls on its own. Verified end
+to end in `tests/herdr-prefix`.
 
 **Releasing the modifier is the only moment this can be done, and that is forced.** The window
 between "Ctrl+Space has been sent" and "the command key is pressed" contains exactly one firmware
-event: the Ctrl release. Anything armed earlier — morphing Space while Ctrl is held, say — is simply
-overwritten, because `&to` sets the layer outright and `&to 1` runs later.
+event: the Ctrl release.
 
-Three things were checked before settling on this and are not worth re-deriving:
+Two things were checked before settling on this and are not worth re-deriving:
 
-- **The stock `&sl` cannot express it.** `&sl` *activates* a layer, but `en` is layer 0, and
-  `keymap.c` pins the default layer at 0 (`_zmk_keymap_layer_default`, line 27), keeps it always
-  active (line 177), refuses to deactivate it (line 145) and makes it the floor of the lookup
-  (lines 186, 715). `en` can therefore never be raised above `ru`; the only way to reach it is to
-  switch `ru` off. Hence a sticky wrapping a macro rather than a sticky layer — `behavior_sticky_key.c`
-  invokes an arbitrary bound behavior as press/release (lines 104-135), so a macro with
-  `&macro_pause_for_release` fits where `&kp` or `&mo` would normally go.
+- **`sken` is the stock `&sl` in all but one property.** That only became true once modifiers stopped
+  switching the base layer. While `en` was reached by turning `ru` *off*, no sticky layer could
+  express it — `keymap.c` pins the default layer at 0 (`_zmk_keymap_layer_default`, line 27), keeps it
+  always active (line 177), refuses to deactivate it (line 145) and makes it the floor of the lookup
+  (lines 186, 715), so layer 0 can never be raised above `ru`. The sticky then had to wrap a macro
+  that switched `ru` off and back on, which `behavior_sticky_key.c` allows because it invokes an
+  arbitrary bound behavior as press/release (lines 104-135). With `en_letters` sitting above `ru`
+  there is a real layer to raise, and the wrapped behavior is plain `&mo`.
 - **`ignore-modifiers` is required**, and the stock `&sl` does not have it (only `&sk` does). Without
   it the Shift of `Shift+R` consumes the sticky before `R` arrives.
 - **`lazy` does not fix the ordering.** It defers the wrapped behavior to the next key, which sounds
@@ -607,9 +623,10 @@ nothing on iPadOS. Everything below follows from that.
 - `layer_en` / `layer_ru` are `&to 0 &os_lang` / `&to 1 &os_lang`, correct **only when invoked from
   the layer they are leaving**. They are bound directly at position 30 — `&layer_en` on `ru`,
   `&layer_ru` on `en` — so the ordinary top-down layer lookup picks the right direction. Never bind
-  these to anything unconditional, and never let position 30 fall through from a layer whose base no
-  longer reflects the user's language: pressing "go to EN" while already on EN flips the host and
-  desynchronizes it. That is what the `&none` at position 30 on `en_hold` prevents.
+  these to anything unconditional, and never let a layer make the base stop reflecting the user's
+  language while position 30 can still be pressed: reading a base that lies is what made "go to RU"
+  fire from RU and desynchronize the host. `en_letters` sits *over* `ru` rather than replacing it
+  precisely so the base never lies.
 - **`nav` positions 6 and 7 are `&to 0` / `&to 1`** — firmware-only resync, deliberately sending no
   keystroke. If host and firmware disagree, press the one matching the host's actual layout.
 - The `en` one-param macro types a single key in EN and returns, for glyphs absent from Cyrillic. It
@@ -668,7 +685,7 @@ permanent desync, and any host-side change is undetectable.
 |---|---|---|
 | 1 | Firmware switched, host never saw the Caps Lock — dropped HID report, or a tap under the host's hold threshold | reduced: `tap-ms` 30 → 100 |
 | 2 | Host switched by itself — menu bar, another shortcut, a secure-input field | **irreducible** |
-| 3 | Switch key pressed while a modifier is held on `ru`, running the wrong direction | fixed: `&none` at position 30 on `en_hold` |
+| 3 | Switch key pressed while a modifier is held on `ru`, running the wrong direction | fixed: modifiers raise `en_letters` instead of switching the base, so the direction is never wrong |
 | 4 | Unintended switch — a fast space-then-backspace firing the old combo | fixed: the switch is a dedicated key |
 | 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: position 30 is on the central half |
 | 6 | A modifier hold's release never runs, so `&to 1` never restores `ru` | reduced only; recovery is one keystroke |

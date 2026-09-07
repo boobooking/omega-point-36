@@ -11,13 +11,17 @@ ht_binding_pressed: 16 new undecided hold_tap
 ht_decide: 16 decided hold-timer (balanced decision moment timer)
 mo_pressed: position 16 layer 8
 kp_pressed: usage_page 0x07 keycode 0xE7 implicit_mods 0x00 explicit_mods 0x00
-layer 8 position: 30, binding name: none
-layer 8 position: 30, binding name: none
+layer 8 position: 30, binding name: transparent
+layer 1 position: 30, binding name: LAYER_EN
+layer 8 position: 30, binding name: transparent
+layer 1 position: 30, binding name: LAYER_EN
+kp_pressed: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x39 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 16, binding name: home_row_mod_right_ru
 kp_released: usage_page 0x07 keycode 0xE7 implicit_mods 0x00 explicit_mods 0x00
 mo_released: position 16 layer 8
 ht_binding_released: 16 cleaning up hold-tap
-layer 1 position: 1, binding name: key_press
-kp_pressed: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
-layer 1 position: 1, binding name: key_press
-kp_released: usage_page 0x07 keycode 0x14 implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 1, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 1, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
