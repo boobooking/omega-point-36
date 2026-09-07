@@ -481,6 +481,55 @@ permanent.
 **The host must have "switch languages using Caps Lock" enabled** — confirmed working on both macOS
 and iPadOS, which are the target platforms.
 
+**The host's Russian layout is the Mac-traditional "Русская", and the keymap is targeted at it.**
+`keys_ru.h` is generated for the Windows ЙЦУКЕН, which macOS calls "Русская — ПК"
+(`com.apple.keylayout.RussianWin`); the host actually runs plain "Русская"
+(`com.apple.keylayout.Russian`). The two place every *letter* identically and disagree only on
+punctuation, which is why `ru` typed correctly for a long time while `sym_ru` was wrong throughout —
+the reported symptom was `,` coming out as `?` and `.` as `/`. `op36_ruen.keymap` therefore
+redefines the affected `RU_*` macros immediately after the includes, and the *base* macro is the one
+redefined so the aliases follow it (`RU_DOT` is `(RU_PERIOD)`, `RU_FSLH` is `(RU_SLASH)`, and so on).
+
+| binding | glyph | PC ЙЦУКЕН (keys_ru.h) | "Русская" (in use) |
+|---|---|---|---|
+| `RU_PERCENT` | `%` | `LS(N5)` | `LS(N4)` |
+| `RU_COLON` | `:` | `LS(N6)` | `LS(N5)` |
+| `RU_COMMA` | `,` | `LS(SLASH)` | `LS(N6)` |
+| `RU_PERIOD` | `.` | `SLASH` | `LS(N7)` |
+| `RU_SEMICOLON` | `;` | `LS(N4)` | `LS(N8)` |
+| `RU_SLASH` | `/` | `LS(BSLH)` | `FSLH` |
+| `RU_QUESTION` | `?` | `LS(N7)` | `LS(FSLH)` |
+| `RU_CYRILLIC_IO` | `ё` | `GRAVE` | `BSLH` |
+
+`RU_LPAR`, `RU_RPAR`, `RU_UNDER`, `RU_DQT`, `RU_MINUS`, `RU_EQUAL` and `RU_PLUS` land the same on
+both, and so does the whole digit row, so `numbers` is untouched. **`ё` is the only letter that
+moves** — every other Cyrillic key, including the ones on punctuation positions (`х ъ э ж б ю`), is
+identical between the variants. That is exactly why the bug read as "`sym_ru` broke" and hid for so
+long.
+
+**"Русская" has no key at all for `*` or `\`.** A sweep of every keycode 0-127 in both the plain and
+shifted states finds `*` only on the numeric keypad and `\` nowhere, so both moved to the `&en`
+wrapper on `sym_ru` (positions 10 and 28). `RU_ASTERISK` and `RU_BACKSLASH` are left `#undef`'d
+rather than redefined, so a future `&kp RU_STAR` fails the devicetree build instead of quietly
+emitting the wrong glyph.
+
+If the host is ever switched to "Русская — ПК", the whole override block comes out and the two `&en`
+keys go back to `&kp`.
+
+Verified by translating each binding through the layout's own data with `UCKeyTranslate` over
+`TISCreateInputSourceList`, for both `com.apple.keylayout.Russian` and `…RussianWin`, rather than
+off a published chart. `defaults read com.apple.HIToolbox AppleEnabledInputSources` says which
+sources are actually enabled — it also confirms the Caps Lock cycle has exactly two keyboard
+layouts, which is what the `en` macro's balance depends on.
+
+**The `&en` wrapper is asynchronous, and at typing speed it reorders.** With `wait-ms = <50>`, a key
+pressed within about 50 ms of an `&en` key gets its own scancode emitted *before* the macro's, and
+worse, it is typed while the host is still flipped to ABC. `tests/ru-symbols` shows this directly:
+rolled at 30 ms, `*` landed after the following `/`, and the `:` after that came out as `%`. The
+case now spaces the two `&en` keys 200 ms apart, which is how a symbol is actually reached; the
+hazard is real but needs a roll no one performs on a symbol layer. Raising `wait-ms` widens the
+window rather than closing it.
+
 The critical constraint: Caps Lock is a **toggle**, not a selector. There is no "set the host to EN"
 on these platforms — Windows' `Ctrl+Shift+1`/`Ctrl+Shift+2`, which this keymap used to send, does
 nothing on iPadOS. Everything below follows from that.
@@ -497,7 +546,8 @@ nothing on iPadOS. Everything below follows from that.
   survives toggle semantics because it is balanced — flip, type, flip back — which holds as long as
   the host's language cycle has exactly two stops (verified: the emoji keyboard stays out of it).
 - `wait-ms = <50>` on the `en` macro is a guess at how long the host needs, not a measured value.
-  Fourteen keys on `sym_ru` now route through it, so a wrong glyph there means raising it.
+  Eleven keys on `sym_ru` route through it — ten `&en` plus the `$` tap of `&hml_en` — so a wrong
+  glyph there means raising it. Raising it also widens the reordering window described above.
 
 **Cmd shortcuts do not need the `en` wrapper.** Verified on device: `Cmd+Shift+[` works with the
 Russian layout active, because macOS and iPadOS fall back to the Latin equivalent when matching
@@ -509,14 +559,18 @@ instead.
 `RU_N0`..`RU_N9` as the very same HID usages as `N0`..`N9`, because ЙЦУКЕН leaves the number row
 alone. So `numbers` needs no `&en` wrapper anywhere, and neither do its digit-based shortcuts —
 `&kp LA(LC(LG(LS(N2))))` (Term) and `&kp LA(LC(LG(LS(N1))))` (qTerm) send the same thing on either
-layout. Of the four shortcuts on that layer only Prev Win, `&kp LC(LG(LS(FSLH)))`, leans on the
-Latin fallback: `RU_FSLH` is `LS(BACKSLASH)`, so the bare FSLH scancode yields `.` in Cyrillic and
-only the Cmd in the chord rescues it. Prev App is `&kp LG(TAB)` and carries no character at all.
+layout. Prev Win, `&kp LC(LG(LS(FSLH)))`, does not lean on the Latin fallback either: "Русская"
+keeps `/` on the slash key exactly where ABC has it, which is also why `RU_SLASH` is redefined to a
+bare `FSLH` above. (Under the PC ЙЦУКЕН it would have: there `RU_FSLH` is `LS(BACKSLASH)` and the
+bare FSLH scancode yields `.`, leaving only the Cmd in the chord to rescue it.) Prev App is
+`&kp LG(TAB)` and carries no character at all.
 
-**Glyphs with no Cyrillic equivalent**, i.e. the ones that must go through `&en` on `sym_ru`:
-`[ ] ' | { } $ ~ ` ` — `keys_ru.h` has no `RU_LBKT`, `RU_RBKT`, `RU_SQT`, `RU_PIPE`, `RU_LBRC`,
-`RU_RBRC`, `RU_DLLR`, `RU_TILDE` or `RU_GRAVE`. Everything else has an `RU_*` form; check the header
-before assuming.
+**Glyphs that must go through `&en` on `sym_ru`**, for two distinct reasons. Nine have no Cyrillic
+equivalent at all: `[ ] ' | { } $ ~ ` ` — `keys_ru.h` has no `RU_LBKT`, `RU_RBKT`, `RU_SQT`,
+`RU_PIPE`, `RU_LBRC`, `RU_RBRC`, `RU_DLLR`, `RU_TILDE` or `RU_GRAVE`. The other two, `*` and `\`, do
+have `RU_*` forms in the header but no key in the "Русская" layout the host runs, so they were
+`#undef`'d and moved to the wrapper as well. Everything else has an `RU_*` form that lands somewhere;
+check the header *and* the layout before assuming.
 
 `keys_ru.h` itself is a generated Unicode-licensed header — vendored, don't hand-edit. Every keymap
 in the repo includes it, even ones with no Cyrillic bindings.

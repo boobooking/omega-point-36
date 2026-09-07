@@ -4,6 +4,40 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/outputs.h>
 
+// keys_ru.h is generated for the Windows ЙЦУКЕН, which macOS calls
+// "Русская — ПК". The host runs the Mac-traditional "Русская" instead. The two
+// place every letter identically and disagree only on punctuation, which is why
+// the ru layer types correctly while sym_ru did not. These are the keys where
+// they differ; ё is the only letter among them. Each value was read out of the
+// layout's own data with UCKeyTranslate, not off a chart.
+//
+// Base macros are redefined so their aliases follow: RU_DOT is (RU_PERIOD),
+// RU_FSLH is (RU_SLASH), RU_SEMI is (RU_SEMICOLON), RU_QMARK is (RU_QUESTION),
+// RU_PRCNT is (RU_PERCENT).
+#undef RU_PERCENT
+#define RU_PERCENT (LS(N4))
+#undef RU_COLON
+#define RU_COLON (LS(N5))
+#undef RU_COMMA
+#define RU_COMMA (LS(N6))
+#undef RU_PERIOD
+#define RU_PERIOD (LS(N7))
+#undef RU_SEMICOLON
+#define RU_SEMICOLON (LS(N8))
+#undef RU_SLASH
+#define RU_SLASH (FSLH)
+#undef RU_QUESTION
+#define RU_QUESTION (LS(FSLH))
+#undef RU_CYRILLIC_IO
+#define RU_CYRILLIC_IO (BSLH)
+
+// "Русская" has no key for * or \ at all — a full sweep of every plain and
+// shifted keycode finds * only on the numeric keypad and \ nowhere. Both go
+// through the &en wrapper on sym_ru instead. Undefining them keeps a future
+// &kp RU_STAR from compiling to a silently wrong glyph.
+#undef RU_ASTERISK
+#undef RU_BACKSLASH
+
 // &lt keeps ZMK's own "tap-preferred": the layer waits for the tapping term and
 // a roll always taps, which is what a layer hanging off a letter key needs. The
 // only change is quick-tap-ms, so tap-then-hold repeats the letter instead of
@@ -330,10 +364,10 @@
 
         sym_ru {
             bindings = <
-  &none        &kp RU_LPAR          &en LBRC   &kp RU_RPAR        &en PIPE                       &kp RU_QMARK  &en LBKT      &kp RU_PLUS   &en RBKT     &none
-  &kp RU_STAR  &hml LSHFT RU_UNDER  &en RBRC   &hml_en LGUI DLLR  &none                          &kp RU_FSLH   &en SQT       &kp RU_MINUS  &kp RU_DQT   &kp RU_EQUAL
-  &none        &en TILDE            &en GRAVE  &kp RU_COLON       &kp RU_SEMI                    &kp RU_PRCNT  &kp RU_COMMA  &kp RU_DOT    &kp RU_BSLH  &none
-                                               &trans             &trans       &trans    &trans  &trans        &trans
+  &none     &kp RU_LPAR          &en LBRC   &kp RU_RPAR        &en PIPE                       &kp RU_QMARK  &en LBKT      &kp RU_PLUS   &en RBKT    &none
+  &en STAR  &hml LSHFT RU_UNDER  &en RBRC   &hml_en LGUI DLLR  &none                          &kp RU_FSLH   &en SQT       &kp RU_MINUS  &kp RU_DQT  &kp RU_EQUAL
+  &none     &en TILDE            &en GRAVE  &kp RU_COLON       &kp RU_SEMI                    &kp RU_PRCNT  &kp RU_COMMA  &kp RU_DOT    &en BSLH    &none
+                                            &trans             &trans       &trans    &trans  &trans        &trans
             >;
 
             display-name = "Symbols";

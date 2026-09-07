@@ -35,15 +35,38 @@
         ZMK_MOCK_RELEASE(3,4,300)
 
         /* Hold Esc (pos 32) to raise sym_ru, which must be layer 4 and not
-           layer 3. Then ? (pos 5), , (pos 26) and . (pos 27). Pos 26 is the
-           ru_ext entrance on ru, so sym_ru has to win over it. */
+           layer 3. Then every symbol the macOS "Русская" layout moves off the
+           PC ЙЦУКЕН position: ? (5), * (10), / (15), : (23), ; (24), % (25),
+           , (26), . (27) and \\ (28). Positions 23 and 26 are the ru_ext
+           entrances on ru, and 10 is a home row mod, so sym_ru has to win over
+           all three. * and \\ have no key in this layout and go through &en,
+           so they bracket themselves in Caps Lock. */
         ZMK_MOCK_PRESS(3,2,350)
         ZMK_MOCK_PRESS(0,5,30)
         ZMK_MOCK_RELEASE(0,5,30)
+        ZMK_MOCK_PRESS(1,5,30)
+        ZMK_MOCK_RELEASE(1,5,30)
+        ZMK_MOCK_PRESS(2,3,30)
+        ZMK_MOCK_RELEASE(2,3,30)
+        ZMK_MOCK_PRESS(2,4,30)
+        ZMK_MOCK_RELEASE(2,4,30)
+        ZMK_MOCK_PRESS(2,5,30)
+        ZMK_MOCK_RELEASE(2,5,30)
         ZMK_MOCK_PRESS(2,6,30)
         ZMK_MOCK_RELEASE(2,6,30)
         ZMK_MOCK_PRESS(2,7,30)
         ZMK_MOCK_RELEASE(2,7,30)
+
+        /* * (pos 10) and \\ (pos 28) go through &en, which flips the host with
+           Caps Lock, types on ABC and flips back. The macro is asynchronous and
+           carries wait-ms = 50, so these two are spaced like a human reaching
+           for a symbol rather than rolled at 30 ms — at 30 ms the macro's own
+           key lands after the following one, and that next key gets typed while
+           the host is still on ABC. */
+        ZMK_MOCK_PRESS(1,0,200)
+        ZMK_MOCK_RELEASE(1,0,200)
+        ZMK_MOCK_PRESS(2,8,200)
+        ZMK_MOCK_RELEASE(2,8,200)
         ZMK_MOCK_RELEASE(3,2,300)
 
         /* The other entrance, Enter (pos 33), must reach the same layer. */

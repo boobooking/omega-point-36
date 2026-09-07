@@ -36,9 +36,9 @@ kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 2 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 2 position: 4, binding name: key_press
-kp_pressed: usage_page 0x07 keycode 0x35 implicit_mods 0x00 explicit_mods 0x00
+kp_pressed: usage_page 0x07 keycode 0x31 implicit_mods 0x00 explicit_mods 0x00
 layer 2 position: 4, binding name: key_press
-kp_released: usage_page 0x07 keycode 0x35 implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x31 implicit_mods 0x00 explicit_mods 0x00
 layer 2 position: 10, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x04 implicit_mods 0x00 explicit_mods 0x00
 layer 2 position: 10, binding name: key_press
