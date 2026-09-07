@@ -613,8 +613,10 @@ Deliberate, pending later work — do not "fix" them unprompted:
 - **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
   four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
-- `adj` is stripped to `&bootloader`, the four `&bt BT_SEL`, `&bt BT_CLR`, both `&out` and
-  `&studio_unlock`; everything else on it is `&none` by intent.
+- `adj` is stripped to `&bootloader`, **three** `&bt BT_SEL` (0-2), `&bt BT_CLR`, both `&out` and
+  `&studio_unlock`; everything else on it is `&none` by intent. Profile 3 has no key — ZMK still
+  keeps its bond, there is just no way to select it from the keymap. `&bt BT_CLR` sits on the bottom
+  row, away from the home row it used to share with the outputs, because it is the destructive one.
 
 ## Dormant config (not built)
 

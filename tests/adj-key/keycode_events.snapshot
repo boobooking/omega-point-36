@@ -4,18 +4,18 @@ layer 0 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 30, binding name: momentary_layer
 mo_pressed: position 30 layer 7
-layer 7 position: 5, binding name: bluetooth
-layer 0 position: 5, binding name: key_press
-kp_pressed: usage_page 0x07 keycode 0x1D implicit_mods 0x00 explicit_mods 0x00
-layer 7 position: 5, binding name: bluetooth
-layer 0 position: 5, binding name: key_press
-kp_released: usage_page 0x07 keycode 0x1D implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 6, binding name: bluetooth
+layer 0 position: 6, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 6, binding name: bluetooth
+layer 0 position: 6, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 30, binding name: momentary_layer
 mo_released: position 30 layer 7
-layer 0 position: 5, binding name: key_press
-kp_pressed: usage_page 0x07 keycode 0x1D implicit_mods 0x00 explicit_mods 0x00
-layer 0 position: 5, binding name: key_press
-kp_released: usage_page 0x07 keycode 0x1D implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 6, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
+layer 0 position: 6, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 31, binding name: layer_tap_thumb
 ht_binding_pressed: 31 new undecided hold_tap
 ht_decide: 31 decided hold-timer (balanced decision moment timer)
@@ -25,8 +25,10 @@ layer 0 position: 34, binding name: layer_tap_thumb
 ht_binding_pressed: 34 new undecided hold_tap
 ht_decide: 34 decided hold-timer (balanced decision moment timer)
 mo_pressed: position 34 layer 5
-layer 6 position: 5, binding name: none
-layer 6 position: 5, binding name: none
+layer 6 position: 6, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0x24 implicit_mods 0x00 explicit_mods 0x00
+layer 6 position: 6, binding name: key_press
+kp_released: usage_page 0x07 keycode 0x24 implicit_mods 0x00 explicit_mods 0x00
 layer 6 position: 34, binding name: transparent
 layer 0 position: 34, binding name: layer_tap_thumb
 mo_released: position 34 layer 5
