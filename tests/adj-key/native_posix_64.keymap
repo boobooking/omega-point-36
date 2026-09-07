@@ -28,19 +28,19 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Position 30 is a plain &mo 7. Held, pos 6 must resolve on layer 7
+        /* Position 35 is a plain &mo 7. Held, pos 6 must resolve on layer 7
            as the bluetooth behavior; released, ordinary letters come back. */
-        ZMK_MOCK_PRESS(3,0,30)
+        ZMK_MOCK_PRESS(3,5,30)
         ZMK_MOCK_PRESS(0,6,30)
         ZMK_MOCK_RELEASE(0,6,30)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_RELEASE(3,5,300)
 
         /* Pos 6 is L on en once the key is up. */
         ZMK_MOCK_PRESS(0,6,30)
         ZMK_MOCK_RELEASE(0,6,300)
 
-        /* The old route is gone: holding Space then Backspace must now give
-           numbers with nav over it, never adj. */
+        /* Holding Space then Backspace gives numbers with nav over it, never
+           adj. They are no longer a combo either, so nothing switches. */
         ZMK_MOCK_PRESS(3,1,300)
         ZMK_MOCK_PRESS(3,4,300)
         ZMK_MOCK_PRESS(0,6,30)

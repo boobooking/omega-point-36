@@ -26,12 +26,10 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* cmbru (a tap on thumbs 31+34) leaves en for ru, and taps Caps Lock so the
+        /* position 30 leaves en for ru, and taps Caps Lock so the
            host follows. Everything below therefore resolves on ru. */
-        ZMK_MOCK_PRESS(3,1,5)
-        ZMK_MOCK_PRESS(3,4,20)
-        ZMK_MOCK_RELEASE(3,1,10)
-        ZMK_MOCK_RELEASE(3,4,300)
+        ZMK_MOCK_PRESS(3,0,30)
+        ZMK_MOCK_RELEASE(3,0,300)
 
         /* "мо" rolled: о goes down and up while м (pos 23) is still held, and
            м is released inside the tapping term. Under the file's balanced

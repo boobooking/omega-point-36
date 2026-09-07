@@ -28,11 +28,9 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* cmbru (tap thumbs 31+34) leaves en for ru */
-        ZMK_MOCK_PRESS(3,1,5)
-        ZMK_MOCK_PRESS(3,4,20)
-        ZMK_MOCK_RELEASE(3,1,10)
-        ZMK_MOCK_RELEASE(3,4,300)
+        /* position 30 leaves en for ru */
+        ZMK_MOCK_PRESS(3,0,30)
+        ZMK_MOCK_RELEASE(3,0,300)
 
         /* Hold Esc (pos 32) to raise sym_ru, which must be layer 4 and not
            layer 3. Then every symbol the macOS "Русская" layout moves off the

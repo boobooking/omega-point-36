@@ -28,21 +28,18 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* cmbru (tap thumbs 31+34) leaves en for ru: one Caps Lock. */
-        ZMK_MOCK_PRESS(3,1,5)
-        ZMK_MOCK_PRESS(3,4,20)
-        ZMK_MOCK_RELEASE(3,1,10)
-        ZMK_MOCK_RELEASE(3,4,300)
+        /* position 30 leaves en for ru: one Caps Lock. */
+        ZMK_MOCK_PRESS(3,0,30)
+        ZMK_MOCK_RELEASE(3,0,300)
 
-        /* Hold right Cmd (pos 16). en_mod runs &to 0, so the highest active
-           layer becomes 0 for the duration — which is what cmbru is scoped to.
-           Firing positions 2+3 now must NOT emit a second Caps Lock: that
-           would leave the firmware on ru and the host back on English. */
+        /* Hold right Cmd (pos 16). en_mod runs &to 0 and raises en_hold, where
+           position 30 is &none. Pressing the switch key now must emit NO second
+           Caps Lock: it would leave the firmware on ru and the host back on
+           English. Without the &none it would fall through to en and run
+           layer_ru, which is the wrong direction entirely. */
         ZMK_MOCK_PRESS(1,6,350)
-        ZMK_MOCK_PRESS(3,1,5)
-        ZMK_MOCK_PRESS(3,4,20)
-        ZMK_MOCK_RELEASE(3,1,10)
-        ZMK_MOCK_RELEASE(3,4,200)
+        ZMK_MOCK_PRESS(3,0,30)
+        ZMK_MOCK_RELEASE(3,0,200)
         ZMK_MOCK_RELEASE(1,6,300)
 
         /* Which layer did we end on? pos 1 is й (0x14) on ru, W (0x1A) on en. */

@@ -2,16 +2,16 @@ layer 0 position: 1, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
-layer 0 position: 30, binding name: momentary_layer
-mo_pressed: position 30 layer 7
+layer 0 position: 35, binding name: momentary_layer
+mo_pressed: position 35 layer 7
 layer 7 position: 6, binding name: bluetooth
 layer 0 position: 6, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
 layer 7 position: 6, binding name: bluetooth
 layer 0 position: 6, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
-layer 0 position: 30, binding name: momentary_layer
-mo_released: position 30 layer 7
+layer 0 position: 35, binding name: momentary_layer
+mo_released: position 35 layer 7
 layer 0 position: 6, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 6, binding name: key_press
