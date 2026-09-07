@@ -318,9 +318,9 @@
 
         ru_ext {
             bindings = <
-  &none               &kp RU_CYRILLIC_TSE  &none  &none   &kp RU_CYRILLIC_IO                    &none   &none                      &kp RU_CYRILLIC_SHCHA  &kp RU_CYRILLIC_E  &none
-  &kp RU_CYRILLIC_EF  &none                &none  &none   &none                                 &none   &none                      &kp RU_CYRILLIC_HA     &none              &none
-  &none               &none                &none  &none   &none                                 &none   &kp RU_CYRILLIC_HARD_SIGN  &none                  &none              &none
+  &none               &kp RU_CYRILLIC_TSE  &none  &none   &kp RU_CYRILLIC_IO                    &none   &none                      &kp RU_CYRILLIC_SHCHA  &kp RU_CYRILLIC_E   &none
+  &kp RU_CYRILLIC_EF  &none                &none  &none   &none                                 &none   &none                      &none                  &kp RU_CYRILLIC_HA  &none
+  &none               &none                &none  &none   &none                                 &none   &kp RU_CYRILLIC_HARD_SIGN  &none                  &none               &none
                                                   &trans  &trans              &trans    &trans  &trans  &trans
             >;
 
