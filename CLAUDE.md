@@ -580,7 +580,14 @@ All checked against upstream ZMK v0.3.0 or the build's own output:
   a pause is needed at one point only.
 - **`&out OUT_BLE` / `OUT_USB` is a preference, not a switch.** `get_selected_transport()` in
   `app/src/endpoints.c` uses it only when both transports are ready and otherwise takes whichever
-  one is. You cannot strand yourself without output. The choice persists to flash.
+  one is — readiness being `zmk_usb_is_hid_ready()` and `zmk_ble_active_profile_is_connected()`. You
+  cannot strand yourself without output.
+- **USB output is real on this board, and the preference is sticky.** `CONFIG_ZMK_USB=y` in the
+  op36_left build and `zephyr_udc0: &usbd { status = "okay" }` on the `ergohaven` board, so the left
+  half does HID over the cable while still holding the split over BLE. `preferred_transport`
+  initialises to `ZMK_TRANSPORT_USB` but is written to `endpoints/preferred` in settings and restored
+  at boot, so **one past press of `&out OUT_BLE` keeps the board on radio forever, cable or not** —
+  which reads as "this keyboard is BLE-only". `&out OUT_USB` is the undo.
 - **`&bt BT_CLR` clears only the active profile's bond** (`zmk_ble_clear_bonds`), then re-advertises.
   It does **not** touch the split pairing — host profiles live in `profiles[]`, the peripheral
   address in `peripheral_addrs[]`. `BT_CLR_ALL` (not bound here) clears everything.
