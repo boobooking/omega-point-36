@@ -278,6 +278,58 @@ say — the firmware stays on `en` under a Russian host. `nav` positions 6 and 7
 
 The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on `$`.
 
+### The right Ctrl keeps `en` for one key after the chord, for herdr's prefix
+
+herdr takes a prefix — Ctrl+Space — and then a command key: Ctrl+Space then `W` opens Spaces,
+Ctrl+Space then `Shift+R` renames one. On `ru` the prefix itself arrives fine, because Space is
+Space on any layout, but the **command key** used to arrive as Cyrillic: `en_mod` puts `ru` back the
+instant Ctrl is released, which is before the command key is pressed. Position 1 sent `Q` (`й`)
+instead of `W`, and herdr matched nothing.
+
+So position 17, the right Ctrl, uses **`hmr_pfx`** — `hmr_ru` with the hold binding swapped for
+`en_mod_prefix`, which is `en_mod` except that its release **arms `sken`** instead of running
+`&to 1`. `sken` is a sticky key wrapping the `prefix_en` macro, and it holds `en` across exactly one
+key press before `ru` comes back on its own. Verified end to end in `tests/herdr-prefix`.
+
+**Releasing the modifier is the only moment this can be done, and that is forced.** The window
+between "Ctrl+Space has been sent" and "the command key is pressed" contains exactly one firmware
+event: the Ctrl release. Anything armed earlier — morphing Space while Ctrl is held, say — is simply
+overwritten, because `&to` sets the layer outright and `&to 1` runs later.
+
+Three things were checked before settling on this and are not worth re-deriving:
+
+- **The stock `&sl` cannot express it.** `&sl` *activates* a layer, but `en` is layer 0, and
+  `keymap.c` pins the default layer at 0 (`_zmk_keymap_layer_default`, line 27), keeps it always
+  active (line 177), refuses to deactivate it (line 145) and makes it the floor of the lookup
+  (lines 186, 715). `en` can therefore never be raised above `ru`; the only way to reach it is to
+  switch `ru` off. Hence a sticky wrapping a macro rather than a sticky layer — `behavior_sticky_key.c`
+  invokes an arbitrary bound behavior as press/release (lines 104-135), so a macro with
+  `&macro_pause_for_release` fits where `&kp` or `&mo` would normally go.
+- **`ignore-modifiers` is required**, and the stock `&sl` does not have it (only `&sk` does). Without
+  it the Shift of `Shift+R` consumes the sticky before `R` arrives.
+- **`lazy` does not fix the ordering.** It defers the wrapped behavior to the next key, which sounds
+  like exactly what is needed, but a lazy sticky presses around the **keycode** event, while the
+  layer for the next key is chosen earlier, at the **position** event. That is also why the stock
+  `&sl` is not lazy.
+
+A combo on Ctrl+Space was rejected: combos need both keys inside `timeout-ms` (default 50), and the
+prefix is typed by holding Ctrl first and pressing Space afterwards, so it would never fire.
+
+**`en_mod_prefix` cannot tell which key was pressed during the hold**, so it arms after any chord
+made with the right Ctrl, not only Ctrl+Space. That costs nothing here because the right Ctrl is
+used for the prefix and nothing else — Tim confirmed it. Do not copy `hmr_pfx` onto a modifier that
+has other uses without re-reading this: the next key after every chord would resolve on `en`.
+
+**Shift must not follow the prefix within 100 ms.** `is_quick_tap()` compares against `last_tapped`,
+which `keycode_state_changed_listener` updates on any non-modifier **press** — including the prefix's
+own Space. Measured with a cut-down case: at a 60 ms gap the log shows
+`ht_decide: 18 decided tap (balanced decision moment quick-tap)`, so Shift types `i` (0x0C), that
+`i` discharges the sticky, and the command key then arrives as Cyrillic (0x16, `ы`, instead of 0x15,
+`R`). Releasing Space and then Ctrl takes a human longer than 100 ms, so this does not bite in
+practice, but it is the failure shape to recognise. It is the ordinary home-row guard, not something
+this feature introduced; `require-prior-idle-ms` is the knob and raising it makes this worse, not
+better.
+
 ## The thumb row
 
 Five keys, and which one you hold picks the layer. Each leaves one hand free:
