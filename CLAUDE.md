@@ -518,7 +518,9 @@ keys go back to `&kp`.
 
 Verified by translating each binding through the layout's own data with `UCKeyTranslate` over
 `TISCreateInputSourceList`, for both `com.apple.keylayout.Russian` and `…RussianWin`, rather than
-off a published chart. `defaults read com.apple.HIToolbox AppleEnabledInputSources` says which
+off a published chart, and confirmed on real firmware afterwards: the built devicetree in run
+34121271222 carries `,` as `&kp 0x2070023` (`LS(N6)`), `.` as `0x2070024` (`LS(N7)`) and `ё` as
+`0x70031` (`BSLH`). `defaults read com.apple.HIToolbox AppleEnabledInputSources` says which
 sources are actually enabled — it also confirms the Caps Lock cycle has exactly two keyboard
 layouts, which is what the `en` macro's balance depends on.
 
