@@ -172,9 +172,9 @@ Nine layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3
 `nav`=5, `numbers`=6, `adj`=7, `en_hold`=8. The other (unbuilt) `_ruen` keymaps use a different
 order, so never copy a `&mo N` across files.
 
-`en_hold` is not a keymap: it is 36 `&trans` and exists only to be the highest active layer while a
-modifier is held on `ru` — see below for what that is worth. It is last so that adding it renumbered
-nothing.
+`en_hold` is not a keymap: it is 35 `&trans` and a single `&none`, and it exists only to sit on top
+of `en` while a modifier is held on `ru` — see below for what that buys. It is last so that adding it
+renumbered nothing.
 
 ```
 en ──hold pos 35──> adj
