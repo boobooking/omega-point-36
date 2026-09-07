@@ -657,6 +657,52 @@ check the header *and* the layout before assuming.
 `keys_ru.h` itself is a generated Unicode-licensed header — vendored, don't hand-edit. Every keymap
 in the repo includes it, even ones with no Cyrillic bindings.
 
+### Every way the layer and the host can drift apart
+
+Worked out in full after intermittent desync was reported on the old combo switch. **The system is
+open-loop**: the firmware issues a *relative* command (Caps Lock toggles) and never learns whether it
+landed. Two consequences follow and neither is fixable from the keymap — any lost Caps Lock is a
+permanent desync, and any host-side change is undetectable.
+
+| # | Cause | Status |
+|---|---|---|
+| 1 | Firmware switched, host never saw the Caps Lock — dropped HID report, or a tap under the host's hold threshold | reduced: `tap-ms` 30 → 100 |
+| 2 | Host switched by itself — menu bar, another shortcut, a secure-input field | **irreducible** |
+| 3 | Switch key pressed while a modifier is held on `ru`, running the wrong direction | fixed: `&none` at position 30 on `en_hold` |
+| 4 | Unintended switch — a fast space-then-backspace firing the old combo | fixed: the switch is a dedicated key |
+| 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: position 30 is on the central half |
+| 6 | A modifier hold's release never runs, so `&to 1` never restores `ru` | reduced only; recovery is one keystroke |
+| 7 | Boot — layer 0 is the hardcoded default and layer state is not persisted, so every reflash and every battery pull starts on `en` regardless of the host | **irreducible** |
+| 8 | A third keyboard layout enabled on the host — Caps Lock then cycles through three, and the binary model breaks silently | avoid; currently ABC + Russian only |
+| 9 | Typing inside the window between `&to` and the host acting on Caps Lock | one character, self-correcting |
+| 10 | A Caps Lock lost inside the `&en` macro, which flips twice per keypress | reduced by the same `tap-ms` |
+
+Two things were checked and **excluded** as causes: macOS's "automatically switch to a document's
+input source" is off here (`TextInputGlobalPropertyPerContextInput = 0` in `com.apple.HIToolbox`), and
+the behavior queue cannot drop the Caps Lock half of `layer_en`/`layer_ru` — `ZMK_BEHAVIORS_QUEUE_SIZE`
+is 64 and those macros queue two items.
+
+**Closing the loop is not available on a stock host, and both routes were checked rather than
+assumed.** There is no feedback: with the host on Russian, `HIDCapsLockLEDOn` reads `No` for the
+op36's own HID service and for the internal keyboard, so macOS does not mirror the input source into
+the Caps Lock LED for a keyboard *layout* the way it does for some input *methods*. And there is no
+absolute setter: macOS and iPadOS offer only "select previous source" and "select next source", both
+relative; Windows' `Ctrl+Shift+1`/`2` does nothing on iPadOS, which is why this keymap stopped sending
+it. ZMK does read HID indicators (`app/src/hid_indicators.c`) but **no behavior exposes them to a
+keymap**, so using them at all would mean custom C in a module.
+
+That leaves two complete solutions, both rejected because **iPadOS is a required platform**: mirror
+the host's input source into an LED from a host-side daemon and have the firmware follow it; or
+install a custom `.keylayout` that maps this keyboard's Colemak-DH scancodes to ЙЦУКЕН positions,
+which removes the firmware's language state entirely. Neither works on iPad. Do not re-derive these —
+the remaining work is reducing the mechanical causes and keeping recovery cheap, and `nav` positions
+6 and 7 are that recovery.
+
+**Still to try:** `GLOBE` (`C_AC_NEXT_KEYBOARD_LAYOUT_SELECT`, defined in ZMK v0.3.0) instead of
+Caps Lock. It is the native switch on both platforms and has no hold threshold, but whether macOS and
+iPadOS honour that consumer usage from a non-Apple BLE keyboard is unverified, and on macOS it needs
+the Fn behaviour set to "Change Input Source" (`AppleFnUsageType` is 0, "do nothing", here).
+
 ## ru_ext, and why it is not a plain `&lt`
 
 Seven Cyrillic letters do not fit on 26 keys, so `ru_ext` (layer 2) holds them and is reachable
@@ -750,6 +796,10 @@ Deliberate, pending later work — do not "fix" them unprompted:
 - **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
   four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
+- **Layer/host desync is reduced, not eliminated.** Two causes are irreducible without host-side
+  software — the host switching by itself, and every boot starting on `en` — and iPadOS support rules
+  out the two solutions that would close the loop. See "Every way the layer and the host can drift
+  apart" for the full accounting and what is still worth trying.
 - **The switch key has no guard.** Position 30 fires the layout switch on press, unlike the combo it
   replaced, which needed two keys and a 150 ms prior-idle window. That is the point — it can no
   longer be missed — but it also cannot be un-pressed. If brushing the outer left thumb turns out to
