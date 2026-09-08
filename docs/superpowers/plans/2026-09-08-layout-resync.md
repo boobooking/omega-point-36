@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Keep `op36_ruen`'s language layer in step with the host it is talking to, across host sleep and across BLE profile switches.
+**Goal:** Give every BLE profile its own remembered input language, and restore it when you come back to that host.
 
 **Architecture:** A Zephyr module carried by this repository, in three layers. A pure state machine holds the per-profile language memory and decides what to do. An adapter core translates Bluetooth and ZMK events into it, reconciles after pairing and applies the result; every platform call it needs is behind a struct of function pointers. A ZMK binding fills that struct in and serialises the callbacks, and has no logic of its own. The first two layers have no Zephyr types and are unit tested on the host; only the binding is untestable here, which is why it is kept trivial.
 
@@ -120,15 +120,6 @@ struct resync_profile {
     bool lang_alt;
     bool lang_known;
     bool link_up;
-    /* Sticky: an outage longer than the threshold happened and has not been
-       acted on. Set only when a link comes back up, cleared only when a reset
-       is applied. */
-    bool needs_reset;
-    /* Whether a disconnect was ever observed for this profile. Time since boot
-       is not an outage: without this the first connection after a minute of
-       advertising measures a minute and arms a reset that never happened. */
-    bool ever_down;
-    int64_t link_down_at;
 };
 
 struct resync_state {
@@ -138,16 +129,9 @@ struct resync_state {
     /* Profile whose language the current layer state represents, or -1. */
     int owner;
     bool ble_selected;
-    int32_t threshold_ms;
-    /* The outage measured by the call that is running right now, or -1 if that
-       call measured nothing. Cleared on entry to every resync_handle, so a
-       repeated notification cannot re-report an older measurement — possibly
-       another profile's. Exposed only so the adapter can log it: the threshold
-       is a guess and this is the data for tuning it. */
-    int64_t last_outage_ms;
 };
 
-void resync_init(struct resync_state *s, uint8_t profile_count, int32_t threshold_ms);
+void resync_init(struct resync_state *s, uint8_t profile_count);
 
 enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev);
 
@@ -185,7 +169,6 @@ static int failures;
 
 #define MAC 0
 #define IPAD 1
-#define THRESHOLD 10000
 
 static struct resync_state st;
 /* What the transport looks like to the caller. Every event carries it, so these
@@ -194,7 +177,7 @@ static bool ble_now = true;
 
 static void setup(void) {
     ble_now = true;
-    resync_init(&st, 3, THRESHOLD);
+    resync_init(&st, 3);
 }
 
 static enum resync_action ev(enum resync_event_kind kind, uint8_t profile, bool alt_now,
@@ -205,7 +188,7 @@ static enum resync_action ev(enum resync_event_kind kind, uint8_t profile, bool 
 }
 
 /* Both hosts connected; arriving at one restores its own language and the
-   threshold is never consulted. */
+   nothing to decide there. */
 static void test_switch_between_connected_hosts(void) {
     setup();
     ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
@@ -219,19 +202,6 @@ static void test_switch_between_connected_hosts(void) {
     /* Back to the Mac: its ru comes back. */
     CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 200) == RESYNC_ACTION_SET_ALT,
           "returning to the Mac restores ru");
-}
-
-/* Review counterexample: switching away must not rewrite link_down_at. */
-static void test_switch_does_not_rewrite_outage(void) {
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
-    ev(RESYNC_EV_LINK_DOWN, MAC, true, 1000);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 2000);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 3000);
-    CHECK(ev(RESYNC_EV_LINK_UP, MAC, false, 61000) == RESYNC_ACTION_CLEAR_ALT,
-          "the outage is 60s measured from the real disconnect, so the Mac resets");
 }
 
 /* Review counterexample: a profile selected but never connected must not
@@ -248,37 +218,6 @@ static void test_selected_but_never_connected_keeps_its_memory(void) {
     ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 40); /* Mac still down: no decision */
     ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, false, 50);
     CHECK(st.profiles[MAC].lang_alt, "the Mac's ru must survive being selected while down");
-}
-
-/* A one second blink, selected a minute later, must not reset. */
-static void test_blink_then_selected_later(void) {
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 10);
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 1000);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 2000);
-    CHECK(!st.profiles[MAC].needs_reset, "a 1s outage is under the threshold");
-    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 62000) == RESYNC_ACTION_SET_ALT,
-          "arriving a minute later restores ru, it does not reset");
-}
-
-/* A long outage followed by a short one before returning: the verdict sticks. */
-static void test_needs_reset_is_sticky(void) {
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 10);
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 100);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 100 + 20000);
-    CHECK(st.profiles[MAC].needs_reset, "20s sets the verdict");
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 30000);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 30500);
-    CHECK(st.profiles[MAC].needs_reset, "a later 500ms outage must not clear it");
-    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 40000) == RESYNC_ACTION_CLEAR_ALT,
-          "the sleep is acted on when we come back");
 }
 
 /* The owner never lost ownership, so its stored language may be older than the
@@ -330,27 +269,6 @@ static void test_late_transport_observation_releases_ownership(void) {
     CHECK(!st.profiles[IPAD].lang_known, "the iPad learned nothing that was not its own");
 }
 
-/* The boundary itself, pinned so it cannot drift. */
-static void test_threshold_boundary(void) {
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 1);
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 1000);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 1000 + THRESHOLD);
-    CHECK(st.profiles[MAC].needs_reset, "exactly the threshold counts as a reset");
-
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 1);
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 1000);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 1000 + THRESHOLD - 1);
-    CHECK(!st.profiles[MAC].needs_reset, "one millisecond under does not");
-}
-
 /* An unknown profile must not inherit the language on screen. */
 static void test_unknown_profile_takes_the_default(void) {
     setup();
@@ -364,52 +282,19 @@ static void test_unknown_profile_takes_the_default(void) {
     CHECK(!st.profiles[IPAD].lang_alt, "and that is what gets remembered for it");
 }
 
-/* Uptime is not an outage. */
-static void test_first_connection_is_not_an_outage(void) {
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 0);
-    /* The keyboard advertised for a minute before the host showed up. */
-    ev(RESYNC_EV_LINK_UP, MAC, false, 60000);
-    CHECK(!st.profiles[MAC].needs_reset, "never having been connected is not a long outage");
-    CHECK(st.last_outage_ms < 0, "and there is no outage to report");
-}
-
-/* A repeated notification must not re-report a measurement, least of all one
-   belonging to a different profile. */
-static void test_repeat_link_up_reports_no_outage(void) {
-    setup();
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_LINK_UP, IPAD, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 0);
-
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 1000);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 2000);
-    CHECK(st.last_outage_ms == 1000, "the Mac's own outage is measured");
-
-    ev(RESYNC_EV_LINK_DOWN, IPAD, false, 3000);
-    ev(RESYNC_EV_LINK_UP, IPAD, false, 63000);
-    CHECK(st.last_outage_ms == 60000, "so is the iPad's");
-
-    ev(RESYNC_EV_LINK_UP, MAC, false, 64000);
-    CHECK(st.last_outage_ms < 0,
-          "a repeat with nothing to measure must not inherit the iPad's minute");
-}
-
 /* The adapter may report the same transition twice. */
 static void test_repeat_notification_is_harmless(void) {
     setup();
     ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
     ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 10);
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 100);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 100 + 20000);
-    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 30000) == RESYNC_ACTION_CLEAR_ALT,
-          "the reset runs once");
-    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 30001) == RESYNC_ACTION_NONE,
-          "and the repeat does nothing");
+    ev(RESYNC_EV_LINK_UP, IPAD, false, 0);
+    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);   /* the Mac is left on ru */
+    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 10); /* the iPad learns en */
+
+    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, false, 20) == RESYNC_ACTION_SET_ALT,
+          "coming back to the Mac restores ru, once");
+    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 21) == RESYNC_ACTION_NONE,
+          "and the repeat does nothing, because the Mac still owns the layer");
 }
 
 /* Re-pairing puts a different machine behind the index. */
@@ -417,13 +302,13 @@ static void test_profile_cleared_drops_history(void) {
     setup();
     ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
     ev(RESYNC_EV_LINK_UP, MAC, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);
+    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0);  /* the Mac is remembered on ru */
     ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 10);
-    ev(RESYNC_EV_LINK_DOWN, MAC, false, 100);
-    ev(RESYNC_EV_LINK_UP, MAC, false, 100 + 20000);
+    CHECK(st.profiles[MAC].lang_known, "the Mac's language was recorded");
+
     ev(RESYNC_EV_PROFILE_CLEARED, MAC, false, 25000);
-    CHECK(!st.profiles[MAC].needs_reset, "the verdict belonged to the old peer");
-    CHECK(!st.profiles[MAC].lang_known, "so did the language");
+    CHECK(!st.profiles[MAC].lang_known, "and it belonged to the old peer, so it goes");
+    CHECK(!st.profiles[MAC].link_up, "the link state goes with it");
 }
 
 int main(void) {
@@ -432,19 +317,13 @@ int main(void) {
         void (*fn)(void);
     } cases[] = {
         {"switch_between_connected_hosts", test_switch_between_connected_hosts},
-        {"switch_does_not_rewrite_outage", test_switch_does_not_rewrite_outage},
         {"selected_but_never_connected_keeps_its_memory",
          test_selected_but_never_connected_keeps_its_memory},
-        {"blink_then_selected_later", test_blink_then_selected_later},
-        {"needs_reset_is_sticky", test_needs_reset_is_sticky},
         {"short_outage_under_owner_changes_nothing", test_short_outage_under_owner_changes_nothing},
         {"usb_round_trip", test_usb_round_trip},
-        {"threshold_boundary", test_threshold_boundary},
         {"late_transport_observation_releases_ownership",
          test_late_transport_observation_releases_ownership},
         {"unknown_profile_takes_the_default", test_unknown_profile_takes_the_default},
-        {"first_connection_is_not_an_outage", test_first_connection_is_not_an_outage},
-        {"repeat_link_up_reports_no_outage", test_repeat_link_up_reports_no_outage},
         {"repeat_notification_is_harmless", test_repeat_notification_is_harmless},
         {"profile_cleared_drops_history", test_profile_cleared_drops_history},
     };
@@ -500,20 +379,13 @@ static enum resync_action decide(struct resync_state *s) {
         return RESYNC_ACTION_NONE;
     }
 
-    /* Never lost ownership and nothing happened to the host: the layer already
-       is this profile's language, and the stored copy may be older than the
-       user's latest choice. */
-    if (s->owner == (int)p && !s->profiles[p].needs_reset) {
+    /* Never lost ownership: the layer already is this profile's language, and
+       the stored copy may be older than the user's latest choice. */
+    if (s->owner == (int)p) {
         return RESYNC_ACTION_NONE;
     }
 
     s->owner = (int)p;
-
-    if (s->profiles[p].needs_reset) {
-        s->profiles[p].needs_reset = false;
-        save_lang(s, p, false);
-        return RESYNC_ACTION_CLEAR_ALT;
-    }
 
     if (!s->profiles[p].lang_known) {
         /* Nothing is known about this host, so the default language stands.
@@ -531,34 +403,26 @@ bool resync_link_up(const struct resync_state *s, uint8_t profile) {
     return profile < s->profile_count && s->profiles[profile].link_up;
 }
 
-void resync_init(struct resync_state *s, uint8_t profile_count, int32_t threshold_ms) {
+void resync_init(struct resync_state *s, uint8_t profile_count) {
     for (unsigned i = 0; i < RESYNC_MAX_PROFILES; i++) {
         s->profiles[i].lang_alt = false;
         s->profiles[i].lang_known = false;
         s->profiles[i].link_up = false;
-        s->profiles[i].needs_reset = false;
-        s->profiles[i].ever_down = false;
-        s->profiles[i].link_down_at = 0;
     }
     s->profile_count = profile_count > RESYNC_MAX_PROFILES ? RESYNC_MAX_PROFILES : profile_count;
     s->active = 0;
     s->owner = -1;
     s->ble_selected = false;
-    s->threshold_ms = threshold_ms;
-    s->last_outage_ms = -1;
 }
 
 enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev) {
     uint8_t p = ev->profile;
 
-    /* Only this call's own measurement may be reported. */
-    s->last_outage_ms = -1;
-
     /* Reconcile the transport first. Deciding and then refusing to apply would
        leave the layer behind the state: ownership would move, a language would
-       be remembered and needs_reset cleared, with nothing written to the
-       keymap. decide() returns before it mutates anything when BLE is not
-       selected, so this has to be right before it runs. */
+       be remembered, with nothing written to the keymap. decide() returns
+       before it mutates anything when BLE is not selected, so this has to be
+       right before it runs. */
     if (ev->ble_now != s->ble_selected) {
         if (!ev->ble_now && s->owner >= 0) {
             /* Leaving BLE: the layer is still the owner's, so save it. */
@@ -573,11 +437,7 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         if (p >= s->profile_count) {
             return RESYNC_ACTION_NONE;
         }
-        if (s->profiles[p].link_up) {
-            s->profiles[p].link_up = false;
-            s->profiles[p].ever_down = true;
-            s->profiles[p].link_down_at = ev->at;
-        }
+        s->profiles[p].link_up = false;
         /* Snapshot the owner's language before the link is gone: it may change
            before we hear about this profile again. */
         if (s->owner == (int)p) {
@@ -589,22 +449,7 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         if (p >= s->profile_count) {
             return RESYNC_ACTION_NONE;
         }
-        if (!s->profiles[p].link_up) {
-            if (s->profiles[p].ever_down) {
-                int64_t outage = ev->at - s->profiles[p].link_down_at;
-                s->last_outage_ms = outage;
-                if (outage >= s->threshold_ms) {
-                    /* Decided here, not at decision time, so it measures the
-                       outage and not the time since. Sticky: only ever set. */
-                    s->profiles[p].needs_reset = true;
-                }
-            } else {
-                /* First time this profile has ever connected: there is no
-                   outage to measure, only uptime. */
-                s->last_outage_ms = -1;
-            }
-            s->profiles[p].link_up = true;
-        }
+        s->profiles[p].link_up = true;
         return decide(s);
 
     case RESYNC_EV_ACTIVE_PROFILE:
@@ -627,9 +472,6 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         s->profiles[p].lang_alt = false;
         s->profiles[p].lang_known = false;
         s->profiles[p].link_up = false;
-        s->profiles[p].needs_reset = false;
-        s->profiles[p].ever_down = false;
-        s->profiles[p].link_down_at = 0;
         if (s->owner == (int)p) {
             s->owner = -1;
         }
@@ -711,7 +553,7 @@ dependencies alone.
 
 **Interfaces:**
 - Consumes: `module/src/resync_state.c` from Task 1.
-- Produces: `CONFIG_ZMK_LAYOUT_RESYNC`, `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER`, `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS`. Task 3's source is added to the build by `module/CMakeLists.txt`.
+- Produces: `CONFIG_ZMK_LAYOUT_RESYNC`, `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER`. Task 3's source is added to the build by `module/CMakeLists.txt`.
 
 - [ ] **Step 1: Declare the module**
 
@@ -755,15 +597,6 @@ config ZMK_LAYOUT_RESYNC_ALT_LAYER
     help
       The layer that is raised for the second language. On op36_ruen this is
       1, the ru layer. The design assumes exactly two languages.
-
-config ZMK_LAYOUT_RESYNC_DISCONNECT_MS
-    int "Outage above which the host is assumed to have reset"
-    default 10000
-    help
-      A link that comes back after longer than this is treated as a host that
-      slept and reset its own layout. Shorter outages are radio hiccups and
-      restore whatever language the profile was left on. A starting guess:
-      every decision is logged with the measured outage so it can be tuned.
 
 endif # ZMK_LAYOUT_RESYNC
 ```
@@ -929,12 +762,10 @@ struct resync_adapter {
     bool peer_known[RESYNC_MAX_PROFILES];
 };
 
-/* Every entry point takes the time the event happened. The caller reads the
-   clock on entry to its callback, so a wait on the binding's mutex cannot be
-   counted as part of an outage — which near the threshold would change the
-   decision. */
-void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         int32_t threshold_ms, int64_t at);
+/* Every entry point takes the time the event happened, read by the caller on
+   entry to its callback rather than after the binding's mutex. Nothing measures
+   durations now, but keeping the timestamp honest costs nothing. */
+void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat, int64_t at);
 
 /* A host link went up or down. Called from the Bluetooth connection callbacks,
    which is the only place an outage may be measured from. */
@@ -945,9 +776,6 @@ void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, 
 
 /* ZMK selected a different transport. */
 void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at);
-
-/* The outage the last call measured, or -1. Diagnostics only. */
-int64_t resync_adapter_last_outage(const struct resync_adapter *a);
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -979,7 +807,6 @@ static int failures;
 
 #define MAC 0
 #define IPAD 1
-#define THRESHOLD 10000
 
 /* The fake host. */
 static bool fake_alt;
@@ -1022,13 +849,13 @@ static void setup(void) {
         fake_has_peer[i] = true;
         fake_peer[i][0] = (uint8_t)(0x10 + i);
     }
-    resync_adapter_init(&ad, &plat, THRESHOLD, fake_now);
+    resync_adapter_init(&ad, &plat, fake_now);
 }
 
 /* Reconciling must never fabricate a link transition for a profile whose peer
-   did not change. Doing so used to swallow a real outage: a stale snapshot said
-   "connected", a real disconnect had just been recorded, and the difference was
-   papered over with a synthetic LINK_UP that reset link_down_at. */
+   did not change. A stale snapshot saying "connected" after a real disconnect
+   had been recorded used to be papered over with a synthetic LINK_UP — after
+   which the real reconnect finds the link already up and never restores. */
 static void test_reconcile_does_not_fabricate_transitions(void) {
     setup();
     fake_connected[MAC] = true;
@@ -1045,11 +872,13 @@ static void test_reconcile_does_not_fabricate_transitions(void) {
 
     CHECK(!resync_link_up(&ad.state, MAC), "the real disconnect must stand");
 
-    /* The real reconnect, a minute later, must still be measured. */
+    /* Its memory is intact and the real reconnect is what marks it up again.
+       The assertion above is the one with teeth: under the racy version the
+       fabricated LINK_UP marked the link up while it was really down. */
+    CHECK(ad.state.profiles[MAC].lang_alt, "the Mac still remembers ru");
     fake_now = 61000;
-    fake_connected[MAC] = true;
     resync_adapter_on_link(&ad, MAC, true, fake_now);
-    CHECK(resync_adapter_last_outage(&ad) == 60000, "the full outage is measured, not 0");
+    CHECK(resync_link_up(&ad.state, MAC), "and the real reconnect brings it up");
 }
 
 /* A peer that changed means a different machine behind the index: its history
@@ -1071,8 +900,8 @@ static void test_new_peer_clears_history_and_adopts_link(void) {
     resync_adapter_on_profile_changed(&ad, MAC, fake_now);
 
     CHECK(resync_link_up(&ad.state, MAC), "the missed connect is picked up from ZMK");
-    CHECK(!ad.state.profiles[MAC].needs_reset, "the old peer's verdict is gone");
-    CHECK(!ad.state.profiles[MAC].ever_down, "and so is its outage history");
+    CHECK(!ad.state.profiles[MAC].lang_alt,
+          "the old peer's ru is gone; the new one starts on the default");
 }
 
 /* ZMK sets the transport before announcing it, so a connection callback can
@@ -1128,28 +957,6 @@ static void test_blocked_window_does_not_advance_state(void) {
     CHECK(!ad.state.profiles[IPAD].lang_alt, "and the iPad does not inherit it");
 }
 
-/* A reset that could not be applied must still be owed. */
-static void test_blocked_reset_survives_the_window(void) {
-    setup();
-    fake_connected[MAC] = true;
-    resync_adapter_on_link(&ad, MAC, true, 0);
-    resync_adapter_on_profile_changed(&ad, MAC, 0);
-    fake_alt = true;
-    resync_adapter_on_profile_changed(&ad, MAC, 0);
-
-    /* Away long enough to reset, but USB is live when it comes back. */
-    resync_adapter_on_link(&ad, MAC, false, 1000);
-    fake_ble = false;
-    resync_adapter_on_link(&ad, MAC, true, 100000);
-    CHECK(ad.state.profiles[MAC].needs_reset, "the verdict is still owed");
-
-    fake_ble = true;
-    set_alt_calls = 0;
-    resync_adapter_on_endpoint_changed(&ad, 101000);
-    CHECK(!fake_alt, "and is applied when BLE comes back");
-    CHECK(set_alt_calls == 1, "exactly once");
-}
-
 /* The USB round trip, through the adapter rather than the bare machine. */
 static void test_usb_round_trip(void) {
     setup();
@@ -1177,7 +984,6 @@ int main(void) {
         {"new_peer_clears_history_and_adopts_link", test_new_peer_clears_history_and_adopts_link},
         {"no_layer_change_once_usb_is_selected", test_no_layer_change_once_usb_is_selected},
         {"blocked_window_does_not_advance_state", test_blocked_window_does_not_advance_state},
-        {"blocked_reset_survives_the_window", test_blocked_reset_survives_the_window},
         {"usb_round_trip", test_usb_round_trip},
     };
 
@@ -1242,10 +1048,9 @@ static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t 
     }
 }
 
-void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         int32_t threshold_ms, int64_t at) {
+void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat, int64_t at) {
     a->plat = plat;
-    resync_init(&a->state, plat->profile_count, threshold_ms);
+    resync_init(&a->state, plat->profile_count);
 
     for (uint8_t i = 0; i < RESYNC_MAX_PROFILES; i++) {
         a->peer_known[i] = false;
@@ -1308,8 +1113,6 @@ void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, 
 void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at) {
     feed(a, a->plat->ble_selected() ? RESYNC_EV_BLE_SELECTED : RESYNC_EV_BLE_DESELECTED, 0, at);
 }
-
-int64_t resync_adapter_last_outage(const struct resync_adapter *a) { return a->state.last_outage_ms; }
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
@@ -1451,8 +1254,8 @@ static const struct resync_platform platform = {
 
 /* The role filter is the one ble.c uses to ignore the split peripheral link.
    The clock is read here, on entry, and passed down: taking it after the mutex
-   would fold a wait into the measured outage, and near the threshold that
-   changes the decision. */
+   would attribute the wait to the event. Nothing measures durations now, but
+   an honest timestamp costs nothing. */
 static void resync_connected(struct bt_conn *conn, uint8_t err) {
     int64_t at = k_uptime_get();
     struct bt_conn_info info;
@@ -1471,16 +1274,7 @@ static void resync_connected(struct bt_conn *conn, uint8_t err) {
 
     k_mutex_lock(&lock, K_FOREVER);
     resync_adapter_on_link(&adapter, (uint8_t)profile, true, at);
-    /* Read under the same lock: last_outage_ms is shared, and another event
-       clears it or replaces it with a different profile's measurement. */
-    int64_t outage = resync_adapter_last_outage(&adapter);
     k_mutex_unlock(&lock);
-
-    if (outage >= 0) {
-        /* The threshold is a guess; this is the data for tuning it. */
-        LOG_INF("resync: profile %d back after %lld ms (threshold %d)", profile, (long long)outage,
-                CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
-    }
 }
 
 static void resync_disconnected(struct bt_conn *conn, uint8_t reason) {
@@ -1534,11 +1328,9 @@ ZMK_SUBSCRIPTION(layout_resync, zmk_endpoint_changed);
 
 static int layout_resync_init(void) {
     k_mutex_init(&lock);
-    resync_adapter_init(&adapter, &platform, CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS,
-                        k_uptime_get());
+    resync_adapter_init(&adapter, &platform, k_uptime_get());
 
-    LOG_INF("resync: %d profiles, threshold %d ms", ZMK_BLE_PROFILE_COUNT,
-            CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
+    LOG_INF("resync: %d profiles, alternate layer %d", ZMK_BLE_PROFILE_COUNT, ALT_LAYER);
     return 0;
 }
 
@@ -1548,8 +1340,8 @@ SYS_INIT(layout_resync_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 - [ ] **Step 3: Add nothing to `config/op36.conf`**
 
 There is nothing to configure. `CONFIG_ZMK_LAYOUT_RESYNC` is `default y` and its dependencies are
-what Task 2 put under test; the threshold and the alternate layer both have the right defaults for
-this keymap. Leaving the file untouched is the step.
+what Task 2 put under test, and the alternate layer already defaults to 1, which is `ru`. Leaving the
+file untouched is the step.
 
 - [ ] **Step 4: Verify the simulator suite still passes**
 
@@ -1587,11 +1379,11 @@ today's firmware too, because the global `ru` simply stays on. The two hosts hav
 Nothing should reset at any point: the mask is `0x0`. If a reset happens, the mask is not being read
 as intended.
 
-### Task 5: Verify the reset on both hosts, and document it
+### Task 5: Verify on the devices and document it
 
-Both the Mac and the iPad reset their own layout on wake, measured on the devices, so the reset
-branch is right everywhere and there is nothing per host to configure. This task is the device
-verification and the write-up.
+The module gives every profile its own language. Everything about resets is gone, so what is left to
+prove is that the memory is per host, that it survives a sleep, and that nothing moves the layer when
+it should not.
 
 **Files:**
 - Modify: `CLAUDE.md`
@@ -1600,67 +1392,65 @@ verification and the write-up.
 - Consumes: the module as built by Task 4.
 - Produces: nothing.
 
-- [ ] **Step 1: Verify the reset on the Mac**
+- [ ] **Step 1: Two hosts, two languages**
 
-Flash the left half if it is not already carrying Task 4's build. Then:
+Flash the left half if it is not already carrying Task 4's build.
 
-1. On the Mac, switch to `ru` and type a Cyrillic word to confirm both sides agree.
-2. Close the lid, wait longer than `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS`, reopen it.
-3. Type the password.
+The obvious check — one host on `ru`, switch away, come back, type — **proves nothing**: it passes on
+firmware without the module too, because the global `ru` simply stays on. The hosts have to disagree.
 
-Expected: Latin characters. Before this change the keyboard was still on `ru` and the password came
-out scrambled.
+1. Mac: switch to `ru`, type a Cyrillic word. Host and firmware agree.
+2. Switch to the iPad's profile. Set it to `en`, type a Latin word. Same there.
+3. Back to the Mac, type. Expected: Cyrillic, with no manual switch.
+4. To the iPad, type. Expected: Latin, with no manual switch.
+5. Repeat 3 and 4 once more, so a single lucky state cannot be mistaken for the feature working.
 
-4. Unlock, open an application and type again.
+- [ ] **Step 2: The language survives a sleep**
 
-Expected: still Latin, and the firmware agrees with the host — the spec calls for the whole chain,
-because the lock screen can force ASCII independently of what the session restores, so a correct
-password proves less than it looks.
+This is the case that replaced the reset branch. The session restores what it had; the firmware must
+restore the same thing.
 
-- [ ] **Step 2: Verify the short case is untouched**
+1. Mac on `ru`, confirmed by typing.
+2. Lock the screen and leave it long enough that the link drops — a minute is plenty.
+3. Unlock, then type in an application.
 
-The steps above end with the Mac on `en`, so **set `ru` again and confirm both sides agree** before
-testing anything — otherwise the check starts from a state it was not meant to.
+Expected: Cyrillic, with the firmware agreeing. **The password field itself is still wrong**, and that
+is known and accepted: the lock screen takes ASCII while the firmware is on `ru`. `nav` position 6
+before typing the password is the manual answer, and it sends no keystroke.
 
-Close and reopen the lid **inside** the threshold, then type.
+Repeat once on the iPad.
 
-Keep two expectations apart. That the firmware did **not** reset is the thing this step tests, and it
-must hold. What language the *host* comes back on is not controlled by us: a short sleep that still
-reset the layout is a limitation the spec already accepts, so a mismatch there is a known gap and not
-a failure of this change. Record which of the two you saw.
+- [ ] **Step 3: Out of range and back**
 
-- [ ] **Step 3: Verify the reset on the iPad**
-
-Same shape, with the log available so the outage can be confirmed as longer than the threshold —
-otherwise the test proves nothing:
-
-1. On the iPad, switch to Russian and type a Cyrillic word in Notes.
-2. Lock it, wait past the threshold, unlock.
-3. Type in Notes.
-
-Expected: Latin. This is the measurement that removed the per-profile mask; this step confirms it
-holds through the module rather than by hand.
+Walk away until the link drops, come back, type. Expected: the language the host was left on, on both
+sides, with no manual switch. This is the same path as Step 2 without the lock screen in it.
 
 - [ ] **Step 4: Update CLAUDE.md**
 
-The module's section already exists from Task 4's documentation commit, but it still describes a
-bitmask that no longer exists. Replace that paragraph:
+The module's section already exists from Task 4's documentation commit, but it describes a reset that
+no longer happens and a bitmask that no longer exists. Replace that paragraph:
 
 ```markdown
-**Both target hosts reset their own layout on wake**, macOS and iPadOS alike, measured on the devices
-before the reset branch was enabled. That is why there is nothing to configure per host: the module
-resets after any outage past the threshold, on every profile.
+**The module never resets a language, only restores one.** The lock screen forces ASCII for the
+password field, but after unlocking, both macOS and iPadOS restore whatever language was active
+before locking — measured on both. A firmware that reset on reconnect would therefore have fixed the
+password field and been wrong for the whole session afterwards, which is the worse trade. Restoring
+what a host was left on is right for a plain profile switch and after a sleep alike.
 
-An earlier draft carried a `RESET_PROFILES` bitmask so one host could be restore-only. It was removed
-rather than defaulted to "all", because it keyed on the **profile index**, which changes when a
-device is re-paired — a trap that would have pointed at the wrong host later. If a host ever turns up
-that preserves its layout across sleep, key that behaviour on the **peer address**, which the module
-already stores and compares to notice re-pairing.
+So the password field stays as it is, and `nav` positions 6 and 7 remain the manual answer for it —
+they move the firmware layer only and send no keystroke, so either is safe to press at a lock screen.
+
+An earlier draft reset after an outage longer than a threshold, and carried a `RESET_PROFILES`
+bitmask so one host could opt out. Both went when the measurement came in. The mask was deleted
+rather than defaulted to "all" because it keyed on the **profile index**, which changes when a device
+is re-paired — a trap that would have pointed at the wrong host later. If a host ever appears that
+does preserve its layout across sleep, key that behaviour on the **peer address**, which the module
+already stores and compares in order to notice re-pairing.
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: record that both hosts reset their layout on wake"
+git commit -m "docs: record that the module restores rather than resets"
 ```
