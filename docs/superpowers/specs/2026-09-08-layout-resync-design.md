@@ -195,19 +195,16 @@ it is most likely to be wrong.
 | `ZMK_LAYOUT_RESYNC` | enable the module | `y` |
 | `ZMK_LAYOUT_RESYNC_ALT_LAYER` | the layer holding the alternate language | `1` (`ru`) |
 | `ZMK_LAYOUT_RESYNC_DISCONNECT_MS` | outage above which the host is assumed to have reset | `10000` |
-| `ZMK_LAYOUT_RESYNC_RESET_PROFILES` | bitmask of profiles that may take the reset branch | all |
 
-`ZMK_LAYOUT_RESYNC_RESET_PROFILES` exists for the iPad. A profile outside the mask is
-**restore-only**: its language is still remembered and restored, but a long outage never clears it to
-the default. That is the safe setting for any host that preserves its layout across sleep, and it has
-to be per profile because the rest of the configuration is global and the two hosts differ.
+**There is nothing to configure per host.** Both target hosts reset their own layout on wake, macOS
+and iPadOS alike, measured on the devices. So the reset branch is right on every profile.
 
-The module's own default is every profile, which suits a host whose behaviour is known. **This
-keyboard's starting configuration must clear the iPad's bit**, because that behaviour is not known and
-the reset branch would create a desync rather than fix one if iPadOS preserves the layout. Setting the
-bit comes *after* the check described under "Out of scope", not before. Identify which profile index
-the iPad occupies before writing the mask — `&bt BT_SEL 0/1/2` are bound, and the keymap does not say
-which host is which.
+An earlier draft carried a `RESET_PROFILES` bitmask so one host could be restore-only, against the
+possibility that iPadOS preserved its layout. The measurement removed the reason, and the mask was
+deleted rather than left with a permissive default, because it keyed on the **profile index** — which
+changes when a device is re-paired, so a mask set today would point at the wrong host tomorrow. If a
+host ever appears that does preserve its layout, key that behaviour on the **peer address**, which
+the module already stores and compares in order to notice re-pairing.
 
 `ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` **and** on the central or non-split role. The two
 excluded matrix entries fail for different reasons, and only both conditions together cover them:
@@ -265,14 +262,11 @@ Named so they are not mistaken for oversights:
 - **Pressing the layout switch while disconnected.** The keymap will happily toggle the layer and send
   a Caps Lock nobody receives. The module records whatever state results; it does not try to undo it.
 
-**iPadOS behaviour after sleep is unverified, and this is a real risk rather than a free one.** The
-first draft claimed the cost was "one manual switch, same as today". That was wrong: if iPadOS
-preserves the Russian layout across sleep, then today the iPad comes back *consistent*, and the
-reconnect branch would **introduce** a desync that does not exist now. Before enabling the reset
-branch for the iPad's profile, check it — switch the iPad to Russian, lock it, unlock, and type one
-letter in Notes. Do it with an outage the log confirms was longer than the threshold, or the test
-proves nothing. If it comes back Russian, drop that profile from
-`ZMK_LAYOUT_RESYNC_RESET_PROFILES` and it becomes restore-only.
+**iPadOS behaviour after sleep was the one thing that could have made this design wrong, and it was
+measured rather than assumed.** An earlier draft claimed the risk was free — "one manual switch, same
+as today" — which was untrue: had iPadOS preserved the Russian layout, the iPad would come back
+consistent today and the reconnect branch would have *introduced* a desync. It does not preserve it.
+Both hosts reset, so the branch is correct on both and no per-host configuration exists.
 
 ## Verification
 

@@ -138,8 +138,6 @@ struct resync_state {
     /* Profile whose language the current layer state represents, or -1. */
     int owner;
     bool ble_selected;
-    /* Bit N set means profile N may take the reset branch. */
-    uint32_t reset_mask;
     int32_t threshold_ms;
     /* The outage measured by the call that is running right now, or -1 if that
        call measured nothing. Cleared on entry to every resync_handle, so a
@@ -149,8 +147,7 @@ struct resync_state {
     int64_t last_outage_ms;
 };
 
-void resync_init(struct resync_state *s, uint8_t profile_count, uint32_t reset_mask,
-                 int32_t threshold_ms);
+void resync_init(struct resync_state *s, uint8_t profile_count, int32_t threshold_ms);
 
 enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev);
 
@@ -197,7 +194,7 @@ static bool ble_now = true;
 
 static void setup(void) {
     ble_now = true;
-    resync_init(&st, 3, 0xFFFFFFFF, THRESHOLD);
+    resync_init(&st, 3, THRESHOLD);
 }
 
 static enum resync_action ev(enum resync_event_kind kind, uint8_t profile, bool alt_now,
@@ -354,23 +351,6 @@ static void test_threshold_boundary(void) {
     CHECK(!st.profiles[MAC].needs_reset, "one millisecond under does not");
 }
 
-/* A profile outside the mask is restore-only however long it was away. */
-static void test_restore_only_profile(void) {
-    /* Not setup(): this case needs its own mask. Reset the transport by hand,
-       or it inherits whatever the previous case left behind. */
-    ble_now = true;
-    resync_init(&st, 3, 1u << MAC, THRESHOLD); /* only the Mac may reset */
-    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
-    ev(RESYNC_EV_LINK_UP, IPAD, false, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 0);
-    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 10);
-    ev(RESYNC_EV_LINK_DOWN, IPAD, false, 100);
-    ev(RESYNC_EV_LINK_UP, IPAD, false, 100 + 600000);
-    CHECK(!st.profiles[IPAD].needs_reset, "ten minutes away must not arm a reset here");
-    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, false, 700000) == RESYNC_ACTION_SET_ALT,
-          "its language is still restored");
-}
-
 /* An unknown profile must not inherit the language on screen. */
 static void test_unknown_profile_takes_the_default(void) {
     setup();
@@ -462,7 +442,6 @@ int main(void) {
         {"threshold_boundary", test_threshold_boundary},
         {"late_transport_observation_releases_ownership",
          test_late_transport_observation_releases_ownership},
-        {"restore_only_profile", test_restore_only_profile},
         {"unknown_profile_takes_the_default", test_unknown_profile_takes_the_default},
         {"first_connection_is_not_an_outage", test_first_connection_is_not_an_outage},
         {"repeat_link_up_reports_no_outage", test_repeat_link_up_reports_no_outage},
@@ -552,8 +531,7 @@ bool resync_link_up(const struct resync_state *s, uint8_t profile) {
     return profile < s->profile_count && s->profiles[profile].link_up;
 }
 
-void resync_init(struct resync_state *s, uint8_t profile_count, uint32_t reset_mask,
-                 int32_t threshold_ms) {
+void resync_init(struct resync_state *s, uint8_t profile_count, int32_t threshold_ms) {
     for (unsigned i = 0; i < RESYNC_MAX_PROFILES; i++) {
         s->profiles[i].lang_alt = false;
         s->profiles[i].lang_known = false;
@@ -566,7 +544,6 @@ void resync_init(struct resync_state *s, uint8_t profile_count, uint32_t reset_m
     s->active = 0;
     s->owner = -1;
     s->ble_selected = false;
-    s->reset_mask = reset_mask;
     s->threshold_ms = threshold_ms;
     s->last_outage_ms = -1;
 }
@@ -616,7 +593,7 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
             if (s->profiles[p].ever_down) {
                 int64_t outage = ev->at - s->profiles[p].link_down_at;
                 s->last_outage_ms = outage;
-                if (outage >= s->threshold_ms && (s->reset_mask & (1u << p))) {
+                if (outage >= s->threshold_ms) {
                     /* Decided here, not at decision time, so it measures the
                        outage and not the time since. Sticky: only ever set. */
                     s->profiles[p].needs_reset = true;
@@ -734,7 +711,7 @@ dependencies alone.
 
 **Interfaces:**
 - Consumes: `module/src/resync_state.c` from Task 1.
-- Produces: `CONFIG_ZMK_LAYOUT_RESYNC`, `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER`, `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS`, `CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES`. Task 3's source is added to the build by `module/CMakeLists.txt`.
+- Produces: `CONFIG_ZMK_LAYOUT_RESYNC`, `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER`, `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS`. Task 3's source is added to the build by `module/CMakeLists.txt`.
 
 - [ ] **Step 1: Declare the module**
 
@@ -787,15 +764,6 @@ config ZMK_LAYOUT_RESYNC_DISCONNECT_MS
       slept and reset its own layout. Shorter outages are radio hiccups and
       restore whatever language the profile was left on. A starting guess:
       every decision is logged with the measured outage so it can be tuned.
-
-config ZMK_LAYOUT_RESYNC_RESET_PROFILES
-    hex "Bitmask of profiles allowed to reset"
-    default 0xFFFFFFFF
-    help
-      Bit N set means profile N may take the reset branch. A profile outside
-      the mask is restore-only: its language is remembered and restored, but a
-      long outage never clears it to the default. Clear the bit for any host
-      that is known, or not yet known, to preserve its own layout across sleep.
 
 endif # ZMK_LAYOUT_RESYNC
 ```
@@ -966,7 +934,7 @@ struct resync_adapter {
    counted as part of an outage — which near the threshold would change the
    decision. */
 void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         uint32_t reset_mask, int32_t threshold_ms, int64_t at);
+                         int32_t threshold_ms, int64_t at);
 
 /* A host link went up or down. Called from the Bluetooth connection callbacks,
    which is the only place an outage may be measured from. */
@@ -1054,7 +1022,7 @@ static void setup(void) {
         fake_has_peer[i] = true;
         fake_peer[i][0] = (uint8_t)(0x10 + i);
     }
-    resync_adapter_init(&ad, &plat, 0xFFFFFFFF, THRESHOLD, fake_now);
+    resync_adapter_init(&ad, &plat, THRESHOLD, fake_now);
 }
 
 /* Reconciling must never fabricate a link transition for a profile whose peer
@@ -1275,9 +1243,9 @@ static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t 
 }
 
 void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         uint32_t reset_mask, int32_t threshold_ms, int64_t at) {
+                         int32_t threshold_ms, int64_t at) {
     a->plat = plat;
-    resync_init(&a->state, plat->profile_count, reset_mask, threshold_ms);
+    resync_init(&a->state, plat->profile_count, threshold_ms);
 
     for (uint8_t i = 0; i < RESYNC_MAX_PROFILES; i++) {
         a->peer_known[i] = false;
@@ -1566,30 +1534,22 @@ ZMK_SUBSCRIPTION(layout_resync, zmk_endpoint_changed);
 
 static int layout_resync_init(void) {
     k_mutex_init(&lock);
-    resync_adapter_init(&adapter, &platform, CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES,
-                        CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS, k_uptime_get());
+    resync_adapter_init(&adapter, &platform, CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS,
+                        k_uptime_get());
 
-    LOG_INF("resync: %d profiles, threshold %d ms, reset mask 0x%x", ZMK_BLE_PROFILE_COUNT,
-            CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS, CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES);
+    LOG_INF("resync: %d profiles, threshold %d ms", ZMK_BLE_PROFILE_COUNT,
+            CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
     return 0;
 }
 
 SYS_INIT(layout_resync_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 ```
 
-- [ ] **Step 3: Keep the reset branch off everywhere for now**
+- [ ] **Step 3: Add nothing to `config/op36.conf`**
 
-Modify `config/op36.conf`, appending:
-
-```
-# Layout resync. Restoring a language is safe on any host; resetting one is only
-# safe on a host known to reset its own layout after sleep, and neither has been
-# checked yet. Task 5 turns on the bit for the Mac.
-CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES=0x0
-```
-
-`CONFIG_ZMK_LAYOUT_RESYNC` itself is left alone: it is `default y` and its dependencies are what Task
-2 put under test.
+There is nothing to configure. `CONFIG_ZMK_LAYOUT_RESYNC` is `default y` and its dependencies are
+what Task 2 put under test; the threshold and the alternate layer both have the right defaults for
+this keymap. Leaving the file untouched is the step.
 
 - [ ] **Step 4: Verify the simulator suite still passes**
 
@@ -1627,59 +1587,22 @@ today's firmware too, because the global `ru` simply stays on. The two hosts hav
 Nothing should reset at any point: the mask is `0x0`. If a reset happens, the mask is not being read
 as intended.
 
-### Task 5: Turn the reset branch on for the Mac
+### Task 5: Verify the reset on both hosts, and document it
 
-Restoring is safe on any host. Resetting is only safe on a host known to reset its own layout, which
-so far means the Mac. This task establishes which profile that is and enables exactly that bit.
+Both the Mac and the iPad reset their own layout on wake, measured on the devices, so the reset
+branch is right everywhere and there is nothing per host to configure. This task is the device
+verification and the write-up.
 
 **Files:**
-- Modify: `config/op36.conf`
 - Modify: `CLAUDE.md`
 
 **Interfaces:**
-- Consumes: `CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES` from Task 2.
+- Consumes: the module as built by Task 4.
 - Produces: nothing.
 
-- [ ] **Step 1: Find out which profile index the Mac occupies**
+- [ ] **Step 1: Verify the reset on the Mac**
 
-The keymap binds `&bt BT_SEL 0`, `1` and `2` on `adj` and says nothing about which host is which. Ask
-Tim, or read it off the device: select a profile, check which machine the keyboard types into.
-
-Record the answer in this step before continuing. Do not guess.
-
-- [ ] **Step 2: Enable the bit for the Mac only**
-
-Modify `config/op36.conf`. Replace the `CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES=0x0` line that Task 4
-added:
-
-| Mac is profile | mask value |
-|---|---|
-| 0 | `0x1` |
-| 1 | `0x2` |
-| 2 | `0x4` |
-
-```
-# Only the Mac's bit. It is known to reset its own layout on wake. Every other
-# profile stays restore-only until checked the same way — in particular the
-# iPad, where a reset would create a desync rather than fix one if iPadOS turns
-# out to preserve the layout across sleep.
-CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES=0x2
-```
-
-The value above assumes the Mac is profile 1. Use the table if Step 1 said otherwise.
-
-- [ ] **Step 3: Commit and build**
-
-```bash
-git add config/op36.conf
-git commit -m "feat: let the Mac's profile reset the language after a sleep"
-```
-
-Ask Tim to push and confirm CI is `success`.
-
-- [ ] **Step 4: Flash and verify the reset half on the Mac**
-
-Flash the left half. Then:
+Flash the left half if it is not already carrying Task 4's build. Then:
 
 1. On the Mac, switch to `ru` and type a Cyrillic word to confirm both sides agree.
 2. Close the lid, wait longer than `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS`, reopen it.
@@ -1694,85 +1617,50 @@ Expected: still Latin, and the firmware agrees with the host — the spec calls 
 because the lock screen can force ASCII independently of what the session restores, so a correct
 password proves less than it looks.
 
-Then the short case. The steps above end with the Mac on `en`, so **set `ru` again and confirm both
-sides agree** before testing anything — otherwise the check starts from a state it was not meant to.
+- [ ] **Step 2: Verify the short case is untouched**
+
+The steps above end with the Mac on `en`, so **set `ru` again and confirm both sides agree** before
+testing anything — otherwise the check starts from a state it was not meant to.
+
 Close and reopen the lid **inside** the threshold, then type.
 
-Keep two expectations apart here. That the firmware did **not** reset is the thing this step tests,
-and it must hold. What language the *host* comes back on is not controlled by us: a short sleep that
-still reset the layout is a limitation the spec already accepts, so a mismatch there is a known gap
-and not a failure of this change. Record which of the two you saw.
+Keep two expectations apart. That the firmware did **not** reset is the thing this step tests, and it
+must hold. What language the *host* comes back on is not controlled by us: a short sleep that still
+reset the layout is a limitation the spec already accepts, so a mismatch there is a known gap and not
+a failure of this change. Record which of the two you saw.
 
-Finally, confirm the iPad is unaffected: switch to it, type, and see its own language restored rather
-than reset.
+- [ ] **Step 3: Verify the reset on the iPad**
 
-- [ ] **Step 5: Check the iPad, and only then decide about its bit**
+Same shape, with the log available so the outage can be confirmed as longer than the threshold —
+otherwise the test proves nothing:
 
-With the log available (`CONFIG_ZMK_USB_LOGGING` if it is not already on), on the iPad:
+1. On the iPad, switch to Russian and type a Cyrillic word in Notes.
+2. Lock it, wait past the threshold, unlock.
+3. Type in Notes.
 
-1. Switch to Russian and confirm in Notes that Cyrillic comes out.
-2. Lock it, wait long enough that the log shows an outage over the threshold, unlock.
-3. Type one letter in Notes.
+Expected: Latin. This is the measurement that removed the per-profile mask; this step confirms it
+holds through the module rather than by hand.
 
-If it comes back Latin, iPadOS resets its own layout and the iPad's bit can be added to the mask in a
-follow-up commit. If it comes back Cyrillic, leave the bit clear — the module must not reset there.
+- [ ] **Step 4: Update CLAUDE.md**
 
-Record the answer in CLAUDE.md either way.
-
-- [ ] **Step 6: Update CLAUDE.md**
-
-Two statements are now false and one section is missing.
-
-In "What this repository is", the sentence "There is no application code, no test suite, and no local
-toolchain checked in" must acknowledge the module. Replace with:
+The module's section already exists from Task 4's documentation commit, but it still describes a
+bitmask that no longer exists. Replace that paragraph:
 
 ```markdown
-A ZMK **user config** (`zmk-config`), forked from Ergohaven's. It is almost all devicetree keymaps,
-Kconfig fragments and a build matrix, with one exception: `module/` is a small Zephyr module carried
-by this repository, the only compiled code here. Firmware is produced by GitHub Actions.
+**Both target hosts reset their own layout on wake**, macOS and iPadOS alike, measured on the devices
+before the reset branch was enabled. That is why there is nothing to configure per host: the module
+resets after any outage past the threshold, on every profile.
+
+An earlier draft carried a `RESET_PROFILES` bitmask so one host could be restore-only. It was removed
+rather than defaulted to "all", because it keyed on the **profile index**, which changes when a
+device is re-paired — a trap that would have pointed at the wrong host later. If a host ever turns up
+that preserves its layout across sleep, key that behaviour on the **peer address**, which the module
+already stores and compares to notice re-pairing.
 ```
 
-Under "Simulating the keymap", extend the line describing what `tests/run.sh` does first:
-
-```markdown
-`./tests/run.sh` first runs two checks that need no simulator — `tests/check-en-letters.py`, that
-layer 8 has not drifted from `en`, and the host-compiled `tests/resync-state/`, which exercises the
-layout resync state machine that the simulator cannot reach for want of BLE — and then builds
-`config/op36_ruen.keymap` for ZMK's `native_posix_64`
-```
-
-Add a new section after "The RU/EN dual-layout system", before "## ru_ext":
-
-```markdown
-## The layout resync module
-
-`module/` is a Zephyr module this repository carries, enabled by `zephyr/module.yml`, which the build
-workflow finds and turns into `-DZMK_EXTRA_MODULES`. It keeps the language layer with the host it is
-talking to: each BLE profile's language is remembered and restored when you come back to it, and a
-host that was away longer than `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS` is assumed to have slept and
-reset its own layout, so the firmware returns to the default language too.
-
-`module/src/resync_state.c` holds the decision logic and `module/src/resync_adapter.c` the event
-translation and reconciliation; neither has a Zephyr type in it, and both are tested by
-`tests/resync-state/`, which `tests/run.sh` runs. `module/src/layout_resync.c` is only the binding —
-it fills in a struct of platform calls and serialises the callbacks — because that layer cannot be
-tested here, the simulator having no BLE.
-
-**`CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES` is a bitmask and defaults to nothing in `op36.conf`.**
-Restoring a language is safe on any host; resetting it is only safe on a host known to reset its own
-layout on wake. Set a bit only after checking that host, and record the result here.
-
-The design and everything checked while arriving at it are in
-`docs/superpowers/specs/2026-09-08-layout-resync-design.md`. The three facts it turns on, all in
-`app/src/ble.c`: `zmk_ble_prof_select()` does not disconnect the outgoing host, both connection
-callbacks ignore anything that is not `BT_CONN_ROLE_PERIPHERAL`, and `zmk_ble_active_profile_changed`
-coalesces through one work item and only ever describes the active profile — which is why the module
-registers its own connection callbacks instead of relying on it.
-```
-
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: record the layout resync module and what it needs to be true"
+git commit -m "docs: record that both hosts reset their layout on wake"
 ```
