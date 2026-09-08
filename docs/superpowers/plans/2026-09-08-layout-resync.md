@@ -4,7 +4,7 @@
 
 **Goal:** Keep `op36_ruen`'s language layer in step with the host it is talking to, across host sleep and across BLE profile switches.
 
-**Architecture:** A Zephyr module carried by this repository. A pure state machine holds the per-profile language memory and decides what to do; a thin ZMK adapter feeds it Bluetooth connection callbacks, active-profile events and endpoint changes, and applies the one layer change it returns. The decision logic has no Zephyr types and is unit tested on the host; the adapter is not testable here and is kept as small as possible.
+**Architecture:** A Zephyr module carried by this repository, in three layers. A pure state machine holds the per-profile language memory and decides what to do. An adapter core translates Bluetooth and ZMK events into it, reconciles after pairing and applies the result; every platform call it needs is behind a struct of function pointers. A ZMK binding fills that struct in and serialises the callbacks, and has no logic of its own. The first two layers have no Zephyr types and are unit tested on the host; only the binding is untestable here, which is why it is kept trivial.
 
 **Tech Stack:** C11, Zephyr, ZMK v0.3.0, Kconfig, CMake. Host tests compiled with `cc`.
 
@@ -32,8 +32,11 @@
 | `module/Kconfig` | the four symbols and the build guard |
 | `module/src/resync_state.h` | the pure state machine's types and API — no Zephyr headers |
 | `module/src/resync_state.c` | the pure state machine |
-| `module/src/layout_resync.c` | ZMK adapter: connection callbacks, event subscriptions, layer application |
+| `module/src/resync_adapter.h` | the adapter core's API and its platform struct |
+| `module/src/resync_adapter.c` | event translation, reconciliation and application — no Zephyr |
+| `module/src/layout_resync.c` | ZMK binding: fills the platform struct in, routes callbacks, holds the mutex |
 | `tests/resync-state/test_resync_state.c` | host-compiled tests for the state machine |
+| `tests/resync-state/test_resync_adapter.c` | host-compiled tests for the adapter core |
 | `tests/run.sh` | runs the host test alongside `check-en-letters.py` |
 
 ---
@@ -101,8 +104,13 @@ struct resync_event {
     /* Whether the alternate layer is active right now, as the caller sees it.
        Passed in so the state machine never has to ask the keymap. */
     bool alt_now;
-    /* Milliseconds since boot. */
+    /* Milliseconds since boot, taken when the event happened and not when it
+       is processed. */
     int64_t at;
+    /* Whether BLE is the selected transport at this instant. Carried on every
+       event because ZMK selects a transport before announcing it, so a callback
+       can arrive while a remembered copy still says BLE. */
+    bool ble_now;
 };
 
 struct resync_profile {
@@ -183,12 +191,19 @@ static int failures;
 #define THRESHOLD 10000
 
 static struct resync_state st;
+/* What the transport looks like to the caller. Every event carries it, so these
+   tests set it the way the adapter would. */
+static bool ble_now = true;
 
-static void setup(void) { resync_init(&st, 3, 0xFFFFFFFF, THRESHOLD); }
+static void setup(void) {
+    ble_now = true;
+    resync_init(&st, 3, 0xFFFFFFFF, THRESHOLD);
+}
 
 static enum resync_action ev(enum resync_event_kind kind, uint8_t profile, bool alt_now,
                              int64_t at) {
-    struct resync_event e = {.kind = kind, .profile = profile, .alt_now = alt_now, .at = at};
+    struct resync_event e = {
+        .kind = kind, .profile = profile, .alt_now = alt_now, .at = at, .ble_now = ble_now};
     return resync_handle(&st, &e);
 }
 
@@ -290,12 +305,32 @@ static void test_usb_round_trip(void) {
     ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
     ev(RESYNC_EV_LINK_UP, MAC, false, 0);
     ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0); /* Mac owns ru */
+    ble_now = false;
     ev(RESYNC_EV_BLE_DESELECTED, 0, true, 100);
     CHECK(st.owner < 0, "nobody owns the layer while USB drives it");
     /* The user types on USB and switches to en. No BLE event describes it. */
+    ble_now = true;
     CHECK(ev(RESYNC_EV_BLE_SELECTED, 0, false, 5000) == RESYNC_ACTION_SET_ALT,
           "returning to BLE restores the Mac's ru");
     CHECK(st.profiles[MAC].lang_alt, "and the USB-era en was never recorded for the Mac");
+}
+
+/* Observing the transport late does the deselect transition itself, so the
+   layer cannot be attributed to the wrong profile afterwards. */
+static void test_late_transport_observation_releases_ownership(void) {
+    setup();
+    ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
+    ev(RESYNC_EV_LINK_UP, MAC, false, 0);
+    ev(RESYNC_EV_LINK_UP, IPAD, false, 0);
+    ev(RESYNC_EV_ACTIVE_PROFILE, MAC, true, 0); /* Mac owns ru */
+
+    /* USB is live but no event has said so yet; the next one carries it. */
+    ble_now = false;
+    CHECK(ev(RESYNC_EV_ACTIVE_PROFILE, IPAD, true, 100) == RESYNC_ACTION_NONE,
+          "nothing is applied while USB drives the layer");
+    CHECK(st.owner < 0, "and nothing takes ownership");
+    CHECK(st.profiles[MAC].lang_alt, "the Mac's ru was saved on the way out");
+    CHECK(!st.profiles[IPAD].lang_known, "the iPad learned nothing that was not its own");
 }
 
 /* The boundary itself, pinned so it cannot drift. */
@@ -321,6 +356,9 @@ static void test_threshold_boundary(void) {
 
 /* A profile outside the mask is restore-only however long it was away. */
 static void test_restore_only_profile(void) {
+    /* Not setup(): this case needs its own mask. Reset the transport by hand,
+       or it inherits whatever the previous case left behind. */
+    ble_now = true;
     resync_init(&st, 3, 1u << MAC, THRESHOLD); /* only the Mac may reset */
     ev(RESYNC_EV_BLE_SELECTED, 0, false, 0);
     ev(RESYNC_EV_LINK_UP, IPAD, false, 0);
@@ -422,6 +460,8 @@ int main(void) {
         {"short_outage_under_owner_changes_nothing", test_short_outage_under_owner_changes_nothing},
         {"usb_round_trip", test_usb_round_trip},
         {"threshold_boundary", test_threshold_boundary},
+        {"late_transport_observation_releases_ownership",
+         test_late_transport_observation_releases_ownership},
         {"restore_only_profile", test_restore_only_profile},
         {"unknown_profile_takes_the_default", test_unknown_profile_takes_the_default},
         {"first_connection_is_not_an_outage", test_first_connection_is_not_an_outage},
@@ -537,6 +577,20 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
     /* Only this call's own measurement may be reported. */
     s->last_outage_ms = -1;
 
+    /* Reconcile the transport first. Deciding and then refusing to apply would
+       leave the layer behind the state: ownership would move, a language would
+       be remembered and needs_reset cleared, with nothing written to the
+       keymap. decide() returns before it mutates anything when BLE is not
+       selected, so this has to be right before it runs. */
+    if (ev->ble_now != s->ble_selected) {
+        if (!ev->ble_now && s->owner >= 0) {
+            /* Leaving BLE: the layer is still the owner's, so save it. */
+            save_lang(s, (uint8_t)s->owner, ev->alt_now);
+            s->owner = -1;
+        }
+        s->ble_selected = ev->ble_now;
+    }
+
     switch (ev->kind) {
     case RESYNC_EV_LINK_DOWN:
         if (p >= s->profile_count) {
@@ -605,15 +659,12 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         return RESYNC_ACTION_NONE;
 
     case RESYNC_EV_BLE_DESELECTED:
-        if (s->owner >= 0) {
-            save_lang(s, (uint8_t)s->owner, ev->alt_now);
-        }
-        s->owner = -1;
-        s->ble_selected = false;
+        /* The reconcile above has already saved and released ownership if this
+           is the first event to observe the change. Arriving second is normal
+           and must do nothing. */
         return RESYNC_ACTION_NONE;
 
     case RESYNC_EV_BLE_SELECTED:
-        s->ble_selected = true;
         return decide(s);
     }
 
@@ -890,8 +941,6 @@ struct resync_platform {
     bool (*alt_active)(void);
     /* Activate or deactivate it. */
     void (*set_alt)(bool on);
-    /* Milliseconds since boot. */
-    int64_t (*now)(void);
     /* Is BLE the transport ZMK has selected *at this instant*. */
     bool (*ble_selected)(void);
     /* Is this profile's host link up, per ZMK. */
@@ -908,18 +957,22 @@ struct resync_adapter {
     bool peer_known[RESYNC_MAX_PROFILES];
 };
 
+/* Every entry point takes the time the event happened. The caller reads the
+   clock on entry to its callback, so a wait on the binding's mutex cannot be
+   counted as part of an outage — which near the threshold would change the
+   decision. */
 void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         uint32_t reset_mask, int32_t threshold_ms);
+                         uint32_t reset_mask, int32_t threshold_ms, int64_t at);
 
 /* A host link went up or down. Called from the Bluetooth connection callbacks,
    which is the only place an outage may be measured from. */
-void resync_adapter_on_link(struct resync_adapter *a, uint8_t profile, bool up);
+void resync_adapter_on_link(struct resync_adapter *a, uint8_t profile, bool up, int64_t at);
 
 /* The active profile changed, or a profile's peer was written. */
-void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index);
+void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, int64_t at);
 
 /* ZMK selected a different transport. */
-void resync_adapter_on_endpoint_changed(struct resync_adapter *a);
+void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at);
 
 /* The outage the last call measured, or -1. Diagnostics only. */
 int64_t resync_adapter_last_outage(const struct resync_adapter *a);
@@ -970,7 +1023,6 @@ static void p_set_alt(bool on) {
     fake_alt = on;
     set_alt_calls++;
 }
-static int64_t p_now(void) { return fake_now; }
 static bool p_ble_selected(void) { return fake_ble; }
 static bool p_profile_connected(uint8_t i) { return fake_connected[i]; }
 static const uint8_t *p_profile_peer(uint8_t i) { return fake_has_peer[i] ? fake_peer[i] : NULL; }
@@ -978,7 +1030,6 @@ static const uint8_t *p_profile_peer(uint8_t i) { return fake_has_peer[i] ? fake
 static const struct resync_platform plat = {
     .alt_active = p_alt_active,
     .set_alt = p_set_alt,
-    .now = p_now,
     .ble_selected = p_ble_selected,
     .profile_connected = p_profile_connected,
     .profile_peer = p_profile_peer,
@@ -999,7 +1050,7 @@ static void setup(void) {
         fake_has_peer[i] = true;
         fake_peer[i][0] = (uint8_t)(0x10 + i);
     }
-    resync_adapter_init(&ad, &plat, 0xFFFFFFFF, THRESHOLD);
+    resync_adapter_init(&ad, &plat, 0xFFFFFFFF, THRESHOLD, fake_now);
 }
 
 /* Reconciling must never fabricate a link transition for a profile whose peer
@@ -1009,23 +1060,23 @@ static void setup(void) {
 static void test_reconcile_does_not_fabricate_transitions(void) {
     setup();
     fake_connected[MAC] = true;
-    resync_adapter_on_link(&ad, MAC, true);
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_link(&ad, MAC, true, fake_now);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
     fake_alt = true; /* user goes to ru on the Mac */
 
     /* A real disconnect, then a profile-changed event arrives while ZMK still
        reports the old connection state. */
     fake_now = 1000;
-    resync_adapter_on_link(&ad, MAC, false);
+    resync_adapter_on_link(&ad, MAC, false, fake_now);
     fake_connected[MAC] = true; /* stale snapshot */
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
 
     CHECK(!resync_link_up(&ad.state, MAC), "the real disconnect must stand");
 
     /* The real reconnect, a minute later, must still be measured. */
     fake_now = 61000;
     fake_connected[MAC] = true;
-    resync_adapter_on_link(&ad, MAC, true);
+    resync_adapter_on_link(&ad, MAC, true, fake_now);
     CHECK(resync_adapter_last_outage(&ad) == 60000, "the full outage is measured, not 0");
 }
 
@@ -1035,17 +1086,17 @@ static void test_reconcile_does_not_fabricate_transitions(void) {
 static void test_new_peer_clears_history_and_adopts_link(void) {
     setup();
     fake_connected[MAC] = true;
-    resync_adapter_on_link(&ad, MAC, true);
+    resync_adapter_on_link(&ad, MAC, true, fake_now);
     fake_alt = true;
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
     fake_now = 1000;
-    resync_adapter_on_link(&ad, MAC, false);
+    resync_adapter_on_link(&ad, MAC, false, fake_now);
 
     /* Paired with something else; ZMK already has it connected. */
     fake_peer[MAC][0] = 0x99;
     fake_connected[MAC] = true;
     fake_now = 2000;
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
 
     CHECK(resync_link_up(&ad.state, MAC), "the missed connect is picked up from ZMK");
     CHECK(!ad.state.profiles[MAC].needs_reset, "the old peer's verdict is gone");
@@ -1058,37 +1109,89 @@ static void test_no_layer_change_once_usb_is_selected(void) {
     setup();
     fake_connected[MAC] = true;
     fake_connected[IPAD] = true;
-    resync_adapter_on_link(&ad, MAC, true);
-    resync_adapter_on_link(&ad, IPAD, true);
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_link(&ad, MAC, true, fake_now);
+    resync_adapter_on_link(&ad, IPAD, true, fake_now);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
     fake_alt = true;
-    resync_adapter_on_profile_changed(&ad, IPAD); /* iPad learns en */
-    resync_adapter_on_profile_changed(&ad, MAC);  /* Mac restored to ru */
+    resync_adapter_on_profile_changed(&ad, IPAD, fake_now); /* iPad learns en */
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);  /* Mac restored to ru */
     CHECK(fake_alt, "the Mac is on ru");
 
     /* USB is chosen. ZMK has switched already but has not told us yet. */
     fake_ble = false;
     set_alt_calls = 0;
-    resync_adapter_on_link(&ad, IPAD, false);
-    resync_adapter_on_link(&ad, IPAD, true);
-    resync_adapter_on_profile_changed(&ad, IPAD);
+    resync_adapter_on_link(&ad, IPAD, false, fake_now);
+    resync_adapter_on_link(&ad, IPAD, true, fake_now);
+    resync_adapter_on_profile_changed(&ad, IPAD, fake_now);
     CHECK(set_alt_calls == 0, "nothing may touch the layer while USB is selected");
+}
+
+/* An action that cannot be applied must not be decided. ZMK selects the
+   transport before announcing it, so events arrive in that window with USB
+   already live; if the machine advanced anyway, ownership would move with
+   nothing written and the next save would attribute one host's language to
+   another. */
+static void test_blocked_window_does_not_advance_state(void) {
+    setup();
+    fake_connected[MAC] = true;
+    fake_connected[IPAD] = true;
+    resync_adapter_on_link(&ad, MAC, true, fake_now);
+    resync_adapter_on_link(&ad, IPAD, true, fake_now);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
+    fake_alt = true;
+    resync_adapter_on_profile_changed(&ad, IPAD, fake_now);
+    fake_alt = false;
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
+    CHECK(fake_alt, "the Mac is on ru and the iPad remembers en");
+
+    /* USB is live; the announcement has not arrived. */
+    fake_ble = false;
+    set_alt_calls = 0;
+    resync_adapter_on_profile_changed(&ad, IPAD, fake_now);
+    CHECK(set_alt_calls == 0, "nothing is applied");
+    CHECK(ad.state.owner < 0, "and nothing takes ownership either");
+
+    resync_adapter_on_endpoint_changed(&ad, fake_now); /* the late notification */
+    CHECK(ad.state.profiles[MAC].lang_alt, "the Mac keeps its ru");
+    CHECK(!ad.state.profiles[IPAD].lang_alt, "and the iPad does not inherit it");
+}
+
+/* A reset that could not be applied must still be owed. */
+static void test_blocked_reset_survives_the_window(void) {
+    setup();
+    fake_connected[MAC] = true;
+    resync_adapter_on_link(&ad, MAC, true, 0);
+    resync_adapter_on_profile_changed(&ad, MAC, 0);
+    fake_alt = true;
+    resync_adapter_on_profile_changed(&ad, MAC, 0);
+
+    /* Away long enough to reset, but USB is live when it comes back. */
+    resync_adapter_on_link(&ad, MAC, false, 1000);
+    fake_ble = false;
+    resync_adapter_on_link(&ad, MAC, true, 100000);
+    CHECK(ad.state.profiles[MAC].needs_reset, "the verdict is still owed");
+
+    fake_ble = true;
+    set_alt_calls = 0;
+    resync_adapter_on_endpoint_changed(&ad, 101000);
+    CHECK(!fake_alt, "and is applied when BLE comes back");
+    CHECK(set_alt_calls == 1, "exactly once");
 }
 
 /* The USB round trip, through the adapter rather than the bare machine. */
 static void test_usb_round_trip(void) {
     setup();
     fake_connected[MAC] = true;
-    resync_adapter_on_link(&ad, MAC, true);
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_link(&ad, MAC, true, fake_now);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
     fake_alt = true;
-    resync_adapter_on_profile_changed(&ad, MAC);
+    resync_adapter_on_profile_changed(&ad, MAC, fake_now);
 
     fake_ble = false;
-    resync_adapter_on_endpoint_changed(&ad);
+    resync_adapter_on_endpoint_changed(&ad, fake_now);
     fake_alt = false; /* the user types on USB in en */
     fake_ble = true;
-    resync_adapter_on_endpoint_changed(&ad);
+    resync_adapter_on_endpoint_changed(&ad, fake_now);
     CHECK(fake_alt, "coming back to BLE restores the Mac's ru");
     CHECK(ad.state.profiles[MAC].lang_alt, "and the USB language was never recorded for it");
 }
@@ -1101,6 +1204,8 @@ int main(void) {
         {"reconcile_does_not_fabricate_transitions", test_reconcile_does_not_fabricate_transitions},
         {"new_peer_clears_history_and_adopts_link", test_new_peer_clears_history_and_adopts_link},
         {"no_layer_change_once_usb_is_selected", test_no_layer_change_once_usb_is_selected},
+        {"blocked_window_does_not_advance_state", test_blocked_window_does_not_advance_state},
+        {"blocked_reset_survives_the_window", test_blocked_reset_survives_the_window},
         {"usb_round_trip", test_usb_round_trip},
     };
 
@@ -1144,25 +1249,29 @@ Create `module/src/resync_adapter.c`:
    sets the selected transport before it announces the change, so a connection
    callback can arrive while our own copy still says BLE. Reading it late is
    what keeps a BLE decision off a USB session. */
-static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t profile) {
+static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t profile,
+                 int64_t at) {
     struct resync_event ev = {
         .kind = kind,
         .profile = profile,
         .alt_now = a->plat->alt_active(),
-        .at = a->plat->now(),
+        .at = at,
+        .ble_now = a->plat->ble_selected(),
     };
 
     enum resync_action action = resync_handle(&a->state, &ev);
 
-    if (action == RESYNC_ACTION_NONE || !a->plat->ble_selected()) {
-        return;
+    /* No guard here on purpose. The transport is carried into the machine and
+       consulted before it decides, so an action can only come back when it is
+       allowed to be applied. Checking afterwards and refusing would leave the
+       state ahead of the layer. */
+    if (action != RESYNC_ACTION_NONE) {
+        a->plat->set_alt(action == RESYNC_ACTION_SET_ALT);
     }
-
-    a->plat->set_alt(action == RESYNC_ACTION_SET_ALT);
 }
 
 void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         uint32_t reset_mask, int32_t threshold_ms) {
+                         uint32_t reset_mask, int32_t threshold_ms, int64_t at) {
     a->plat = plat;
     resync_init(&a->state, plat->profile_count, reset_mask, threshold_ms);
 
@@ -1180,15 +1289,15 @@ void resync_adapter_init(struct resync_adapter *a, const struct resync_platform 
     }
 
     if (plat->ble_selected()) {
-        feed(a, RESYNC_EV_BLE_SELECTED, 0);
+        feed(a, RESYNC_EV_BLE_SELECTED, 0, at);
     }
 }
 
-void resync_adapter_on_link(struct resync_adapter *a, uint8_t profile, bool up) {
-    feed(a, up ? RESYNC_EV_LINK_UP : RESYNC_EV_LINK_DOWN, profile);
+void resync_adapter_on_link(struct resync_adapter *a, uint8_t profile, bool up, int64_t at) {
+    feed(a, up ? RESYNC_EV_LINK_UP : RESYNC_EV_LINK_DOWN, profile, at);
 }
 
-void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index) {
+void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, int64_t at) {
     /* Only a profile whose peer changed is reconciled. Comparing every profile
        against its remembered link state races the connection callbacks: a
        snapshot taken a moment ago can contradict a disconnect that has just
@@ -1212,20 +1321,20 @@ void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index) 
         a->peer_known[i] = true;
 
         /* A different machine is behind this index now. */
-        feed(a, RESYNC_EV_PROFILE_CLEARED, i);
+        feed(a, RESYNC_EV_PROFILE_CLEARED, i, at);
 
         /* Its history is gone, so adopting ZMK's view of the link cannot
            swallow an outage: there is none to swallow. */
         if (a->plat->profile_connected(i)) {
-            feed(a, RESYNC_EV_LINK_UP, i);
+            feed(a, RESYNC_EV_LINK_UP, i, at);
         }
     }
 
-    feed(a, RESYNC_EV_ACTIVE_PROFILE, index);
+    feed(a, RESYNC_EV_ACTIVE_PROFILE, index, at);
 }
 
-void resync_adapter_on_endpoint_changed(struct resync_adapter *a) {
-    feed(a, a->plat->ble_selected() ? RESYNC_EV_BLE_SELECTED : RESYNC_EV_BLE_DESELECTED, 0);
+void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at) {
+    feed(a, a->plat->ble_selected() ? RESYNC_EV_BLE_SELECTED : RESYNC_EV_BLE_DESELECTED, 0, at);
 }
 
 int64_t resync_adapter_last_outage(const struct resync_adapter *a) { return a->state.last_outage_ms; }
@@ -1343,8 +1452,6 @@ static void plat_set_alt(bool on) {
     }
 }
 
-static int64_t plat_now(void) { return k_uptime_get(); }
-
 static bool plat_ble_selected(void) {
     return zmk_endpoints_selected().transport == ZMK_TRANSPORT_BLE;
 }
@@ -1358,26 +1465,18 @@ static const uint8_t *plat_profile_peer(uint8_t profile) {
 static const struct resync_platform platform = {
     .alt_active = plat_alt_active,
     .set_alt = plat_set_alt,
-    .now = plat_now,
     .ble_selected = plat_ble_selected,
     .profile_connected = plat_profile_connected,
     .profile_peer = plat_profile_peer,
     .profile_count = ZMK_BLE_PROFILE_COUNT,
 };
 
-static void log_outage(uint8_t profile) {
-    int64_t outage = resync_adapter_last_outage(&adapter);
-    if (outage >= 0) {
-        /* The threshold is a guess; this is the data for tuning it. */
-        LOG_INF("resync: profile %d back after %lld ms (threshold %d)", profile, (long long)outage,
-                CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
-    }
-}
-
 /* The role filter is the one ble.c uses to ignore the split peripheral link.
-   The timestamp is taken inside resync_adapter_on_link, called straight from
-   here, so it is the moment of the callback and not of some later processing. */
+   The clock is read here, on entry, and passed down: taking it after the mutex
+   would fold a wait into the measured outage, and near the threshold that
+   changes the decision. */
 static void resync_connected(struct bt_conn *conn, uint8_t err) {
+    int64_t at = k_uptime_get();
     struct bt_conn_info info;
 
     if (err || bt_conn_get_info(conn, &info) < 0 || info.role != BT_CONN_ROLE_PERIPHERAL) {
@@ -1393,12 +1492,21 @@ static void resync_connected(struct bt_conn *conn, uint8_t err) {
     }
 
     k_mutex_lock(&lock, K_FOREVER);
-    resync_adapter_on_link(&adapter, (uint8_t)profile, true);
+    resync_adapter_on_link(&adapter, (uint8_t)profile, true, at);
+    /* Read under the same lock: last_outage_ms is shared, and another event
+       clears it or replaces it with a different profile's measurement. */
+    int64_t outage = resync_adapter_last_outage(&adapter);
     k_mutex_unlock(&lock);
-    log_outage((uint8_t)profile);
+
+    if (outage >= 0) {
+        /* The threshold is a guess; this is the data for tuning it. */
+        LOG_INF("resync: profile %d back after %lld ms (threshold %d)", profile, (long long)outage,
+                CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
+    }
 }
 
 static void resync_disconnected(struct bt_conn *conn, uint8_t reason) {
+    int64_t at = k_uptime_get();
     struct bt_conn_info info;
 
     ARG_UNUSED(reason);
@@ -1413,7 +1521,7 @@ static void resync_disconnected(struct bt_conn *conn, uint8_t reason) {
     }
 
     k_mutex_lock(&lock, K_FOREVER);
-    resync_adapter_on_link(&adapter, (uint8_t)profile, false);
+    resync_adapter_on_link(&adapter, (uint8_t)profile, false, at);
     k_mutex_unlock(&lock);
 }
 
@@ -1423,17 +1531,19 @@ BT_CONN_CB_DEFINE(resync_conn_callbacks) = {
 };
 
 static int resync_event_listener(const zmk_event_t *eh) {
+    int64_t at = k_uptime_get();
+
     const struct zmk_ble_active_profile_changed *profile_ev = as_zmk_ble_active_profile_changed(eh);
     if (profile_ev) {
         k_mutex_lock(&lock, K_FOREVER);
-        resync_adapter_on_profile_changed(&adapter, profile_ev->index);
+        resync_adapter_on_profile_changed(&adapter, profile_ev->index, at);
         k_mutex_unlock(&lock);
         return ZMK_EV_EVENT_BUBBLE;
     }
 
     if (as_zmk_endpoint_changed(eh)) {
         k_mutex_lock(&lock, K_FOREVER);
-        resync_adapter_on_endpoint_changed(&adapter);
+        resync_adapter_on_endpoint_changed(&adapter, at);
         k_mutex_unlock(&lock);
     }
 
@@ -1447,7 +1557,7 @@ ZMK_SUBSCRIPTION(layout_resync, zmk_endpoint_changed);
 static int layout_resync_init(void) {
     k_mutex_init(&lock);
     resync_adapter_init(&adapter, &platform, CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES,
-                        CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
+                        CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS, k_uptime_get());
 
     LOG_INF("resync: %d profiles, threshold %d ms, reset mask 0x%x", ZMK_BLE_PROFILE_COUNT,
             CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS, CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES);
@@ -1483,8 +1593,8 @@ git add module/src/layout_resync.c module/CMakeLists.txt config/op36.conf
 git commit -m "feat: keep the language layer with the host it is talking to"
 ```
 
-Push, then confirm the run is `success`. If it fails, read the failing entry before changing
-anything:
+Then ask for a push, and once it lands confirm the run is `success`. If it fails, read the failing
+entry before changing anything:
 
 ```bash
 gh run view <run-id> --log | grep -iE "error|undefined reference" | head -20
@@ -1632,9 +1742,11 @@ talking to: each BLE profile's language is remembered and restored when you come
 host that was away longer than `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS` is assumed to have slept and
 reset its own layout, so the firmware returns to the default language too.
 
-`module/src/resync_state.c` holds all the decision logic with no Zephyr types in it and is tested by
-`tests/resync-state/`, run by `tests/run.sh`. `module/src/layout_resync.c` is the adapter and cannot
-be tested here — the simulator has no BLE — so it is deliberately thin.
+`module/src/resync_state.c` holds the decision logic and `module/src/resync_adapter.c` the event
+translation and reconciliation; neither has a Zephyr type in it, and both are tested by
+`tests/resync-state/`, which `tests/run.sh` runs. `module/src/layout_resync.c` is only the binding —
+it fills in a struct of platform calls and serialises the callbacks — because that layer cannot be
+tested here, the simulator having no BLE.
 
 **`CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES` is a bitmask and defaults to nothing in `op36.conf`.**
 Restoring a language is safe on any host; resetting it is only safe on a host known to reset its own
