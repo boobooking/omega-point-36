@@ -162,17 +162,18 @@ kept for USB** — the module's job there is to not corrupt the BLE profiles, no
 
 ### The adapter has to be idempotent
 
-The pure state machine is testable; the code that feeds it is not, and that is where the remaining
-risk sits. Two rules it must obey, to be stated as requirements rather than discovered later:
+The state machine and the adapter core are both testable on the host; only the ZMK binding is not,
+and that is where the remaining risk sits. Two rules it must obey, to be stated as requirements
+rather than discovered later:
 
 - **State update, layer application and the `owner` change are one step.** A connection callback and
   a ZMK event can describe the same transition, and they do not arrive in a guaranteed order — the
   event is a coalescing snapshot, the callback is immediate. Applying a layer without moving `owner`,
   or the reverse, leaves the two disagreeing.
 - **A repeat notification must be harmless.** The same transition may be reported twice, or reported
-  when nothing changed. Deciding again for a profile that already owns the layer with no pending
-  verdict must do nothing, which the first row of the decision table already gives — but it has to
-  hold for the adapter's own re-entry, not only for the automaton.
+  when nothing changed. Deciding again for a profile that already owns the layer must do nothing,
+  which the first row of the decision table already gives — but it has to hold for the binding's own
+  re-entry, not only for the automaton.
 
 ### Nothing is written to flash, and that is a limitation rather than a virtue
 
@@ -232,7 +233,6 @@ zephyr/module.yml        build: { cmake: module, kconfig: module/Kconfig }
 module/CMakeLists.txt
 module/Kconfig
 module/src/layout_resync.c
-module/src/decide.h      pure decision function, shared with the test
 ```
 
 Everything it uses is public API: `zmk_keymap_layer_activate`, `zmk_keymap_layer_deactivate`,
@@ -249,7 +249,10 @@ Named so they are not mistaken for oversights:
 - **The host changing layout while awake** — menu bar, another application, a foreign shortcut. Still
   undetectable; cause 2 in CLAUDE.md's table, and it needs feedback the platform does not give.
 - **The first connection to a profile after boot.** No memory exists yet, so the default language
-  stands. Right answer, but not a decision.
+  stands while the host restores its own, which may be the other one. An accepted gap, the same one
+  the RAM-only memory produces after a deep sleep, and closed by the same work: persisting the
+  memory. Not a decision, and not a right answer — just the only one available without state that
+  outlives a reset.
 - **Profile clearing and re-pairing.** `&bt BT_CLR` and pairing both raise the profile-changed event
   through `set_profile_address()`. The module must not crash or act oddly, but restoring a language
   for a profile whose peer just changed is meaningless; that profile's memory is simply dropped.

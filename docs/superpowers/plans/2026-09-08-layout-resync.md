@@ -1164,10 +1164,14 @@ This is the case that replaced the reset branch. **Do not touch the layer by han
 path is Step 3, separately.
 
 1. Mac on `ru`, confirmed by typing.
-2. Lock the screen and leave it long enough that the link drops — a minute is plenty.
-3. Unlock **without typing the password correctly mattering**: it will come out scrambled, which is
-   expected and is what Step 3 is about. Get in.
-4. Type in an application.
+2. Lock the screen and wait until the link **is observed** to have dropped. A minute of waiting is
+   not evidence: watch the keyboard disappear from the Bluetooth list, or read it out of the log if
+   USB logging is on. Without that observation the check proves nothing, because a link that never
+   dropped means no event ever reached the module.
+3. Unlock **with Touch ID, a watch, or the built-in keyboard** — anything that does not put a
+   character through the op36. Typing the password on it would move the firmware layer and confound
+   the result; the manual path is Step 3, on purpose separate.
+4. Type in an application, on the op36.
 
 Expected: Cyrillic, with the firmware agreeing. Repeat once on the iPad.
 
@@ -1197,8 +1201,15 @@ sides, with no manual switch. Same path as Step 2 without the lock screen in it.
 
 - [ ] **Step 5: Update CLAUDE.md**
 
-The module's section exists from an earlier commit but describes a reset that no longer happens and a
-bitmask that no longer exists. Replace that paragraph:
+The module's section exists from an earlier commit and has **two** stale paragraphs, not one. Replace
+both:
+
+- the opening one, which says the module "returns to the default language" after an outage past
+  `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS`;
+- the one beginning "**`CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES` is a bitmask**".
+
+Replacing only the second leaves the first promising a reset that no longer happens. The replacement
+for both:
 
 ```markdown
 **The module never resets a language, only restores one.** The lock screen forces ASCII for the
