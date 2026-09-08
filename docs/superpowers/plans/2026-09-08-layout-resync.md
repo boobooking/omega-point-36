@@ -1165,12 +1165,14 @@ path is Step 3, separately.
 
 1. Mac on `ru`, confirmed by typing.
 2. Lock the screen and wait until the link **is observed** to have dropped. A minute of waiting is
-   not evidence: watch the keyboard disappear from the Bluetooth list, or read it out of the log if
-   USB logging is on. Without that observation the check proves nothing, because a link that never
+   not evidence. The keyboard stays in the Bluetooth list either way — a paired device does not
+   disappear — so read its status as **not connected**, or take the disconnect event out of the log
+   if USB logging is on. Without that observation the check proves nothing, because a link that never
    dropped means no event ever reached the module.
-3. Unlock **with Touch ID, a watch, or the built-in keyboard** — anything that does not put a
-   character through the op36. Typing the password on it would move the firmware layer and confound
-   the result; the manual path is Step 3, on purpose separate.
+3. Unlock **with Touch ID, a watch, or the built-in keyboard** — anything that does not require the
+   manual switch. Typing on the op36 does not move the layer by itself; what would move it is the
+   `nav` 6 you would need in order to type the password correctly, and that is the confound. The
+   manual path is Step 3, on purpose separate.
 4. Type in an application, on the op36.
 
 Expected: Cyrillic, with the firmware agreeing. Repeat once on the iPad.
