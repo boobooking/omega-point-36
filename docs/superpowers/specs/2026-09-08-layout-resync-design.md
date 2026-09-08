@@ -40,8 +40,10 @@ and the host can drift apart".
 - **It is raised from four places, not three.** `set_profile_address()` (line 119) raises it too, so
   pairing and `&bt BT_CLR` produce it as well as profile selection and connect/disconnect.
 - **It is a snapshot, not a transition.** `raise_profile_changed_event()` reads `active_profile` when
-  the work item runs, and `K_WORK_DEFINE` gives all four call sites **one** work item. A disconnect
-  followed quickly by a connect submits twice, runs once, and the intervening state is never seen.
+  it runs, and `K_WORK_DEFINE` gives the three deferred call sites — `set_profile_address()`,
+  `connected()`, `disconnected()` — **one** work item. (`zmk_ble_prof_select()` calls it directly, at
+  line 303.) A disconnect followed quickly by a connect submits twice, runs once, and the intervening
+  state is never seen.
 - **It only ever concerns the active profile.** `connected()` and `disconnected()` gate on
   `is_conn_active_profile(conn)`, which compares against `profiles[active_profile]`. A host that drops
   while we are on another profile is invisible — exactly the measurement this design needs.
@@ -62,10 +64,21 @@ Per profile, in RAM, `ZMK_BLE_PROFILE_COUNT` entries (`CONFIG_BT_MAX_PAIRED` min
 `CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS`, so 5 on this build):
 
 - `lang_alt` — the remembered language for this profile
-- `disconnected_at` — when this profile's host link went down, from the connection callback only
+- `link_down_at` — when this profile's host link went down, from the connection callback only
+- `needs_reset` — sticky: an outage longer than the threshold has happened and has not been acted on
 
 Plus one global: `owner`, the profile index whose language the current layer state represents, or
 none.
+
+`needs_reset` is a **verdict, not a duration**. It is decided at the moment the link comes back, from
+`link_up_at - link_down_at`, and it is sticky: once a long outage has set it, a later short outage
+must not clear it. Two bugs follow from getting this wrong, and both were found in review:
+
+- Measuring `now - link_down_at` at decision time counts the time the link was *up* again. An
+  inactive profile that blinked for a second and was selected a minute later would measure a
+  minute-long outage and reset for no reason.
+- Clearing the verdict on any reconnect loses a genuine sleep that happened to be followed by a brief
+  hiccup before you came back.
 
 ### Ownership, and the two bugs it fixes
 
@@ -74,7 +87,7 @@ failures, both found in review of the first draft:
 
 - The Mac dropped a minute ago. You switch to the iPad and straight back. If switching away rewrote
   the Mac's timestamp, its minute-long absence would measure as two seconds. **Fixed by taking
-  `disconnected_at` only from the connection callback**, never from profile switching.
+  `link_down_at` only from the connection callback**, never from profile switching.
 - The iPad is on `en`. You select the Mac profile, which is disconnected and remembers `ru`, and
   leave before it connects. The layer never became the Mac's, yet a naive save would write `en` into
   the Mac's slot. **Fixed by `owner`**: the language is saved for a profile only while that profile
@@ -85,20 +98,35 @@ which no decision has been made. Saving happens only when `owner` is about to ch
 
 ### Deciding
 
-When a profile becomes both active and connected:
+When a profile becomes both active and connected, or when BLE becomes the selected transport again:
 
 | condition | meaning | action |
 |---|---|---|
-| link never went down since we last owned it | the host stayed awake | restore `lang_alt` |
-| link came back, gap ≥ threshold | away long enough to have slept and reset | clear to the default language |
-| link came back, gap < threshold | radio hiccup, or an immediate reconnect after a switch | restore `lang_alt` |
+| it is still the `owner` and `needs_reset` is clear | nothing happened to it; the layer already *is* its language | **nothing** |
+| `needs_reset` set | it was away long enough to have slept and reset | clear to the default language, clear the flag, take ownership |
+| otherwise | arriving at a host that stayed awake, or a hiccup | restore `lang_alt`, take ownership |
 
-`gap` is `now - disconnected_at`. This rests on one assumption worth stating plainly: **a sleeping
-host drops the BLE connection.** A host that slept while holding the link open would look like one
-that stayed awake, and its stale language would be restored — no worse than today.
+The first row matters more than it looks. If a profile never lost ownership, its stored `lang_alt`
+may be older than the user's latest choice — they may have switched language since — so restoring
+from memory would drag them back. Doing nothing is both correct and cheaper.
+
+This rests on one assumption worth stating plainly: **a sleeping host drops the BLE connection.** A
+host that slept while holding the link open would look like one that stayed awake, and its stale
+language would be restored — no worse than today.
 
 Two cases the threshold cannot separate, accepted rather than solved: a short sleep that still reset
 the layout is missed, and a long radio loss from an awake host causes a false reset.
+
+### When the language is saved
+
+`lang_alt` is written for a profile at exactly two moments, both while that profile is the `owner`:
+
+- when its link goes down, and
+- when ownership is about to move elsewhere — another profile, or away from BLE entirely.
+
+Saving only on ownership change is not enough: a profile can own the layer, have the user change
+language under it, and then suffer a short outage without any ownership change. Without the
+save-on-disconnect the memory would still hold the older language.
 
 ### Applying the change
 
@@ -116,15 +144,27 @@ momentary layer sits on top.
 
 No keystroke is ever sent. On wake the host sets its own layout; the firmware only has to agree.
 
-### Only while BLE is the selected transport
+### Transport changes are their own signal
 
 BLE profiles and their connections keep existing while USB is the chosen endpoint —
-`get_selected_transport()` returns the stored preference whenever both are ready. Without a guard, a
-background BLE reconnect could change the layer under a user typing over USB, and a language chosen
-while on USB could be recorded into a BLE profile.
+`get_selected_transport()` returns the stored preference whenever both are ready. Guarding only the
+*application* of a layer change is not enough, because ownership can go stale with no BLE event at
+all:
 
-The module acts only when the selected endpoint transport is BLE. Fixing the layout for USB is out of
-scope; not corrupting it is not.
+> BLE with the Mac on `ru` → switch to USB → change the language to `en` → switch back to BLE. The
+> connection never dropped and the active index never changed, so neither the connection callbacks nor
+> `zmk_ble_active_profile_changed` need fire. The layer is left holding a USB-era `en`, which could
+> then be saved as the Mac's language.
+
+So the module also subscribes to `zmk_endpoint_changed`:
+
+- **leaving BLE** — save the current owner's language, then clear `owner`. Nobody owns the layer while
+  USB drives it.
+- **returning to BLE** — decide for the selected profile if it is connected, exactly as on arrival.
+
+BLE connection history keeps being recorded throughout, including while USB is selected; only the
+*application* of a layer change is gated on BLE being the selected transport. **No language memory is
+kept for USB** — the module's job there is to not corrupt the BLE profiles, not to manage USB.
 
 ### Why nothing is written to flash
 
@@ -138,12 +178,21 @@ it is most likely to be wrong.
 |---|---|---|
 | `ZMK_LAYOUT_RESYNC` | enable the module | `y` |
 | `ZMK_LAYOUT_RESYNC_ALT_LAYER` | the layer holding the alternate language | `1` (`ru`) |
-| `ZMK_LAYOUT_RESYNC_DISCONNECT_MS` | reconnect gap above which the host is assumed to have reset | `10000` |
+| `ZMK_LAYOUT_RESYNC_DISCONNECT_MS` | outage above which the host is assumed to have reset | `10000` |
+| `ZMK_LAYOUT_RESYNC_RESET_PROFILES` | bitmask of profiles that may take the reset branch | all |
 
-`ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` and on the central or non-split role.
-`app/CMakeLists.txt:47` builds `keymap.c` and `ble.c` only under
-`(NOT CONFIG_ZMK_SPLIT) OR CONFIG_ZMK_SPLIT_ROLE_CENTRAL`; without the guard the module fails to link
-on `op36_right` and `settings_reset`, which is two of the three matrix entries.
+`ZMK_LAYOUT_RESYNC_RESET_PROFILES` exists for the iPad. A profile outside the mask is
+**restore-only**: its language is still remembered and restored, but a long outage never clears it to
+the default. That is the safe setting for any host that preserves its layout across sleep, and it has
+to be per profile because the rest of the configuration is global and the two hosts differ.
+
+`ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` **and** on the central or non-split role. The two
+excluded matrix entries fail for different reasons, and only both conditions together cover them:
+
+- `op36_right` is a split peripheral, so `app/CMakeLists.txt:47`
+  (`(NOT CONFIG_ZMK_SPLIT) OR CONFIG_ZMK_SPLIT_ROLE_CENTRAL`) builds neither `keymap.c` nor `ble.c`.
+- `settings_reset` is not split at all, so it *does* build `keymap.c`; what it lacks is `ble.c`,
+  because its shield conf sets `CONFIG_ZMK_BLE=n`.
 
 The design assumes exactly two languages: `ALT_LAYER` exists, differs from the default, and is read
 through `zmk_keymap_layer_active()`. A third language would break the Caps Lock macros in the keymap
@@ -198,24 +247,35 @@ first draft claimed the cost was "one manual switch, same as today". That was wr
 preserves the Russian layout across sleep, then today the iPad comes back *consistent*, and the
 reconnect branch would **introduce** a desync that does not exist now. Before enabling the reset
 branch for the iPad's profile, check it — switch the iPad to Russian, lock it, unlock, and type one
-letter in Notes. If it comes back Russian, that profile should get restore-only behaviour and no
-reset.
+letter in Notes. Do it with an outage the log confirms was longer than the threshold, or the test
+proves nothing. If it comes back Russian, drop that profile from
+`ZMK_LAYOUT_RESYNC_RESET_PROFILES` and it becomes restore-only.
 
 ## Verification
 
 **The device is the only place the BLE transitions and the OS behaviour can be seen.**
 `native_posix_64` has no BLE, no second host and no profiles.
 
-**The decision logic, however, is testable and will be tested.** It is extracted into a pure function
-over (per-profile state, event, timestamp) returning an action, with no Zephyr types in its
-signature. A host-compiled test drives it through the sequences that matter, including the two that
-review found in the first draft:
+**The decision logic, however, is testable and will be tested.** It is extracted into a pure
+**state-transition** function — (state, event, timestamp) → (new state, action) — with no Zephyr types
+in its signature. Testing branch selection alone would miss the whole class of bugs review found,
+which are about *what gets stored and who owns it*, so the tests assert the resulting state and not
+just the action.
 
-- Mac drops, switch to iPad and back, Mac reconnects — the gap must still measure the full minute.
-- iPad on `en`, select the disconnected Mac which remembers `ru`, leave before it connects — the
-  Mac's memory must be untouched.
-- Switch between two connected hosts — restore each side's language, threshold never consulted.
-- Reconnect below and above the threshold.
+Sequences, each one a bug review found or a rule the design turns on:
+
+- Mac drops, you switch to the iPad and back, Mac reconnects — the outage must measure the real
+  minute, and switching must not rewrite `link_down_at`.
+- iPad on `en`; select the disconnected Mac, which remembers `ru`; leave before it connects — the
+  Mac's `lang_alt` must be untouched.
+- A profile blinks for a second, then is selected a minute later — no reset: the verdict is decided at
+  reconnect, not from `now`.
+- A long outage followed by a short one before you return — `needs_reset` must survive the short one.
+- A profile owns the layer, the user changes language, a short outage follows with no profile change —
+  the restore must not drag the old language back.
+- BLE/Mac on `ru` → USB → language changed to `en` → back to BLE — the Mac's memory must not acquire
+  the USB-era language.
+- Switch between two connected hosts — each side's language restored, threshold never consulted.
 - Profile cleared while active.
 
 That test runs from `tests/run.sh` alongside `check-en-letters.py`, so it costs nothing to keep.
@@ -236,5 +296,6 @@ behaviour.
 - **First C in the repository.** CLAUDE.md's claim that there is no ZMK fork stays true — this is a
   module — but the statement that the repo holds no application code stops being true and must be
   updated.
-- **Two of three matrix entries do not build `keymap.c` or `ble.c`.** The Kconfig guard is not tidiness;
+- **Two of three matrix entries lack what the module links against**, for different reasons —
+  `op36_right` by role, `settings_reset` by `CONFIG_ZMK_BLE=n`. The Kconfig guard is not tidiness;
   without it CI breaks.
