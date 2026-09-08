@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-A ZMK **user config** (`zmk-config`), forked from Ergohaven's. There is no application code, no test
-suite, and no local toolchain checked in — the entire repo is devicetree keymaps, Kconfig fragments,
-and a build matrix. Firmware is produced by GitHub Actions.
+A ZMK **user config** (`zmk-config`), forked from Ergohaven's. It is almost all devicetree keymaps,
+Kconfig fragments and a build matrix, with one exception: `module/` is a small Zephyr module carried
+by this repository, the only compiled code here. No local toolchain is checked in; firmware is
+produced by GitHub Actions.
 
 **Only the Omega Point 36 (`op36`) with the RU/EN keymap is built**, and `config/op36_ruen.keymap`
 is the only file that receives real work. `config/` still holds the upstream keymaps for velvet_v3,
@@ -81,8 +82,10 @@ and none of them are gitignored — build outside the repo, or just push and let
 
 ## Simulating the keymap
 
-`./tests/run.sh` first runs `tests/check-en-letters.py`, a static check that layer 8 has not drifted
-from `en`, and then builds `config/op36_ruen.keymap` for ZMK's `native_posix_64`
+`./tests/run.sh` first runs two checks that need no simulator — `tests/check-en-letters.py`, that
+layer 8 has not drifted from `en`, and the host-compiled tests under `tests/resync-state/`, which
+exercise the layout resync module's logic that the simulator cannot reach for want of BLE — and then
+builds `config/op36_ruen.keymap` for ZMK's `native_posix_64`
 board — the firmware becomes an ordinary Linux binary whose key matrix is a mock
 scanner replaying timed events — and diffs the resulting log against a snapshot.
 It runs in `zmkfirmware/zmk-build-arm:stable`; the first run clones ZMK and its
@@ -756,6 +759,36 @@ the remaining work is reducing the mechanical causes and keeping recovery cheap,
 Caps Lock. It is the native switch on both platforms and has no hold threshold, but whether macOS and
 iPadOS honour that consumer usage from a non-Apple BLE keyboard is unverified, and on macOS it needs
 the Fn behaviour set to "Change Input Source" (`AppleFnUsageType` is 0, "do nothing", here).
+
+## The layout resync module
+
+`module/` is a Zephyr module this repository carries, enabled by `zephyr/module.yml`, which the build
+workflow finds and turns into `-DZMK_EXTRA_MODULES`. It keeps the language layer with the host it is
+talking to: each BLE profile's language is remembered and restored when you come back to it, and a
+host that was away longer than `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS` is assumed to have slept and
+reset its own layout, so the firmware returns to the default language too.
+
+Three layers. `module/src/resync_state.c` decides what should happen, `module/src/resync_adapter.c`
+translates events and reconciles after pairing, and neither has a Zephyr type in it — both are tested
+by `tests/resync-state/`, which `tests/run.sh` runs. `module/src/layout_resync.c` is only the binding:
+it fills in a struct of platform calls and serialises the callbacks. That last layer cannot be tested
+here, the simulator having no BLE, which is exactly why it holds no logic.
+
+**`CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES` is a bitmask and is `0x0` in `op36.conf`.** Restoring a
+language is safe on any host; resetting it is only safe on a host known to reset its own layout on
+wake. Set a bit only after checking that host, and record the result here.
+
+The Kconfig guard is not tidiness. `app/CMakeLists.txt:47` builds `keymap.c` and `ble.c` only for a
+central or non-split target, so `op36_right` has neither; `settings_reset` is not split and does build
+`keymap.c`, but sets `CONFIG_ZMK_BLE=n` and so has no `ble.c`. Confirmed on CI run 34214748643, where
+`CONFIG_ZMK_LAYOUT_RESYNC=y` appears for `op36_left` alone.
+
+The design and everything checked while arriving at it are in
+`docs/superpowers/specs/2026-09-08-layout-resync-design.md`. The three facts it turns on, all in
+`app/src/ble.c`: `zmk_ble_prof_select()` does not disconnect the outgoing host, both connection
+callbacks ignore anything that is not `BT_CONN_ROLE_PERIPHERAL`, and `zmk_ble_active_profile_changed`
+coalesces through one work item and only ever describes the active profile — which is why the module
+registers its own connection callbacks instead of relying on it.
 
 ## ru_ext, and why it is not a plain `&lt`
 
