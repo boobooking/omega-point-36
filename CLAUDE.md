@@ -190,6 +190,17 @@ Nine layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3
 `nav`=5, `numbers`=6, `adj`=7, `en_letters`=8. The other (unbuilt) `_ruen` keymaps use a different
 order, so never copy a `&mo N` across files.
 
+**No binding in this file spells a layer number, though.** `&mo`, `&lt` and `&to` take a plain
+devicetree cell and ZMK has no phandle to a layer — a layer *is* its position in the keymap node — so
+an index is unavoidable where the behavior is bound. The `#define L_*` block at the top names every
+one of them, and the bindings read `&ltt L_NAV BACKSPACE`. Reordering the layers is therefore one
+edit in that block rather than a hunt for literals, which is what it is there for; keep the block in
+the same order as the nodes below it so the two cannot disagree silently.
+
+The one layer index the block cannot reach is `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER` in
+`module/Kconfig`: Kconfig does not see these defines. It defaults to 1, which is `L_RU`, and has to
+be moved by hand if `ru` ever moves.
+
 `en_letters` is a copy of `en` raised over `ru` whenever a modifier or the herdr prefix needs Latin
 scancodes — see below, including why it must be kept in sync by hand and what checks that. It is last
 so that adding it renumbered nothing.
