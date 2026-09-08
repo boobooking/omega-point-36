@@ -823,6 +823,10 @@ Create `module/src/layout_resync.c` with only enough to link. Task 4 replaces it
 ```c
 /* ZMK binding for the layout resync module. Task 4 implements this. */
 
+/* init.h is what declares SYS_INIT; kernel.h does not pull it in, and ZMK's own
+   files include it explicitly for the same reason. Without it the compiler
+   reads SYS_INIT as a function declaration and stops on the priority constant. */
+#include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -1418,6 +1422,8 @@ Replace the contents of `module/src/layout_resync.c`:
 
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/conn.h>
+/* SYS_INIT lives here, not in kernel.h. */
+#include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 

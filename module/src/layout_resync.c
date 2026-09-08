@@ -1,5 +1,6 @@
 /* ZMK binding for the layout resync module. Task 4 implements this. */
 
+#include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
