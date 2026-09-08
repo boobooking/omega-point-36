@@ -10,55 +10,72 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-08-layout-resync-design.md`
 
+## This is a migration, not a green field
+
+**The module already exists in the repository**, built and passing CI at commit `2747874`, in the
+shape the design had before the lock-screen measurement: it reset a host's language after an outage
+longer than a threshold. The measurement removed that idea — after unlocking, both platforms restore
+the language that was active before locking — so the reset branch, the threshold, the sticky verdict
+and the outage clock all come out.
+
+That makes the ordering different from a from-scratch build. The state machine, the adapter, the
+tests, the Kconfig and `config/op36.conf` are **one change**: land them separately and the tree does
+not compile, because the adapter calls `resync_init` with an argument that no longer exists and the
+tests read fields that are gone. Task 1 is therefore a single coherent step, and the code blocks in
+it are the content each file must end up with, not new files to create.
+
 ## Global Constraints
 
-- ZMK is **v0.3.0**, pinned through `ergohaven-zmk`. Only public API: `zmk_keymap_layer_activate`, `zmk_keymap_layer_deactivate`, `zmk_keymap_layer_active`, `zmk_ble_profile_index`, `zmk_endpoints_selected`, `ZMK_LISTENER`/`ZMK_SUBSCRIPTION`, Zephyr's `BT_CONN_CB_DEFINE`.
+- ZMK is **v0.3.0**, pinned through `ergohaven-zmk`. Only public API: `zmk_keymap_layer_activate`, `zmk_keymap_layer_deactivate`, `zmk_keymap_layer_active`, `zmk_ble_profile_index`, `zmk_ble_profile_address`, `zmk_ble_profile_is_connected`, `zmk_endpoints_selected`, `ZMK_LISTENER`/`ZMK_SUBSCRIPTION`, Zephyr's `BT_CONN_CB_DEFINE`.
 - **Never call `zmk_keymap_layer_to()`.** It deactivates every layer (`keymap.c:214`) and would drop a held momentary layer — including `en_letters` under a held modifier.
-- **Never send a keycode.** The host sets its own layout on wake; the firmware only has to agree.
-- `ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` **and** `(!ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL)`. Without both, `op36_right` (no `keymap.c`, no `ble.c` — role) and `settings_reset` (no `ble.c` — `CONFIG_ZMK_BLE=n`) fail to link.
+- **Never send a keycode.** The module only moves the firmware's own layer.
+- **The module never resets a language, only restores one.** See the spec: the lock screen forces ASCII for the password field, but the session restores what it had, so resetting would be wrong for everything after the unlock.
+- `ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` **and** `(!ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL)`. Verified on CI run 34214748643.
 - Nothing is written to flash.
-- The repository is column-aligned in the keymap editor's format; **this plan touches no `.keymap` file**, so no re-rendering is involved.
+- **This plan touches no `.keymap` file**, so no column re-rendering is involved.
 - Commit messages: conventional commits, imperative, present tense, no attribution.
 - **Do not push.** Tim pushes.
 
----
-
 ## File Structure
 
-| file | responsibility |
-|---|---|
-| `zephyr/module.yml` | makes this repository a Zephyr module; the build workflow already looks for it |
-| `module/CMakeLists.txt` | compiles the module sources when `ZMK_LAYOUT_RESYNC` is on |
-| `module/Kconfig` | the four symbols and the build guard |
-| `module/src/resync_state.h` | the pure state machine's types and API — no Zephyr headers |
-| `module/src/resync_state.c` | the pure state machine |
-| `module/src/resync_adapter.h` | the adapter core's API and its platform struct |
-| `module/src/resync_adapter.c` | event translation, reconciliation and application — no Zephyr |
-| `module/src/layout_resync.c` | ZMK binding: fills the platform struct in, routes callbacks, holds the mutex |
-| `tests/resync-state/test_resync_state.c` | host-compiled tests for the state machine |
-| `tests/resync-state/test_resync_adapter.c` | host-compiled tests for the adapter core |
-| `tests/run.sh` | runs the host test alongside `check-en-letters.py` |
+All of these exist already; the table says what each is for and which change.
+
+| file | responsibility | changes |
+|---|---|---|
+| `zephyr/module.yml` | makes this repository a Zephyr module | no |
+| `module/CMakeLists.txt` | compiles the module sources | no |
+| `module/Kconfig` | the symbols and the build guard | **yes** — the threshold goes |
+| `module/src/resync_state.h` | the pure state machine's types and API | **yes** |
+| `module/src/resync_state.c` | the pure state machine | **yes** |
+| `module/src/resync_adapter.h` | the adapter core's API and platform struct | **yes** |
+| `module/src/resync_adapter.c` | event translation, reconciliation, application | **yes** |
+| `module/src/layout_resync.c` | ZMK binding | **yes** — the outage logging goes |
+| `tests/resync-state/test_resync_state.c` | host tests for the state machine | **yes** |
+| `tests/resync-state/test_resync_adapter.c` | host tests for the adapter core | **yes** |
+| `config/op36.conf` | Kconfig fragment | **yes** — a dead assignment must go |
+| `tests/run.sh` | runs both host tests before the simulator | no |
 
 ---
 
-### Task 1: The state machine, with its tests
+### Task 1: Remove the reset machinery
 
-The whole of the decision logic, testable on the host with no Zephyr. Every bug review found in the
-spec was about stored state rather than which branch ran, so the tests assert the resulting state as
-well as the returned action.
+One commit. The pieces cannot land separately: the adapter calls `resync_init` with a threshold the
+state machine no longer takes, the tests read `needs_reset` and `ever_down` which no longer exist, and
+`config/op36.conf` assigns a Kconfig symbol that is about to be deleted — which stops the Zephyr
+configuration outright with `Aborting due to Kconfig warnings`, not merely warns.
 
 **Files:**
-- Create: `module/src/resync_state.h`
-- Create: `module/src/resync_state.c`
-- Test: `tests/resync-state/test_resync_state.c`
+- Modify: `module/src/resync_state.h`, `module/src/resync_state.c`
+- Modify: `module/src/resync_adapter.h`, `module/src/resync_adapter.c`
+- Modify: `module/src/layout_resync.c`, `module/Kconfig`, `config/op36.conf`
+- Test: `tests/resync-state/test_resync_state.c`, `tests/resync-state/test_resync_adapter.c`
 
 **Interfaces:**
-- Consumes: nothing.
-- Produces: `struct resync_state`, `struct resync_event`, `enum resync_action`, `enum resync_event_kind`, `resync_init()`, `resync_handle()`, `resync_link_up()`. Task 3's adapter calls `resync_init`, `resync_handle` and `resync_link_up`.
+- Produces: `resync_init(s, profile_count)`, `resync_handle()`, `resync_link_up()`, `resync_adapter_init(a, plat, at)`, `resync_adapter_on_link()`, `resync_adapter_on_profile_changed()`, `resync_adapter_on_endpoint_changed()`. Every one of these loses a parameter or disappears from the old shape, which is why nothing compiles until all of them move together.
 
-- [ ] **Step 1: Write the header**
+- [ ] **Step 1: Rewrite the state machine header**
 
-Create `module/src/resync_state.h`:
+`module/src/resync_state.h` becomes:
 
 ```c
 /*
@@ -140,9 +157,147 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
 bool resync_link_up(const struct resync_state *s, uint8_t profile);
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [ ] **Step 2: Rewrite the state machine**
 
-Create `tests/resync-state/test_resync_state.c`. Every case is a sequence the spec names.
+`module/src/resync_state.c` becomes:
+
+```c
+#include "resync_state.h"
+
+static void save_lang(struct resync_state *s, uint8_t p, bool alt) {
+    s->profiles[p].lang_alt = alt;
+    s->profiles[p].lang_known = true;
+}
+
+/* Apply a decision for the active profile, if one is due. Called from every
+   event that could have made one due; doing nothing is the common answer. It
+   needs nothing from the event itself: what is on screen only matters when a
+   language is being saved, which the callers do. */
+static enum resync_action decide(struct resync_state *s) {
+    if (!s->ble_selected) {
+        return RESYNC_ACTION_NONE;
+    }
+
+    uint8_t p = s->active;
+    if (p >= s->profile_count || !s->profiles[p].link_up) {
+        return RESYNC_ACTION_NONE;
+    }
+
+    /* Never lost ownership: the layer already is this profile's language, and
+       the stored copy may be older than the user's latest choice. */
+    if (s->owner == (int)p) {
+        return RESYNC_ACTION_NONE;
+    }
+
+    s->owner = (int)p;
+
+    if (!s->profiles[p].lang_known) {
+        /* Nothing is known about this host, so the default language stands.
+           Adopting what is on screen would hand it the *previous* host's
+           language, which is how a first visit to the iPad used to inherit the
+           Mac's ru. */
+        save_lang(s, p, false);
+        return RESYNC_ACTION_CLEAR_ALT;
+    }
+
+    return s->profiles[p].lang_alt ? RESYNC_ACTION_SET_ALT : RESYNC_ACTION_CLEAR_ALT;
+}
+
+bool resync_link_up(const struct resync_state *s, uint8_t profile) {
+    return profile < s->profile_count && s->profiles[profile].link_up;
+}
+
+void resync_init(struct resync_state *s, uint8_t profile_count) {
+    for (unsigned i = 0; i < RESYNC_MAX_PROFILES; i++) {
+        s->profiles[i].lang_alt = false;
+        s->profiles[i].lang_known = false;
+        s->profiles[i].link_up = false;
+    }
+    s->profile_count = profile_count > RESYNC_MAX_PROFILES ? RESYNC_MAX_PROFILES : profile_count;
+    s->active = 0;
+    s->owner = -1;
+    s->ble_selected = false;
+}
+
+enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev) {
+    uint8_t p = ev->profile;
+
+    /* Reconcile the transport first. Deciding and then refusing to apply would
+       leave the layer behind the state: ownership would move, a language would
+       be remembered, with nothing written to the keymap. decide() returns
+       before it mutates anything when BLE is not selected, so this has to be
+       right before it runs. */
+    if (ev->ble_now != s->ble_selected) {
+        if (!ev->ble_now && s->owner >= 0) {
+            /* Leaving BLE: the layer is still the owner's, so save it. */
+            save_lang(s, (uint8_t)s->owner, ev->alt_now);
+            s->owner = -1;
+        }
+        s->ble_selected = ev->ble_now;
+    }
+
+    switch (ev->kind) {
+    case RESYNC_EV_LINK_DOWN:
+        if (p >= s->profile_count) {
+            return RESYNC_ACTION_NONE;
+        }
+        s->profiles[p].link_up = false;
+        /* Snapshot the owner's language before the link is gone: it may change
+           before we hear about this profile again. */
+        if (s->owner == (int)p) {
+            save_lang(s, p, ev->alt_now);
+        }
+        return RESYNC_ACTION_NONE;
+
+    case RESYNC_EV_LINK_UP:
+        if (p >= s->profile_count) {
+            return RESYNC_ACTION_NONE;
+        }
+        s->profiles[p].link_up = true;
+        return decide(s);
+
+    case RESYNC_EV_ACTIVE_PROFILE:
+        if (p >= s->profile_count) {
+            return RESYNC_ACTION_NONE;
+        }
+        if (p != s->active) {
+            if (s->owner == (int)s->active) {
+                save_lang(s, s->active, ev->alt_now);
+            }
+            s->owner = -1;
+            s->active = p;
+        }
+        return decide(s);
+
+    case RESYNC_EV_PROFILE_CLEARED:
+        if (p >= s->profile_count) {
+            return RESYNC_ACTION_NONE;
+        }
+        s->profiles[p].lang_alt = false;
+        s->profiles[p].lang_known = false;
+        s->profiles[p].link_up = false;
+        if (s->owner == (int)p) {
+            s->owner = -1;
+        }
+        return RESYNC_ACTION_NONE;
+
+    case RESYNC_EV_BLE_DESELECTED:
+        /* The reconcile above has already saved and released ownership if this
+           is the first event to observe the change. Arriving second is normal
+           and must do nothing. */
+        return RESYNC_ACTION_NONE;
+
+    case RESYNC_EV_BLE_SELECTED:
+        return decide(s);
+    }
+
+    return RESYNC_ACTION_NONE;
+}
+```
+
+- [ ] **Step 3: Rewrite its tests**
+
+`tests/resync-state/test_resync_state.c` becomes:
 
 ```c
 /* Host-compiled tests for the layout resync state machine. Build and run:
@@ -342,386 +497,20 @@ int main(void) {
 }
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [ ] **Step 4: Run the state machine tests**
 
 Run:
 
 ```bash
-cc -std=c11 -Wall -Wextra -o /tmp/resync_test \
+cc -std=c11 -Wall -Wextra -Werror -o /tmp/resync_test \
    module/src/resync_state.c tests/resync-state/test_resync_state.c && /tmp/resync_test
 ```
 
-Expected: FAIL — `module/src/resync_state.c` does not exist, so the compile fails.
+Expected: PASS — eight cases, then `all checks passed`, no warnings.
 
-- [ ] **Step 4: Write the implementation**
+- [ ] **Step 5: Rewrite the adapter core header**
 
-Create `module/src/resync_state.c`:
-
-```c
-#include "resync_state.h"
-
-static void save_lang(struct resync_state *s, uint8_t p, bool alt) {
-    s->profiles[p].lang_alt = alt;
-    s->profiles[p].lang_known = true;
-}
-
-/* Apply a decision for the active profile, if one is due. Called from every
-   event that could have made one due; doing nothing is the common answer. It
-   needs nothing from the event itself: what is on screen only matters when a
-   language is being saved, which the callers do. */
-static enum resync_action decide(struct resync_state *s) {
-    if (!s->ble_selected) {
-        return RESYNC_ACTION_NONE;
-    }
-
-    uint8_t p = s->active;
-    if (p >= s->profile_count || !s->profiles[p].link_up) {
-        return RESYNC_ACTION_NONE;
-    }
-
-    /* Never lost ownership: the layer already is this profile's language, and
-       the stored copy may be older than the user's latest choice. */
-    if (s->owner == (int)p) {
-        return RESYNC_ACTION_NONE;
-    }
-
-    s->owner = (int)p;
-
-    if (!s->profiles[p].lang_known) {
-        /* Nothing is known about this host, so the default language stands.
-           Adopting what is on screen would hand it the *previous* host's
-           language, which is how a first visit to the iPad used to inherit the
-           Mac's ru. */
-        save_lang(s, p, false);
-        return RESYNC_ACTION_CLEAR_ALT;
-    }
-
-    return s->profiles[p].lang_alt ? RESYNC_ACTION_SET_ALT : RESYNC_ACTION_CLEAR_ALT;
-}
-
-bool resync_link_up(const struct resync_state *s, uint8_t profile) {
-    return profile < s->profile_count && s->profiles[profile].link_up;
-}
-
-void resync_init(struct resync_state *s, uint8_t profile_count) {
-    for (unsigned i = 0; i < RESYNC_MAX_PROFILES; i++) {
-        s->profiles[i].lang_alt = false;
-        s->profiles[i].lang_known = false;
-        s->profiles[i].link_up = false;
-    }
-    s->profile_count = profile_count > RESYNC_MAX_PROFILES ? RESYNC_MAX_PROFILES : profile_count;
-    s->active = 0;
-    s->owner = -1;
-    s->ble_selected = false;
-}
-
-enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev) {
-    uint8_t p = ev->profile;
-
-    /* Reconcile the transport first. Deciding and then refusing to apply would
-       leave the layer behind the state: ownership would move, a language would
-       be remembered, with nothing written to the keymap. decide() returns
-       before it mutates anything when BLE is not selected, so this has to be
-       right before it runs. */
-    if (ev->ble_now != s->ble_selected) {
-        if (!ev->ble_now && s->owner >= 0) {
-            /* Leaving BLE: the layer is still the owner's, so save it. */
-            save_lang(s, (uint8_t)s->owner, ev->alt_now);
-            s->owner = -1;
-        }
-        s->ble_selected = ev->ble_now;
-    }
-
-    switch (ev->kind) {
-    case RESYNC_EV_LINK_DOWN:
-        if (p >= s->profile_count) {
-            return RESYNC_ACTION_NONE;
-        }
-        s->profiles[p].link_up = false;
-        /* Snapshot the owner's language before the link is gone: it may change
-           before we hear about this profile again. */
-        if (s->owner == (int)p) {
-            save_lang(s, p, ev->alt_now);
-        }
-        return RESYNC_ACTION_NONE;
-
-    case RESYNC_EV_LINK_UP:
-        if (p >= s->profile_count) {
-            return RESYNC_ACTION_NONE;
-        }
-        s->profiles[p].link_up = true;
-        return decide(s);
-
-    case RESYNC_EV_ACTIVE_PROFILE:
-        if (p >= s->profile_count) {
-            return RESYNC_ACTION_NONE;
-        }
-        if (p != s->active) {
-            if (s->owner == (int)s->active) {
-                save_lang(s, s->active, ev->alt_now);
-            }
-            s->owner = -1;
-            s->active = p;
-        }
-        return decide(s);
-
-    case RESYNC_EV_PROFILE_CLEARED:
-        if (p >= s->profile_count) {
-            return RESYNC_ACTION_NONE;
-        }
-        s->profiles[p].lang_alt = false;
-        s->profiles[p].lang_known = false;
-        s->profiles[p].link_up = false;
-        if (s->owner == (int)p) {
-            s->owner = -1;
-        }
-        return RESYNC_ACTION_NONE;
-
-    case RESYNC_EV_BLE_DESELECTED:
-        /* The reconcile above has already saved and released ownership if this
-           is the first event to observe the change. Arriving second is normal
-           and must do nothing. */
-        return RESYNC_ACTION_NONE;
-
-    case RESYNC_EV_BLE_SELECTED:
-        return decide(s);
-    }
-
-    return RESYNC_ACTION_NONE;
-}
-```
-
-- [ ] **Step 5: Run the tests to verify they pass**
-
-Run:
-
-```bash
-cc -std=c11 -Wall -Wextra -o /tmp/resync_test \
-   module/src/resync_state.c tests/resync-state/test_resync_state.c && /tmp/resync_test
-```
-
-Expected: PASS — every case listed, then `all checks passed`. No compiler warnings.
-
-- [ ] **Step 6: Wire the test into the suite**
-
-Modify `tests/run.sh`. Find this block, added when `check-en-letters.py` arrived:
-
-```sh
-# en_letters is a hand-kept copy of en; nothing in the devicetree enforces it.
-python3 "$REPO/tests/check-en-letters.py"
-```
-
-Replace it with:
-
-```sh
-# en_letters is a hand-kept copy of en; nothing in the devicetree enforces it.
-python3 "$REPO/tests/check-en-letters.py"
-
-# The resync state machine is plain C with no Zephyr in it, so it runs here
-# rather than in the simulator, which has no BLE to exercise it with.
-cc -std=c11 -Wall -Wextra -o "${TMPDIR:-/tmp}/resync_test" \
-    "$REPO/module/src/resync_state.c" "$REPO/tests/resync-state/test_resync_state.c"
-"${TMPDIR:-/tmp}/resync_test" > /dev/null
-```
-
-- [ ] **Step 7: Run the whole suite**
-
-Run: `./tests/run.sh`
-Expected: no `FAILED` lines. The C test runs silently before any simulator case; break it deliberately once (change a `CHECK` to something false) to confirm the runner stops, then restore it.
-
-- [ ] **Step 8: Commit**
-
-```bash
-git add module/src/resync_state.h module/src/resync_state.c \
-        tests/resync-state/test_resync_state.c tests/run.sh
-git commit -m "feat: add the layout resync state machine"
-```
-
----
-
-### Task 2: Module scaffolding that builds on every matrix entry
-
-The state machine exists but nothing compiles it into the firmware. This task adds the Zephyr module
-and its Kconfig guard, with a stub for the adapter, and puts the guard under test: the symbol keeps
-its `default y`, so it must resolve to `y` on `op36_left` and to `n` on the other two by its
-dependencies alone.
-
-**Files:**
-- Create: `zephyr/module.yml`
-- Create: `module/CMakeLists.txt`
-- Create: `module/Kconfig`
-
-**Interfaces:**
-- Consumes: `module/src/resync_state.c` from Task 1.
-- Produces: `CONFIG_ZMK_LAYOUT_RESYNC`, `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER`. Task 3's source is added to the build by `module/CMakeLists.txt`.
-
-- [ ] **Step 1: Declare the module**
-
-Create `zephyr/module.yml`:
-
-```yaml
-# Makes this repository a Zephyr module. .github/workflows/build-user-config.yml
-# looks for exactly this file and, finding it, passes
-# -DZMK_EXTRA_MODULES=<repo root> to the build.
-build:
-  cmake: module
-  kconfig: module/Kconfig
-```
-
-- [ ] **Step 2: Write the Kconfig**
-
-Create `module/Kconfig`:
-
-```kconfig
-menuconfig ZMK_LAYOUT_RESYNC
-    bool "Keep the language layer in step with the connected host"
-    default y
-    depends on ZMK_BLE
-    depends on !ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL
-    help
-      Remembers which language each BLE profile was left on and restores it
-      when that host comes back, and returns to the default language when a
-      host has been away long enough to have slept and reset its own layout.
-
-      Both dependencies are load bearing. app/CMakeLists.txt builds keymap.c
-      and ble.c only for a central or non-split target, so op36_right has
-      neither; settings_reset is not split and does build keymap.c, but sets
-      CONFIG_ZMK_BLE=n and so has no ble.c. Dropping either dependency breaks
-      the link on one of them.
-
-if ZMK_LAYOUT_RESYNC
-
-config ZMK_LAYOUT_RESYNC_ALT_LAYER
-    int "Layer holding the alternate language"
-    default 1
-    help
-      The layer that is raised for the second language. On op36_ruen this is
-      1, the ru layer. The design assumes exactly two languages.
-
-endif # ZMK_LAYOUT_RESYNC
-```
-
-- [ ] **Step 3: Write the CMakeLists**
-
-Create `module/CMakeLists.txt`:
-
-```cmake
-if(CONFIG_ZMK_LAYOUT_RESYNC)
-  zephyr_library_named(layout_resync)
-  # app adds its own headers with target_include_directories(app PRIVATE include),
-  # and a separately named library does not inherit that. Without this line
-  # <zmk/...> resolves only by accident, depending on what other modules set.
-  zephyr_library_include_directories(${APPLICATION_SOURCE_DIR}/include)
-  zephyr_library_sources(src/resync_state.c)
-  zephyr_library_sources(src/layout_resync.c)
-endif()
-```
-
-- [ ] **Step 4: Create the adapter as a stub so the build has something to compile**
-
-Create `module/src/layout_resync.c` with only enough to link. Task 4 replaces it with the real binding.
-
-```c
-/* ZMK binding for the layout resync module. Task 4 implements this. */
-
-/* init.h is what declares SYS_INIT; kernel.h does not pull it in, and ZMK's own
-   files include it explicitly for the same reason. Without it the compiler
-   reads SYS_INIT as a function declaration and stops on the priority constant. */
-#include <zephyr/init.h>
-#include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
-
-LOG_MODULE_REGISTER(layout_resync, CONFIG_ZMK_LOG_LEVEL);
-
-static int layout_resync_init(void) {
-    LOG_DBG("layout resync present");
-    return 0;
-}
-
-SYS_INIT(layout_resync_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
-```
-
-- [ ] **Step 5: Leave the default in place**
-
-Do **not** add `CONFIG_ZMK_LAYOUT_RESYNC=n` to `config/op36.conf`. With the feature switched off the
-module is never compiled, so the Kconfig dependencies are never evaluated and the guard is not tested
-at all — deleting it entirely would pass just the same. The symbol is `default y`, so leaving
-`op36.conf` alone is what puts the guard under test: it must resolve to `y` on `op36_left` and to `n`
-on the other two, by its dependencies alone.
-
-The Task 2 stub is a no-op `SYS_INIT`, so a `y` here links and does nothing.
-
-- [ ] **Step 6: Verify the simulator suite is unaffected**
-
-Run: `./tests/run.sh`
-Expected: no `FAILED` lines. The simulator does not receive `ZMK_EXTRA_MODULES`, so this proves only that nothing was broken — the module itself is not exercised here.
-
-- [ ] **Step 7: Commit and let CI build it**
-
-```bash
-git add zephyr/module.yml module/CMakeLists.txt module/Kconfig \
-        module/src/layout_resync.c config/op36.conf
-git commit -m "build: carry a Zephyr module for layout resync"
-```
-
-Then ask Tim to push, and check the run:
-
-```bash
-gh run list --limit 1
-gh run view <run-id> --json conclusion --jq .conclusion
-```
-
-Expected: `success` for all three matrix entries. Then check the guard actually resolved as intended,
-because a green build alone does not show it. The workflow dumps each build's fully resolved
-`zephyr/.config`, and every line carries a job name, so scope the grep per build:
-
-```bash
-gh run view <run-id> --log > /tmp/ci.log
-for job in op36_left op36_right settings_reset; do
-  printf '%s: ' "$job"
-  grep "$job" /tmp/ci.log | grep -oE "CONFIG_ZMK_LAYOUT_RESYNC=[ny]" | sort -u | head -1
-  printf '\n'
-done
-```
-
-Expected: `y` for `op36_left`, and **nothing** for `op36_right` and `settings_reset` — the workflow
-filters out `# ... is not set` lines, so an unset symbol prints empty. An empty result and a broken
-pipeline look identical, so give each build a **positive** control, a symbol that must be there:
-
-```bash
-grep op36_left /tmp/ci.log | grep -oE "CONFIG_ZMK_SPLIT_ROLE_CENTRAL=y" | sort -u
-grep op36_right /tmp/ci.log | grep -oE "CONFIG_ZMK_SPLIT=y" | sort -u
-grep settings_reset /tmp/ci.log | grep -oE "CONFIG_ZMK_SETTINGS_RESET_ON_START=y" | sort -u
-```
-
-All three must print their symbol. Only then does an empty `ZMK_LAYOUT_RESYNC` result mean anything.
-**This is the gate for the guard.** If
-`ZMK_LAYOUT_RESYNC` shows up anywhere but `op36_left`, or if a build fails to link, the dependencies
-are wrong and must be fixed before Task 3.
-
----
-
-### Task 3: The adapter core, with its tests
-
-Three of the four code defects review found lived in the adapter, so it does not stay untestable. The
-part that decides *what to tell the state machine* — reconciling after pairing, translating
-callbacks, guarding on the transport — is separated from the ZMK and Zephyr calls behind a small
-platform struct, and tested on the host like the state machine. Task 4 is then a thin binding with no
-logic in it.
-
-**Files:**
-- Create: `module/src/resync_adapter.h`
-- Create: `module/src/resync_adapter.c`
-- Test: `tests/resync-state/test_resync_adapter.c`
-- Modify: `tests/run.sh`
-
-**Interfaces:**
-- Consumes: `resync_init()`, `resync_handle()`, `resync_link_up()`, `struct resync_event`, `enum resync_action` from Task 1.
-- Produces: `struct resync_platform`, `resync_adapter_init()`, `resync_adapter_on_link()`, `resync_adapter_on_profile_changed()`, `resync_adapter_on_endpoint_changed()`. Task 4 calls exactly these four.
-
-- [ ] **Step 1: Write the core header**
-
-Create `module/src/resync_adapter.h`:
+`module/src/resync_adapter.h` becomes:
 
 ```c
 /*
@@ -778,9 +567,111 @@ void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, 
 void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at);
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [ ] **Step 6: Rewrite the adapter core**
 
-Create `tests/resync-state/test_resync_adapter.c`. Each case is a defect review reproduced.
+`module/src/resync_adapter.c` becomes:
+
+```c
+#include <string.h>
+
+#include "resync_adapter.h"
+
+/* Build the event, hand it over and apply what comes back. The transport is
+   read here, at the moment of applying, and never from a remembered copy: ZMK
+   sets the selected transport before it announces the change, so a connection
+   callback can arrive while our own copy still says BLE. Reading it late is
+   what keeps a BLE decision off a USB session. */
+static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t profile,
+                 int64_t at) {
+    struct resync_event ev = {
+        .kind = kind,
+        .profile = profile,
+        .alt_now = a->plat->alt_active(),
+        .at = at,
+        .ble_now = a->plat->ble_selected(),
+    };
+
+    enum resync_action action = resync_handle(&a->state, &ev);
+
+    /* No guard here on purpose. The transport is carried into the machine and
+       consulted before it decides, so an action can only come back when it is
+       allowed to be applied. Checking afterwards and refusing would leave the
+       state ahead of the layer. */
+    if (action != RESYNC_ACTION_NONE) {
+        a->plat->set_alt(action == RESYNC_ACTION_SET_ALT);
+    }
+}
+
+void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat, int64_t at) {
+    a->plat = plat;
+    resync_init(&a->state, plat->profile_count);
+
+    for (uint8_t i = 0; i < RESYNC_MAX_PROFILES; i++) {
+        a->peer_known[i] = false;
+        memset(a->known_peer[i], 0, RESYNC_PEER_LEN);
+    }
+
+    for (uint8_t i = 0; i < plat->profile_count; i++) {
+        const uint8_t *peer = plat->profile_peer(i);
+        if (peer) {
+            memcpy(a->known_peer[i], peer, RESYNC_PEER_LEN);
+            a->peer_known[i] = true;
+        }
+    }
+
+    if (plat->ble_selected()) {
+        feed(a, RESYNC_EV_BLE_SELECTED, 0, at);
+    }
+}
+
+void resync_adapter_on_link(struct resync_adapter *a, uint8_t profile, bool up, int64_t at) {
+    feed(a, up ? RESYNC_EV_LINK_UP : RESYNC_EV_LINK_DOWN, profile, at);
+}
+
+void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, int64_t at) {
+    /* Only a profile whose peer changed is reconciled. Comparing every profile
+       against its remembered link state races the connection callbacks: a
+       snapshot taken a moment ago can contradict a disconnect that has just
+       been recorded, and "correcting" it fabricates a transition that resets
+       the outage clock and swallows the real outage. A changed peer is the one
+       case where a callback is known to have been unusable, because at pairing
+       the connect fires before the address is stored and the profile cannot be
+       named yet. */
+    for (uint8_t i = 0; i < a->plat->profile_count; i++) {
+        const uint8_t *peer = a->plat->profile_peer(i);
+        if (!peer) {
+            continue;
+        }
+
+        bool changed = !a->peer_known[i] || memcmp(a->known_peer[i], peer, RESYNC_PEER_LEN) != 0;
+        if (!changed) {
+            continue;
+        }
+
+        memcpy(a->known_peer[i], peer, RESYNC_PEER_LEN);
+        a->peer_known[i] = true;
+
+        /* A different machine is behind this index now. */
+        feed(a, RESYNC_EV_PROFILE_CLEARED, i, at);
+
+        /* Its history is gone, so adopting ZMK's view of the link cannot
+           swallow an outage: there is none to swallow. */
+        if (a->plat->profile_connected(i)) {
+            feed(a, RESYNC_EV_LINK_UP, i, at);
+        }
+    }
+
+    feed(a, RESYNC_EV_ACTIVE_PROFILE, index, at);
+}
+
+void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at) {
+    feed(a, a->plat->ble_selected() ? RESYNC_EV_BLE_SELECTED : RESYNC_EV_BLE_DESELECTED, 0, at);
+}
+```
+
+- [ ] **Step 7: Rewrite its tests**
+
+`tests/resync-state/test_resync_adapter.c` becomes:
 
 ```c
 /* Host tests for the adapter core, with a fake platform. Build and run:
@@ -1001,7 +892,7 @@ int main(void) {
 }
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [ ] **Step 8: Run the adapter tests**
 
 Run:
 
@@ -1011,177 +902,60 @@ cc -std=c11 -Wall -Wextra -Werror -o /tmp/resync_adapter_test \
    tests/resync-state/test_resync_adapter.c && /tmp/resync_adapter_test
 ```
 
-Expected: FAIL — `module/src/resync_adapter.c` does not exist.
+Expected: PASS — five cases, then `all checks passed`, no warnings.
 
-- [ ] **Step 4: Write the core**
+- [ ] **Step 9: Drop the threshold from the Kconfig**
 
-Create `module/src/resync_adapter.c`:
+`module/Kconfig` becomes:
 
-```c
-#include <string.h>
+```kconfig
+menuconfig ZMK_LAYOUT_RESYNC
+    bool "Keep the language layer in step with the connected host"
+    default y
+    depends on ZMK_BLE
+    depends on !ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL
+    help
+      Remembers which language each BLE profile was left on and restores it
+      when you come back to that host. It never resets a language: after
+      unlocking, both macOS and iPadOS restore whatever was active before
+      locking, so resetting would be wrong for the whole session.
 
-#include "resync_adapter.h"
+      Both dependencies are load bearing. app/CMakeLists.txt builds keymap.c
+      and ble.c only for a central or non-split target, so op36_right has
+      neither; settings_reset is not split and does build keymap.c, but sets
+      CONFIG_ZMK_BLE=n and so has no ble.c. Dropping either dependency breaks
+      the link on one of them.
 
-/* Build the event, hand it over and apply what comes back. The transport is
-   read here, at the moment of applying, and never from a remembered copy: ZMK
-   sets the selected transport before it announces the change, so a connection
-   callback can arrive while our own copy still says BLE. Reading it late is
-   what keeps a BLE decision off a USB session. */
-static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t profile,
-                 int64_t at) {
-    struct resync_event ev = {
-        .kind = kind,
-        .profile = profile,
-        .alt_now = a->plat->alt_active(),
-        .at = at,
-        .ble_now = a->plat->ble_selected(),
-    };
+if ZMK_LAYOUT_RESYNC
 
-    enum resync_action action = resync_handle(&a->state, &ev);
+config ZMK_LAYOUT_RESYNC_ALT_LAYER
+    int "Layer holding the alternate language"
+    default 1
+    help
+      The layer that is raised for the second language. On op36_ruen this is
+      1, the ru layer. The design assumes exactly two languages.
 
-    /* No guard here on purpose. The transport is carried into the machine and
-       consulted before it decides, so an action can only come back when it is
-       allowed to be applied. Checking afterwards and refusing would leave the
-       state ahead of the layer. */
-    if (action != RESYNC_ACTION_NONE) {
-        a->plat->set_alt(action == RESYNC_ACTION_SET_ALT);
-    }
-}
-
-void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat, int64_t at) {
-    a->plat = plat;
-    resync_init(&a->state, plat->profile_count);
-
-    for (uint8_t i = 0; i < RESYNC_MAX_PROFILES; i++) {
-        a->peer_known[i] = false;
-        memset(a->known_peer[i], 0, RESYNC_PEER_LEN);
-    }
-
-    for (uint8_t i = 0; i < plat->profile_count; i++) {
-        const uint8_t *peer = plat->profile_peer(i);
-        if (peer) {
-            memcpy(a->known_peer[i], peer, RESYNC_PEER_LEN);
-            a->peer_known[i] = true;
-        }
-    }
-
-    if (plat->ble_selected()) {
-        feed(a, RESYNC_EV_BLE_SELECTED, 0, at);
-    }
-}
-
-void resync_adapter_on_link(struct resync_adapter *a, uint8_t profile, bool up, int64_t at) {
-    feed(a, up ? RESYNC_EV_LINK_UP : RESYNC_EV_LINK_DOWN, profile, at);
-}
-
-void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, int64_t at) {
-    /* Only a profile whose peer changed is reconciled. Comparing every profile
-       against its remembered link state races the connection callbacks: a
-       snapshot taken a moment ago can contradict a disconnect that has just
-       been recorded, and "correcting" it fabricates a transition that resets
-       the outage clock and swallows the real outage. A changed peer is the one
-       case where a callback is known to have been unusable, because at pairing
-       the connect fires before the address is stored and the profile cannot be
-       named yet. */
-    for (uint8_t i = 0; i < a->plat->profile_count; i++) {
-        const uint8_t *peer = a->plat->profile_peer(i);
-        if (!peer) {
-            continue;
-        }
-
-        bool changed = !a->peer_known[i] || memcmp(a->known_peer[i], peer, RESYNC_PEER_LEN) != 0;
-        if (!changed) {
-            continue;
-        }
-
-        memcpy(a->known_peer[i], peer, RESYNC_PEER_LEN);
-        a->peer_known[i] = true;
-
-        /* A different machine is behind this index now. */
-        feed(a, RESYNC_EV_PROFILE_CLEARED, i, at);
-
-        /* Its history is gone, so adopting ZMK's view of the link cannot
-           swallow an outage: there is none to swallow. */
-        if (a->plat->profile_connected(i)) {
-            feed(a, RESYNC_EV_LINK_UP, i, at);
-        }
-    }
-
-    feed(a, RESYNC_EV_ACTIVE_PROFILE, index, at);
-}
-
-void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at) {
-    feed(a, a->plat->ble_selected() ? RESYNC_EV_BLE_SELECTED : RESYNC_EV_BLE_DESELECTED, 0, at);
-}
+endif # ZMK_LAYOUT_RESYNC
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [ ] **Step 10: Remove the dead assignment from `config/op36.conf`**
 
-Run the command from Step 3.
-Expected: PASS — six cases, then `all checks passed`, with no warnings under `-Werror`.
+Delete these four lines, comment included. The symbol no longer exists, and Zephyr stops on an
+assignment to a symbol it does not know:
 
-- [ ] **Step 6: Wire it into the suite and put the state machine test under -Werror too**
-
-Modify `tests/run.sh`. Replace the block added in Task 1 with:
-
-```sh
-# en_letters is a hand-kept copy of en; nothing in the devicetree enforces it.
-python3 "$REPO/tests/check-en-letters.py"
-
-# The resync state machine and adapter core are plain C with no Zephyr in them,
-# so they run here rather than in the simulator, which has no BLE to exercise
-# them with.
-cc -std=c11 -Wall -Wextra -Werror -o "${TMPDIR:-/tmp}/resync_test" \
-    "$REPO/module/src/resync_state.c" "$REPO/tests/resync-state/test_resync_state.c"
-"${TMPDIR:-/tmp}/resync_test" > /dev/null
-
-cc -std=c11 -Wall -Wextra -Werror -o "${TMPDIR:-/tmp}/resync_adapter_test" \
-    "$REPO/module/src/resync_state.c" "$REPO/module/src/resync_adapter.c" \
-    "$REPO/tests/resync-state/test_resync_adapter.c"
-"${TMPDIR:-/tmp}/resync_adapter_test" > /dev/null
+```
+# Layout resync. Restoring a language is safe on any host; resetting one is only
+# safe on a host known to reset its own layout after sleep, and neither has been
+# checked yet. Task 5 turns on the bit for the Mac.
+CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES=0x0
 ```
 
-- [ ] **Step 7: Run the whole suite**
+Nothing replaces them. `CONFIG_ZMK_LAYOUT_RESYNC` is `default y` and its dependencies are what CI
+already put under test; the alternate layer defaults to 1, which is `ru`.
 
-Run: `./tests/run.sh`
-Expected: no `FAILED` lines. Break one `CHECK` in each C test in turn to confirm the runner stops on
-both, then restore them.
+- [ ] **Step 11: Rewrite the binding**
 
-- [ ] **Step 8: Commit**
-
-```bash
-git add module/src/resync_adapter.h module/src/resync_adapter.c \
-        tests/resync-state/test_resync_adapter.c tests/run.sh
-git commit -m "feat: add the layout resync adapter core"
-```
-
----
-
-### Task 4: Bind the adapter to ZMK
-
-Everything with logic in it is now behind Task 3. This file only fills in the platform struct, routes
-Bluetooth and ZMK events into the four entry points, and serialises them.
-
-**Files:**
-- Modify: `module/src/layout_resync.c` (replace the Task 2 stub entirely)
-- Modify: `module/CMakeLists.txt`
-- Modify: `config/op36.conf`
-
-**Interfaces:**
-- Consumes: the four `resync_adapter_*` functions and `struct resync_platform` from Task 3.
-- Produces: nothing.
-
-- [ ] **Step 1: Add the new source to the build**
-
-Modify `module/CMakeLists.txt`, adding one line beside the others:
-
-```cmake
-  zephyr_library_sources(src/resync_adapter.c)
-```
-
-- [ ] **Step 2: Write the binding**
-
-Replace the contents of `module/src/layout_resync.c`:
+`module/src/layout_resync.c` becomes:
 
 ```c
 /*
@@ -1337,67 +1111,45 @@ static int layout_resync_init(void) {
 SYS_INIT(layout_resync_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 ```
 
-- [ ] **Step 3: Add nothing to `config/op36.conf`**
-
-There is nothing to configure. `CONFIG_ZMK_LAYOUT_RESYNC` is `default y` and its dependencies are
-what Task 2 put under test, and the alternate layer already defaults to 1, which is `ru`. Leaving the
-file untouched is the step.
-
-- [ ] **Step 4: Verify the simulator suite still passes**
+- [ ] **Step 12: Run the whole suite**
 
 Run: `./tests/run.sh`
-Expected: no `FAILED` lines, both C tests included.
+Expected: no `FAILED` lines. Both C tests run before any simulator case.
 
-- [ ] **Step 5: Commit and build**
-
-```bash
-git add module/src/layout_resync.c module/CMakeLists.txt config/op36.conf
-git commit -m "feat: keep the language layer with the host it is talking to"
-```
-
-Then ask for a push, and once it lands confirm the run is `success`. If it fails, read the failing
-entry before changing anything:
+- [ ] **Step 13: Commit**
 
 ```bash
-gh run view <run-id> --log | grep -iE "error|undefined reference" | head -20
+git add module/src tests/resync-state module/Kconfig config/op36.conf
+git commit -m "refactor: restore languages per profile without ever resetting one"
 ```
 
-- [ ] **Step 6: Flash and confirm the restore half works**
+- [ ] **Step 14: Build it**
 
-Flash the left half only.
+Ask for a push, then confirm the run is `success` on all three matrix entries:
 
-The obvious check — Mac on `ru`, go to the iPad, come back, type — **proves nothing**: it passes on
-today's firmware too, because the global `ru` simply stays on. The two hosts have to be on
-*different* languages, each consistent with its own host, and both have to be typed on.
+```bash
+gh run list --limit 1
+gh run view <run-id> --json jobs --jq '.jobs[] | "\(.conclusion)  \(.name)"'
+```
 
-1. Mac: switch to `ru` and type a Cyrillic word to confirm host and firmware agree.
-2. Switch to the iPad's profile. Switch it to `en` and type a Latin word, confirming the same there.
-3. Switch back to the Mac and type. Expected: Cyrillic, with no manual switch.
-4. Switch to the iPad and type. Expected: Latin, with no manual switch.
-5. Repeat 3 and 4 once more, so a single lucky state cannot be mistaken for the feature working.
+If the configuration step fails with `Aborting due to Kconfig warnings`, Step 10 was missed.
 
-Nothing should reset at any point: the mask is `0x0`. If a reset happens, the mask is not being read
-as intended.
+---
 
-### Task 5: Verify on the devices and document it
+### Task 2: Verify on the devices and document it
 
-The module gives every profile its own language. Everything about resets is gone, so what is left to
-prove is that the memory is per host, that it survives a sleep, and that nothing moves the layer when
-it should not.
+What is left to prove is that the memory is per host, that it survives a sleep, and that nothing
+moves the layer when it should not.
 
 **Files:**
 - Modify: `CLAUDE.md`
 
-**Interfaces:**
-- Consumes: the module as built by Task 4.
-- Produces: nothing.
-
 - [ ] **Step 1: Two hosts, two languages**
 
-Flash the left half if it is not already carrying Task 4's build.
+Flash the left half with Task 1's build.
 
-The obvious check — one host on `ru`, switch away, come back, type — **proves nothing**: it passes on
-firmware without the module too, because the global `ru` simply stays on. The hosts have to disagree.
+The obvious check — one host on `ru`, switch away, come back, type — **proves nothing**: it passes
+without the module too, because the global `ru` simply stays on. The hosts have to disagree.
 
 1. Mac: switch to `ru`, type a Cyrillic word. Host and firmware agree.
 2. Switch to the iPad's profile. Set it to `en`, type a Latin word. Same there.
@@ -1407,28 +1159,46 @@ firmware without the module too, because the global `ru` simply stays on. The ho
 
 - [ ] **Step 2: The language survives a sleep**
 
-This is the case that replaced the reset branch. The session restores what it had; the firmware must
-restore the same thing.
+This is the case that replaced the reset branch. **Do not touch the layer by hand during this check** —
+`nav` 6 or 7 would move the firmware without moving ownership and confound the result. The manual
+path is Step 3, separately.
 
 1. Mac on `ru`, confirmed by typing.
 2. Lock the screen and leave it long enough that the link drops — a minute is plenty.
-3. Unlock, then type in an application.
+3. Unlock **without typing the password correctly mattering**: it will come out scrambled, which is
+   expected and is what Step 3 is about. Get in.
+4. Type in an application.
 
-Expected: Cyrillic, with the firmware agreeing. **The password field itself is still wrong**, and that
-is known and accepted: the lock screen takes ASCII while the firmware is on `ru`. `nav` position 6
-before typing the password is the manual answer, and it sends no keystroke.
+Expected: Cyrillic, with the firmware agreeing. Repeat once on the iPad.
 
-Repeat once on the iPad.
+- [ ] **Step 3: The manual path for the password, in full**
 
-- [ ] **Step 3: Out of range and back**
+The password field takes ASCII while the firmware is on `ru`. The manual answer is two presses, not
+one, and the second is the part that is easy to forget:
+
+1. At the lock screen, press `nav` 6 (`&to 0`). The firmware is now `en`; nothing was sent to the
+   host.
+2. Type the password. Expected: it works.
+3. Unlock. The session restores `ru`, but **the firmware is still `en`** — ownership never moved, so
+   nothing restored it.
+4. Press `nav` 7 (`&to 1`).
+
+Expected: Cyrillic again, both sides agreeing.
+
+Check the consequence of skipping step 4 once, so the failure is recognisable: with the firmware left
+on `en`, switch to the iPad and back. The Mac's memory will have taken that `en` — the layer was its
+to save when ownership moved — and the Mac now restores `en`. Fix it by setting `ru` again and
+switching away and back, which re-saves it.
+
+- [ ] **Step 4: Out of range and back**
 
 Walk away until the link drops, come back, type. Expected: the language the host was left on, on both
-sides, with no manual switch. This is the same path as Step 2 without the lock screen in it.
+sides, with no manual switch. Same path as Step 2 without the lock screen in it.
 
-- [ ] **Step 4: Update CLAUDE.md**
+- [ ] **Step 5: Update CLAUDE.md**
 
-The module's section already exists from Task 4's documentation commit, but it describes a reset that
-no longer happens and a bitmask that no longer exists. Replace that paragraph:
+The module's section exists from an earlier commit but describes a reset that no longer happens and a
+bitmask that no longer exists. Replace that paragraph:
 
 ```markdown
 **The module never resets a language, only restores one.** The lock screen forces ASCII for the
@@ -1437,18 +1207,26 @@ before locking — measured on both. A firmware that reset on reconnect would th
 password field and been wrong for the whole session afterwards, which is the worse trade. Restoring
 what a host was left on is right for a plain profile switch and after a sleep alike.
 
-So the password field stays as it is, and `nav` positions 6 and 7 remain the manual answer for it —
-they move the firmware layer only and send no keystroke, so either is safe to press at a lock screen.
+The password field is left as it is. The manual answer is `nav` 6 before typing it and **`nav` 7
+after unlocking** — both presses, because the first moves the firmware without moving ownership, so
+nothing puts it back. Skip the second and the next profile switch saves that `en` as the Mac's
+language.
+
+Two gaps are accepted rather than solved. A host that changes language while awake is invisible. And
+the memory is in RAM, so a deep sleep — `activity.c` powers the board off after
+`CONFIG_ZMK_IDLE_SLEEP_TIMEOUT`, 600000 ms, when not on USB — loses it, and the first arrival at a
+profile afterwards takes the default language while the host restores its own. Persisting to flash
+would close that and is deliberately out of scope.
 
 An earlier draft reset after an outage longer than a threshold, and carried a `RESET_PROFILES`
 bitmask so one host could opt out. Both went when the measurement came in. The mask was deleted
 rather than defaulted to "all" because it keyed on the **profile index**, which changes when a device
-is re-paired — a trap that would have pointed at the wrong host later. If a host ever appears that
-does preserve its layout across sleep, key that behaviour on the **peer address**, which the module
-already stores and compares in order to notice re-pairing.
+is re-paired — a trap that would have pointed at the wrong host later. If that behaviour is ever
+needed, key it on the **peer address**, which the module already stores and compares in order to
+notice re-pairing.
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add CLAUDE.md

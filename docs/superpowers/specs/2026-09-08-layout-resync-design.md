@@ -174,11 +174,21 @@ risk sits. Two rules it must obey, to be stated as requirements rather than disc
   verdict must do nothing, which the first row of the decision table already gives — but it has to
   hold for the adapter's own re-entry, not only for the automaton.
 
-### Why nothing is written to flash
+### Nothing is written to flash, and that is a limitation rather than a virtue
 
-Deep sleep resets the board, which loses this state — and that is correct, because a deep sleep means
-a long absence and the host will have reset too. Persisting it would survive exactly the case where
-it is most likely to be wrong.
+The memory lives in RAM, so a deep sleep loses it. `activity.c` powers the board off after
+`CONFIG_ZMK_IDLE_SLEEP_TIMEOUT` — 600000 ms here — when it is not on USB, and waking is a reset, so
+the module comes back knowing nothing. The first arrival at a profile then takes the default language
+while the host, which restores what it had, may well be on the other one.
+
+An earlier draft called this correct on the grounds that the host would have reset too. **That was
+the reset hypothesis, and the measurement disproved it.** It is now simply an accepted gap, the same
+one as the first connection after boot: no memory, so the default stands.
+
+Persisting to flash would close it, and is deliberately out of scope here rather than justified away.
+It would mean writing on every language change — `settings_save_one` on a path the keymap currently
+touches only for Studio edits — and deciding what a stored language means after the peer behind a
+profile has changed. Neither is hard; both are a separate piece of work.
 
 ## Configuration
 
