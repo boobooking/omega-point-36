@@ -330,10 +330,17 @@ to end in `tests/herdr-prefix`.
 between "Ctrl+Space has been sent" and "the command key is pressed" contains exactly one firmware
 event: the Ctrl release.
 
-**`sken` carries `release-after-ms = <30000>`, and the stock 1000 is far too short.** herdr puts a
+**`sken` carries `release-after-ms = <600000>`, and the stock 1000 is far too short.** herdr puts a
 prompt on screen and you read it before choosing, so the gap between the prefix and the command key
 is seconds, not milliseconds. At 1000 the sticky expired first and the command key arrived as
-Cyrillic — the prefix appeared to work, herdr showed it was waiting, and nothing matched. This is
+Cyrillic — the prefix appeared to work, herdr showed it was waiting, and nothing matched.
+
+**herdr has no prefix timeout at all**, so neither should this. `ClientShellMode::Prefix` in
+`src/client/shell/input.rs` (`herdrdev/herdr`) is a key-driven state machine with no `Instant` and no
+`Duration`: the prefix key again, `Esc`, a matching binding, or **any other key** all just leave the
+mode. That last branch is why an expired sticky looked the way it did — the Cyrillic scancode was not
+recognised but still dismissed the prompt. Ten minutes is not a considered interval, it is "long
+enough that the firmware never decides before you do". This is
 the failure that reached the device, and `tests/herdr-prefix` missed it because the case pressed the
 command key 150 ms after the prefix. It now waits 1500 ms, which is what a person does. A long window
 costs nothing in normal use: any key press consumes the sticky, so the only exposure is arming the

@@ -193,9 +193,14 @@
         // arrived. And release-after-ms, which has to outlast the human, not
         // the keystroke — herdr puts a prompt on screen and you read it before
         // choosing a command. The stock 1000 expired first and the command key
-        // arrived as Cyrillic, which is the whole bug this value fixes. Any key
-        // press consumes the sticky, so a long window only costs one Latin
-        // character if you arm the prefix and then abandon it.
+        // arrived as Cyrillic, which is the whole bug this value fixes.
+        //
+        // herdr itself has no prefix timeout: ClientShellMode::Prefix in
+        // src/client/shell/input.rs is a key-driven state machine with no timer,
+        // and any key at all leaves the mode. So the firmware should hold until
+        // the next key too, and 600000 is "long enough that it never decides
+        // first". Any key press consumes the sticky, so the only cost is one
+        // Latin character if you arm the prefix and then abandon it.
         //
         // It only works because en_letters sits above ru. Raising layer 0
         // itself is impossible — keymap.c pins the default layer at 0, keeps it
@@ -204,7 +209,7 @@
             compatible = "zmk,behavior-sticky-key";
             #binding-cells = <1>;
             bindings = <&mo>;
-            release-after-ms = <30000>;
+            release-after-ms = <600000>;
             ignore-modifiers;
         };
 
