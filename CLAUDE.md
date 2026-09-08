@@ -729,10 +729,11 @@ permanent desync, and any host-side change is undetectable.
 | 4 | Unintended switch — a fast space-then-backspace firing the old combo | fixed: the switch is a dedicated key |
 | 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: the switch key is on the central half |
 | 6 | A modifier hold's release never runs, so `&to 1` never restores `ru` | reduced only; recovery is one keystroke |
-| 7 | Boot — layer 0 is the hardcoded default and layer state is not persisted, so every reflash and every battery pull starts on `en` regardless of the host | **irreducible** |
+| 7 | Boot — layer 0 is the hardcoded default and layer state is not persisted, so every reflash and every battery pull starts on `en` regardless of the host | **irreducible**; the module's memory is RAM-only and shares this fate after a deep sleep |
 | 8 | A third keyboard layout enabled on the host — Caps Lock then cycles through three, and the binary model breaks silently | avoid; currently ABC + Russian only |
 | 9 | Typing inside the window between `&to` and the host acting on Caps Lock | one character, self-correcting |
 | 10 | A Caps Lock lost inside the `&en` macro, which flips twice per keypress | reduced by the same `tap-ms` |
+| 11 | Two hosts on different languages — one firmware layer describing whichever profile you last switched to | fixed by the layout resync module, below |
 
 Two things were checked and **excluded** as causes: macOS's "automatically switch to a document's
 input source" is off here (`TextInputGlobalPropertyPerContextInput = 0` in `com.apple.HIToolbox`), and
@@ -752,8 +753,12 @@ That leaves two complete solutions, both rejected because **iPadOS is a required
 the host's input source into an LED from a host-side daemon and have the firmware follow it; or
 install a custom `.keylayout` that maps this keyboard's Colemak-DH scancodes to ЙЦУКЕН positions,
 which removes the firmware's language state entirely. Neither works on iPad. Do not re-derive these —
-the remaining work is reducing the mechanical causes and keeping recovery cheap, and `nav` positions
-6 and 7 are that recovery.
+what is left is reducing the mechanical causes and keeping recovery cheap, and `nav` positions 6 and
+7 are that recovery.
+
+Cause 11 is the one that turned out to be fixable in firmware after all, because it needs no
+knowledge of the host's layout — only of which host you are talking to, which BLE does tell the
+keyboard. That is the layout resync module. Nothing else in this table moved because of it.
 
 **Still to try:** `GLOBE` (`C_AC_NEXT_KEYBOARD_LAYOUT_SELECT`, defined in ZMK v0.3.0) instead of
 Caps Lock. It is the native switch on both platforms and has no hold threshold, but whether macOS and
@@ -763,10 +768,8 @@ the Fn behaviour set to "Change Input Source" (`AppleFnUsageType` is 0, "do noth
 ## The layout resync module
 
 `module/` is a Zephyr module this repository carries, enabled by `zephyr/module.yml`, which the build
-workflow finds and turns into `-DZMK_EXTRA_MODULES`. It keeps the language layer with the host it is
-talking to: each BLE profile's language is remembered and restored when you come back to it, and a
-host that was away longer than `CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS` is assumed to have slept and
-reset its own layout, so the firmware returns to the default language too.
+workflow finds and turns into `-DZMK_EXTRA_MODULES`. It gives every BLE profile its own remembered
+input language and restores it when you come back to that host. That is the whole of it.
 
 Three layers. `module/src/resync_state.c` decides what should happen, `module/src/resync_adapter.c`
 translates events and reconciles after pairing, and neither has a Zephyr type in it — both are tested
@@ -774,14 +777,38 @@ by `tests/resync-state/`, which `tests/run.sh` runs. `module/src/layout_resync.c
 it fills in a struct of platform calls and serialises the callbacks. That last layer cannot be tested
 here, the simulator having no BLE, which is exactly why it holds no logic.
 
-**`CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES` is a bitmask and is `0x0` in `op36.conf`.** Restoring a
-language is safe on any host; resetting it is only safe on a host known to reset its own layout on
-wake. Set a bit only after checking that host, and record the result here.
+**The module never resets a language, only restores one.** The lock screen forces ASCII for the
+password field, but after unlocking, both macOS and iPadOS restore whatever language was active
+before locking — measured on both. A firmware that reset on reconnect would therefore have fixed the
+password field and been wrong for the whole session afterwards, which is the worse trade. Restoring
+what a host was left on is right for a plain profile switch and after a sleep alike.
+
+The password field is left as it is. The manual answer is `nav` 6 before typing it and **`nav` 7
+after unlocking** — both presses, because the first moves the firmware without moving ownership, so
+nothing puts it back. Skip the second and the next profile switch saves that `en` as the Mac's
+language.
+
+Two gaps are accepted rather than solved. A host that changes language while awake is invisible. And
+the memory is in RAM, so a deep sleep — `activity.c` powers the board off after
+`CONFIG_ZMK_IDLE_SLEEP_TIMEOUT`, 600000 ms, when not on USB — loses it, and the first arrival at a
+profile afterwards takes the default language while the host restores its own. Persisting to flash
+would close that and is deliberately out of scope.
+
+An earlier draft reset after an outage longer than a threshold, and carried a `RESET_PROFILES`
+bitmask so one host could opt out. Both went when the measurement came in. The mask was deleted
+rather than defaulted to "all" because it keyed on the **profile index**, which changes when a device
+is re-paired — a trap that would have pointed at the wrong host later. If that behaviour is ever
+needed, key it on the **peer address**, which the module already stores and compares in order to
+notice re-pairing.
+
+The only configuration is `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER`, which is the layer holding the second
+language and defaults to 1. `op36.conf` sets nothing for the module at all.
 
 The Kconfig guard is not tidiness. `app/CMakeLists.txt:47` builds `keymap.c` and `ble.c` only for a
 central or non-split target, so `op36_right` has neither; `settings_reset` is not split and does build
-`keymap.c`, but sets `CONFIG_ZMK_BLE=n` and so has no `ble.c`. Confirmed on CI run 34214748643, where
-`CONFIG_ZMK_LAYOUT_RESYNC=y` appears for `op36_left` alone.
+`keymap.c`, but sets `CONFIG_ZMK_BLE=n` and so has no `ble.c`. Confirmed on CI run 34235280103, where
+`CONFIG_ZMK_LAYOUT_RESYNC=y` appears for `op36_left` alone and each build carries its own positive
+control — an empty grep result and a broken pipeline look identical otherwise.
 
 The design and everything checked while arriving at it are in
 `docs/superpowers/specs/2026-09-08-layout-resync-design.md`. The three facts it turns on, all in
