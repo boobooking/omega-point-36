@@ -103,6 +103,37 @@
             bindings = <&mo>, <&kp>;
         };
 
+        // Position 32 carries both jobs: hold for the symbol layer, tap to
+        // switch language. &ltt cannot express it — its tap binding is &kp and
+        // the switch is a macro — so these are the same behavior with the tap
+        // swapped, one per direction. The second parameter goes to that macro,
+        // which takes none, so it is written 0 and ignored; the schema demands
+        // two cells regardless, the same as `&hyl 0 F`.
+        //
+        // No quick-tap-ms here on purpose. Repeating a tapped key is what that
+        // is for, and repeating a language switch is never wanted: tap then
+        // hold would switch twice instead of raising the layer.
+        //
+        // Balanced like the other thumbs, and here it is also the safer
+        // flavour: a roll resolves as a hold, so it yields the symbol layer
+        // rather than an accidental language switch. Tap-preferred would do the
+        // opposite.
+        ltru: layer_tap_to_ru {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            bindings = <&mo>, <&layer_ru>;
+        };
+
+        lten: layer_tap_to_en {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            bindings = <&mo>, <&layer_en>;
+        };
+
         // Hyper on the top row. The hold binding has to be the &hyper macro, not
         // &kp LS(LC(LA(LGUI))): that form registers LGUI as an explicit modifier
         // but Shift/Ctrl/Alt only as implicit ones, and
@@ -369,7 +400,7 @@
   &none        &kp W         &hyl 0 F      &kp P        &kp B                                    &kp Z             &kp L        &hyr 0 U      &kp Y         &none
   &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                    &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
   &none        &kp X         &kp C         &kp D        &kp V                                    &kp K             &kp H        &kp J         &kp Q         &none
-                                           &ltt 3 ESC   &ltt 6 SPACE  &layer_ru    &ltt 3 ENTER  &ltt 5 BACKSPACE  &lt 7 TAB
+                                           &kp ESC      &ltt 6 SPACE  &ltru 3 0    &ltt 3 ENTER  &ltt 5 BACKSPACE  &lt 7 TAB
             >;
 
             display-name = "Base";
@@ -380,7 +411,7 @@
   &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA          &kp RU_CYRILLIC_IE                             &kp RU_CYRILLIC_EN  &kp RU_CYRILLIC_GHE          &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
   &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A  &kp RU_CYRILLIC_PE                             &kp RU_CYRILLIC_ER  &hmr_ru RGUI RU_CYRILLIC_O   &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
   &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt 2 RU_CYRILLIC_EM        &kp RU_CYRILLIC_I                              &kp RU_CYRILLIC_TE  &lt 2 RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
-                                                                                          &ltt 4 ESC                  &ltt 6 SPACE        &layer_en    &ltt 4 ENTER  &ltt 5 BACKSPACE    &lt 7 TAB
+                                                                                          &kp ESC                     &ltt 6 SPACE        &lten 4 0    &ltt 4 ENTER  &ltt 5 BACKSPACE    &lt 7 TAB
             >;
 
             display-name = "Ru";
@@ -454,10 +485,10 @@
 
         en_letters {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                 &kp Z             &kp L        &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                 &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                 &kp K             &kp H        &kp J         &kp Q         &none
-                                           &ltt 3 ESC   &ltt 6 SPACE  &trans    &ltt 3 ENTER  &ltt 5 BACKSPACE  &lt 7 TAB
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                &kp Z             &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                &kp M             &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                &kp K             &kp H        &kp J         &kp Q         &none
+                                           &kp ESC      &ltt 6 SPACE  &none    &ltt 3 ENTER  &ltt 5 BACKSPACE  &lt 7 TAB
             >;
 
             display-name = "En letters";

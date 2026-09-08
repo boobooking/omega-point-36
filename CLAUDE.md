@@ -175,7 +175,7 @@ re-rendering silently breaks alignment. The layout algorithm is:
   come the two middle thumb tokens (separated by 4 spaces, not 2), and column 5 starts after them.
 
 **Layer 8 (`en_letters`) is a copy of the `en` layer** — rows 0-2 verbatim, plus `en`'s thumb row
-with the layout switch position replaced by `&trans`. Change one and you must change the other in the
+with the layout switch position replaced by `&none`. Change one and you must change the other in the
 same commit;
 `tests/check-en-letters.py` fails the run and names the drifting position if you forget. See
 "Modifiers on `ru` raise the English letters over it" for why the copy exists.
@@ -270,8 +270,13 @@ modifier is down, which puts the letters back where `en` has them. `hml_ru`/`hmr
 `en_mod` / `hyper_en` macros; flavour, guards and trigger lists are untouched. Verified end to end in
 `tests/ru-mod-switch`.
 
-**`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with the
-layout switch position (32) replaced by `&trans`. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
+**`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with position
+32 replaced by **`&none`**. Under a held modifier neither of that key's two jobs can be right: a copy
+of `en`'s binding would tap "go to ru" while already on `ru`, and a `&trans` would fall through to
+`ru` and reach `sym_ru`, whose symbols go through the `&en` wrapper and tap Caps Lock mid-chord.
+Refusing the press is the only safe answer, and it costs `Cmd` plus the left thumb reaching a symbol
+layer at all. Enter on position 33 still does, and still reaches `sym_en` with the Latin symbols a
+shortcut needs. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
 straight back through to `ru`, which is the thing being overridden. Position 30 is the exception
 precisely because falling through is what is wanted there — see below.
 
@@ -393,15 +398,26 @@ Five keys, and which one you hold picks the layer. Each leaves one hand free:
 | 35 Tab | `adj` | left, and `adj` lives on the right hand |
 | 31 Space | `numbers` | right, where the digits are |
 | 34 Backspace | `nav` | left, where the arrows are |
-| 30 Esc / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
+| 32 / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
 | **tap 32** | the layout switch, not a layer | — |
 
-Every thumb position now carries something; none is spare.
+Position 30 is a plain `&kp ESC` and reaches no layer at all. Every other thumb carries something;
+none is spare.
 
-**The switch sits on 32, an inner thumb, and Esc on 30, the outer one.** They were the other way
-round at first, which put the one gesture you cannot undo on the key most easily brushed. Brushing 30
-now types an Esc. Read any "position 30" below that talks about the layout switch as history from
-before that swap.
+**Position 32 does two jobs**, hold for the symbol layer and tap for the layout switch, through
+`ltru` on `en` and `lten` on `ru`. `&ltt` cannot express it: its tap binding is `&kp` and the switch
+is a macro, so these are the same hold-tap with the tap swapped, one per direction. The second
+parameter is written `0` and ignored, because the macro takes none and the schema demands two cells —
+the same shape as `&hyl 0 F`.
+
+They carry **no `quick-tap-ms`**, deliberately. That property exists so tap-then-hold repeats the
+tapped key, and repeating a language switch is never wanted — it would switch twice instead of
+raising the layer. Balanced is also the safer flavour here rather than merely the consistent one: a
+roll resolves as a hold, so it yields the symbol layer, where tap-preferred would yield an accidental
+language switch.
+
+Read any "position 30" below that talks about the layout switch as history: the switch has lived on
+2+3, then 31+34, then 30, and now 32.
 
 **Position 35 is `&lt 7 TAB`, deliberately the stock tap-preferred `&lt` and not `&ltt`.** Every other
 thumb is balanced, but `adj` carries `&bootloader` and `&bt BT_CLR`, and Tab is frequent: with

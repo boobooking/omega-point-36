@@ -32,14 +32,14 @@
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,300)
 
-        /* Hold Esc (pos 32) to raise sym_ru, which must be layer 4 and not
+        /* Hold position 32 to raise sym_ru, which must be layer 4 and not
            layer 3. Then every symbol the macOS "Русская" layout moves off the
            PC ЙЦУКЕН position: ? (5), * (10), / (15), : (23), ; (24), % (25),
            , (26), . (27) and \\ (28). Positions 23 and 26 are the ru_ext
            entrances on ru, and 10 is a home row mod, so sym_ru has to win over
            all three. * and \\ have no key in this layout and go through &en,
            so they bracket themselves in Caps Lock. */
-        ZMK_MOCK_PRESS(3,0,350)
+        ZMK_MOCK_PRESS(3,2,350)
         ZMK_MOCK_PRESS(0,5,30)
         ZMK_MOCK_RELEASE(0,5,30)
         ZMK_MOCK_PRESS(1,5,30)
@@ -65,7 +65,7 @@
         ZMK_MOCK_RELEASE(1,0,200)
         ZMK_MOCK_PRESS(2,8,200)
         ZMK_MOCK_RELEASE(2,8,200)
-        ZMK_MOCK_RELEASE(3,0,300)
+        ZMK_MOCK_RELEASE(3,2,300)
 
         /* The other entrance, Enter (pos 33), must reach the same layer. */
         ZMK_MOCK_PRESS(3,3,350)
