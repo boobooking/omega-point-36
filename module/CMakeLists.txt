@@ -5,5 +5,6 @@ if(CONFIG_ZMK_LAYOUT_RESYNC)
   # <zmk/...> resolves only by accident, depending on what other modules set.
   zephyr_library_include_directories(${APPLICATION_SOURCE_DIR}/include)
   zephyr_library_sources(src/resync_state.c)
+  zephyr_library_sources(src/resync_adapter.c)
   zephyr_library_sources(src/layout_resync.c)
 endif()

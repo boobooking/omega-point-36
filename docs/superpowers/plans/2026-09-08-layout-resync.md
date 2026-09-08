@@ -1440,7 +1440,11 @@ LOG_MODULE_REGISTER(layout_resync, CONFIG_ZMK_LOG_LEVEL);
 
 #define ALT_LAYER ((zmk_keymap_layer_id_t)CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYER)
 
-BUILD_ASSERT(sizeof(bt_addr_le_t) == RESYNC_PEER_LEN,
+/* Zephyr says of bt_addr_le_t: "Not packed, so no sizeof()". BT_ADDR_LE_SIZE is
+   the documented length, and the type byte and the six address bytes are both
+   byte aligned, so the first BT_ADDR_LE_SIZE bytes are the address whatever the
+   compiler does with trailing padding. */
+BUILD_ASSERT(BT_ADDR_LE_SIZE == RESYNC_PEER_LEN,
              "the adapter compares peers as RESYNC_PEER_LEN opaque bytes");
 
 static struct resync_adapter adapter;
