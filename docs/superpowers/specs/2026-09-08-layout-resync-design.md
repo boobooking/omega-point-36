@@ -94,7 +94,9 @@ failures, both found in review of the first draft:
   owns the layer state.
 
 `owner` is set when a decision is applied for a profile, and cleared when we move to a profile for
-which no decision has been made. Saving happens only when `owner` is about to change and is set.
+which no decision has been made or when BLE stops being the selected transport. Saving requires an
+`owner` to be set, and happens at the two moments listed under "When the language is saved" — an
+ownership change and the owner's own disconnect.
 
 ### Deciding
 
@@ -166,6 +168,20 @@ BLE connection history keeps being recorded throughout, including while USB is s
 *application* of a layer change is gated on BLE being the selected transport. **No language memory is
 kept for USB** — the module's job there is to not corrupt the BLE profiles, not to manage USB.
 
+### The adapter has to be idempotent
+
+The pure state machine is testable; the code that feeds it is not, and that is where the remaining
+risk sits. Two rules it must obey, to be stated as requirements rather than discovered later:
+
+- **State update, layer application and the `owner` change are one step.** A connection callback and
+  a ZMK event can describe the same transition, and they do not arrive in a guaranteed order — the
+  event is a coalescing snapshot, the callback is immediate. Applying a layer without moving `owner`,
+  or the reverse, leaves the two disagreeing.
+- **A repeat notification must be harmless.** The same transition may be reported twice, or reported
+  when nothing changed. Deciding again for a profile that already owns the layer with no pending
+  verdict must do nothing, which the first row of the decision table already gives — but it has to
+  hold for the adapter's own re-entry, not only for the automaton.
+
 ### Why nothing is written to flash
 
 Deep sleep resets the board, which loses this state — and that is correct, because a deep sleep means
@@ -185,6 +201,13 @@ it is most likely to be wrong.
 **restore-only**: its language is still remembered and restored, but a long outage never clears it to
 the default. That is the safe setting for any host that preserves its layout across sleep, and it has
 to be per profile because the rest of the configuration is global and the two hosts differ.
+
+The module's own default is every profile, which suits a host whose behaviour is known. **This
+keyboard's starting configuration must clear the iPad's bit**, because that behaviour is not known and
+the reset branch would create a desync rather than fix one if iPadOS preserves the layout. Setting the
+bit comes *after* the check described under "Out of scope", not before. Identify which profile index
+the iPad occupies before writing the mask — `&bt BT_SEL 0/1/2` are bound, and the keymap does not say
+which host is which.
 
 `ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` **and** on the central or non-split role. The two
 excluded matrix entries fail for different reasons, and only both conditions together cover them:
@@ -276,7 +299,11 @@ Sequences, each one a bug review found or a rule the design turns on:
 - BLE/Mac on `ru` → USB → language changed to `en` → back to BLE — the Mac's memory must not acquire
   the USB-era language.
 - Switch between two connected hosts — each side's language restored, threshold never consulted.
-- Profile cleared while active.
+- An outage of exactly `ZMK_LAYOUT_RESYNC_DISCONNECT_MS` — the boundary, pinned so it cannot drift.
+- A long outage on a **restore-only** profile — the language comes back, the reset never fires.
+- A repeat notification after a reset has already been applied — nothing happens the second time.
+- Profile cleared or re-paired while active — the whole history for that profile goes, `needs_reset`
+  included, since the peer behind the index is now a different machine.
 
 That test runs from `tests/run.sh` alongside `check-en-letters.py`, so it costs nothing to keep.
 
