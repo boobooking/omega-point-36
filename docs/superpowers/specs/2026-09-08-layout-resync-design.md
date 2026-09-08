@@ -32,85 +32,125 @@ is not available: with the host on Russian, `HIDCapsLockLEDOn` reads `No` for th
 service, so macOS does not mirror the input source into any LED. See CLAUDE.md, "Every way the layer
 and the host can drift apart".
 
-## The signal
+## The signals, and why the obvious one is not enough
 
-`zmk_ble_active_profile_changed` carries `uint8_t index` and is raised in exactly the three places
-this design needs, and nowhere else:
+`zmk_ble_active_profile_changed` looks like the whole answer and is not. Three properties of
+`app/src/ble.c` rule it out as the only input:
 
-- `zmk_ble_prof_select()` raises it when the active profile index actually changes, and returns early
-  when it does not. It does **not** disconnect the outgoing host — it only calls
-  `update_advertising()`, which manages advertising alone.
-- `connected()` and `disconnected()` raise it for the active profile.
+- **It is raised from four places, not three.** `set_profile_address()` (line 119) raises it too, so
+  pairing and `&bt BT_CLR` produce it as well as profile selection and connect/disconnect.
+- **It is a snapshot, not a transition.** `raise_profile_changed_event()` reads `active_profile` when
+  the work item runs, and `K_WORK_DEFINE` gives all four call sites **one** work item. A disconnect
+  followed quickly by a connect submits twice, runs once, and the intervening state is never seen.
+- **It only ever concerns the active profile.** `connected()` and `disconnected()` gate on
+  `is_conn_active_profile(conn)`, which compares against `profiles[active_profile]`. A host that drops
+  while we are on another profile is invisible — exactly the measurement this design needs.
 
-Both connection callbacks return early unless `info.role == BT_CONN_ROLE_PERIPHERAL`, and then gate
-on `is_conn_active_profile(conn)`. The split peripheral link — where this half is the BLE central —
-never reaches the event. That is the correctness property the whole design rests on: the module hears
-about the host and only the host.
+So the module registers **its own** `BT_CONN_CB_DEFINE` and uses the ZMK event only to learn that the
+active index changed:
 
-Because a profile switch leaves the outgoing connection up, "you switched devices" and "the host went
-away" arrive as *different* events, and can be told apart without guessing from elapsed time.
+- Connection callbacks filter `info.role == BT_CONN_ROLE_PERIPHERAL`, which is how `ble.c` itself
+  excludes the split peripheral link, and map the peer to a profile with `zmk_ble_profile_index()`
+  (public in `zmk/ble.h`). That yields accurate per-profile connect and disconnect times for **all**
+  profiles.
+- `zmk_ble_active_profile_changed` tells us the active profile may have changed; the module compares
+  against its own record rather than trusting the event to describe a transition.
 
 ## Design
 
 Per profile, in RAM, `ZMK_BLE_PROFILE_COUNT` entries (`CONFIG_BT_MAX_PAIRED` minus
 `CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS`, so 5 on this build):
 
-- `alt_active` — was the alternate language layer active when we last left this profile
-- `left_at` — `k_uptime_get()` when we left it
+- `lang_alt` — the remembered language for this profile
+- `disconnected_at` — when this profile's host link went down, from the connection callback only
 
-The module also tracks the previous profile index and the previous connection state, so each event
-can be classified.
+Plus one global: `owner`, the profile index whose language the current layer state represents, or
+none.
 
-On every `zmk_ble_active_profile_changed`:
+### Ownership, and the two bugs it fixes
 
-1. **Record.** If the index changed, or the profile went from connected to disconnected, store
-   `alt_active` and `left_at` for the profile we are leaving.
-2. **Decide**, when the now-active profile is connected. The discriminator is whether the link was
-   already up when we arrived, because **host sleep drops the BLE link** — so a live connection is
-   itself evidence that the host never went away:
+The layer state is global; a profile's language is not. Conflating them produces two concrete
+failures, both found in review of the first draft:
 
-| trigger | meaning | action |
+- The Mac dropped a minute ago. You switch to the iPad and straight back. If switching away rewrote
+  the Mac's timestamp, its minute-long absence would measure as two seconds. **Fixed by taking
+  `disconnected_at` only from the connection callback**, never from profile switching.
+- The iPad is on `en`. You select the Mac profile, which is disconnected and remembers `ru`, and
+  leave before it connects. The layer never became the Mac's, yet a naive save would write `en` into
+  the Mac's slot. **Fixed by `owner`**: the language is saved for a profile only while that profile
+  owns the layer state.
+
+`owner` is set when a decision is applied for a profile, and cleared when we move to a profile for
+which no decision has been made. Saving happens only when `owner` is about to change and is set.
+
+### Deciding
+
+When a profile becomes both active and connected:
+
+| condition | meaning | action |
 |---|---|---|
-| the profile is already connected when it becomes active | you moved to a host that has been awake the whole time | restore that profile's `alt_active` |
-| the profile *becomes* connected, gap ≥ threshold | it was away long enough to have slept and reset | `zmk_keymap_layer_to(zmk_keymap_layer_default())` |
-| the profile *becomes* connected, gap < threshold | radio hiccup, or you switched to it and it reconnected at once | restore that profile's `alt_active` |
+| link never went down since we last owned it | the host stayed awake | restore `lang_alt` |
+| link came back, gap ≥ threshold | away long enough to have slept and reset | clear to the default language |
+| link came back, gap < threshold | radio hiccup, or an immediate reconnect after a switch | restore `lang_alt` |
 
-`gap` is `now - left_at` for that profile: how long since we last had it. That covers switching to a
-profile that happens to be disconnected as well, with no extra rule — it lands on the second or third
-row according to how long we have been away from it.
+`gap` is `now - disconnected_at`. This rests on one assumption worth stating plainly: **a sleeping
+host drops the BLE connection.** A host that slept while holding the link open would look like one
+that stayed awake, and its stale language would be restored — no worse than today.
 
-"Restore" means `zmk_keymap_layer_to()` of either the alternate layer or the default one. Returning
-to `zmk_keymap_layer_default()` rather than a literal 0 keeps the code correct if the default layer
-ever moves, and avoids a magic number.
+Two cases the threshold cannot separate, accepted rather than solved: a short sleep that still reset
+the layout is missed, and a long radio loss from an awake host causes a false reset.
 
-No keystroke is ever sent. On wake the host sets its own layout; the firmware only has to agree with
-it. Sending Caps Lock here would desynchronise in the other direction.
+### Applying the change
 
-The threshold is consulted **only** when a link comes up that was down. Switching between two hosts
-that are both awake never reaches it, so "away on the iPad for three minutes" and "lid closed for
-thirty seconds" are decided by different rules and never compete for one number.
+**Never `zmk_keymap_layer_to()`.** It loops `zmk_keymap_layer_deactivate()` over every layer before
+activating the target (`keymap.c:214`), so firing it while a momentary layer is held would drop that
+layer with its key still down — including `en_letters` under a held modifier, which is precisely the
+mechanism the keymap relies on to type Latin shortcuts on `ru`. `nav`, `numbers`, `adj` and the
+symbol layers are exposed the same way.
 
-This rests on one assumption worth stating plainly: **a sleeping host drops the BLE connection.** If
-some host were to sleep while holding the link open, its wake would look like a plain profile switch
-and the stale language would be restored. That is the same failure the user already lives with today,
-so the assumption failing costs nothing new.
+The module therefore touches only the language layer:
+`zmk_keymap_layer_activate(ALT)` / `zmk_keymap_layer_deactivate(ALT)`. Layer 0 is the default and
+`set_layer_state` refuses to deactivate it, so "go to `en`" *is* deactivating the alternate layer.
+Reading the current language is `zmk_keymap_layer_active(ALT)`, which is unaffected by whatever
+momentary layer sits on top.
+
+No keystroke is ever sent. On wake the host sets its own layout; the firmware only has to agree.
+
+### Only while BLE is the selected transport
+
+BLE profiles and their connections keep existing while USB is the chosen endpoint —
+`get_selected_transport()` returns the stored preference whenever both are ready. Without a guard, a
+background BLE reconnect could change the layer under a user typing over USB, and a language chosen
+while on USB could be recorded into a BLE profile.
+
+The module acts only when the selected endpoint transport is BLE. Fixing the layout for USB is out of
+scope; not corrupting it is not.
 
 ### Why nothing is written to flash
 
 Deep sleep resets the board, which loses this state — and that is correct, because a deep sleep means
 a long absence and the host will have reset too. Persisting it would survive exactly the case where
-it is most likely to be wrong. CLAUDE.md already records this reasoning for layer state generally.
+it is most likely to be wrong.
 
 ## Configuration
 
 | symbol | meaning | default |
 |---|---|---|
 | `ZMK_LAYOUT_RESYNC` | enable the module | `y` |
-| `ZMK_LAYOUT_RESYNC_ALT_LAYER` | the layer whose state is remembered per profile | `1` (`ru`) |
+| `ZMK_LAYOUT_RESYNC_ALT_LAYER` | the layer holding the alternate language | `1` (`ru`) |
 | `ZMK_LAYOUT_RESYNC_DISCONNECT_MS` | reconnect gap above which the host is assumed to have reset | `10000` |
 
-10000 is a starting guess, not a measurement. The module logs the measured gap on every reconnect so
-the value can be tuned from observation.
+`ZMK_LAYOUT_RESYNC` **must** depend on `ZMK_BLE` and on the central or non-split role.
+`app/CMakeLists.txt:47` builds `keymap.c` and `ble.c` only under
+`(NOT CONFIG_ZMK_SPLIT) OR CONFIG_ZMK_SPLIT_ROLE_CENTRAL`; without the guard the module fails to link
+on `op36_right` and `settings_reset`, which is two of the three matrix entries.
+
+The design assumes exactly two languages: `ALT_LAYER` exists, differs from the default, and is read
+through `zmk_keymap_layer_active()`. A third language would break the Caps Lock macros in the keymap
+long before it troubled this module, so it is not generalised here.
+
+10000 is a starting guess, not a measurement. Every decision logs the profile, the disconnect and
+connect moments, the measured gap and the branch taken, so the value can be tuned from observation.
 
 ## Build integration
 
@@ -129,50 +169,72 @@ zephyr/module.yml        build: { cmake: module, kconfig: module/Kconfig }
 module/CMakeLists.txt
 module/Kconfig
 module/src/layout_resync.c
+module/src/decide.h      pure decision function, shared with the test
 ```
 
-Everything it uses is public API: `zmk_keymap_layer_to`, `zmk_keymap_layer_default`,
-`zmk_keymap_layer_active`, `zmk_ble_active_profile_is_connected`, and the
-`ZMK_LISTENER` / `ZMK_SUBSCRIPTION` macros.
+Everything it uses is public API: `zmk_keymap_layer_activate`, `zmk_keymap_layer_deactivate`,
+`zmk_keymap_layer_active`, `zmk_ble_profile_index`, `zmk_endpoints_selected`, Zephyr's
+`BT_CONN_CB_DEFINE`, and the `ZMK_LISTENER` / `ZMK_SUBSCRIPTION` macros.
 
 ## Out of scope
 
 Named so they are not mistaken for oversights:
 
-- **USB.** No BLE profile exists in that mode and the keyboard never deep-sleeps on the cable, so the
-  password case remains broken there. `usb_conn_state_changed` is the analogous signal if it is ever
-  worth doing.
+- **Correcting the layout on USB.** No BLE profile is in play and the keyboard never deep-sleeps on
+  the cable, so the password case remains broken there. The module only guarantees it will not make
+  USB worse. `usb_conn_state_changed` is the analogous signal if it is ever worth doing.
 - **The host changing layout while awake** — menu bar, another application, a foreign shortcut. Still
-  undetectable; this is cause 2 in CLAUDE.md's table and needs feedback the platform does not give.
-- **The first connection to a profile after boot.** There is no memory yet, so the default layer
-  stands. That is the right answer, but it is worth knowing it is not a decision.
-- **iPadOS behaviour after sleep is unverified.** If iPadOS preserves the Russian layout across sleep,
-  the reconnect branch will force `en` there wrongly. The cost is one manual switch, which is what
-  already happens today, so this does not block. Scoping the behaviour per profile is the fix if it
-  turns out to matter.
+  undetectable; cause 2 in CLAUDE.md's table, and it needs feedback the platform does not give.
+- **The first connection to a profile after boot.** No memory exists yet, so the default language
+  stands. Right answer, but not a decision.
+- **Profile clearing and re-pairing.** `&bt BT_CLR` and pairing both raise the profile-changed event
+  through `set_profile_address()`. The module must not crash or act oddly, but restoring a language
+  for a profile whose peer just changed is meaningless; that profile's memory is simply dropped.
+- **Pressing the layout switch while disconnected.** The keymap will happily toggle the layer and send
+  a Caps Lock nobody receives. The module records whatever state results; it does not try to undo it.
+
+**iPadOS behaviour after sleep is unverified, and this is a real risk rather than a free one.** The
+first draft claimed the cost was "one manual switch, same as today". That was wrong: if iPadOS
+preserves the Russian layout across sleep, then today the iPad comes back *consistent*, and the
+reconnect branch would **introduce** a desync that does not exist now. Before enabling the reset
+branch for the iPad's profile, check it — switch the iPad to Russian, lock it, unlock, and type one
+letter in Notes. If it comes back Russian, that profile should get restore-only behaviour and no
+reset.
 
 ## Verification
 
-**The simulator cannot exercise any of this.** `native_posix_64` is a single node with no BLE, so
-there is no connection to drop and no profile to switch. This is the first code in the repository
-that `./tests/run.sh` does not cover, and it should be treated as such rather than assumed safe
-because the suite is green.
+**The device is the only place the BLE transitions and the OS behaviour can be seen.**
+`native_posix_64` has no BLE, no second host and no profiles.
 
-What stands in for it:
+**The decision logic, however, is testable and will be tested.** It is extracted into a pure function
+over (per-profile state, event, timestamp) returning an action, with no Zephyr types in its
+signature. A host-compiled test drives it through the sequences that matter, including the two that
+review found in the first draft:
 
-- The decision logic is a handful of lines with no timing subtlety, small enough to read whole.
-- Every reconnect logs the measured gap and the branch taken, so device behaviour is observable
-  rather than inferred.
-- Device checks: lid close and reopen inside the threshold; lid close for longer; Mac to iPad and
-  back inside a minute; a walk out of range and back.
-- `tests/check-en-letters.py` and the existing suite still guard everything the module does not touch,
-  and must stay green — the module changes no keymap behaviour.
+- Mac drops, switch to iPad and back, Mac reconnects — the gap must still measure the full minute.
+- iPad on `en`, select the disconnected Mac which remembers `ru`, leave before it connects — the
+  Mac's memory must be untouched.
+- Switch between two connected hosts — restore each side's language, threshold never consulted.
+- Reconnect below and above the threshold.
+- Profile cleared while active.
+
+That test runs from `tests/run.sh` alongside `check-en-letters.py`, so it costs nothing to keep.
+
+Device checks that remain: lid close and reopen inside and outside the threshold; Mac to iPad and
+back inside a minute; a walk out of range and back; the full password-screen chain — lock screen,
+unlock, then typing in an application, since the lock screen may force ASCII independently of what
+the session restores.
+
+The existing suite and `check-en-letters.py` must stay green throughout: the module changes no keymap
+behaviour.
 
 ## Risks
 
-- **The threshold is a guess.** Tunable without code changes, and the log gives the data.
-- **A host that sleeps without dropping the link** would be indistinguishable from one that stayed
-  awake, and its stale language would be restored. No worse than today's behaviour.
-- **First C in the repository.** CLAUDE.md's opening claim that there is no fork stays true — this is
-  a module, not a patch to ZMK — but the statement that the repo holds no application code stops
-  being true and must be updated.
+- **The threshold is a guess.** Tunable without code changes, and every decision is logged.
+- **A host that sleeps without dropping the link** is indistinguishable from one that stayed awake;
+  its stale language would be restored. No worse than today.
+- **First C in the repository.** CLAUDE.md's claim that there is no ZMK fork stays true — this is a
+  module — but the statement that the repo holds no application code stops being true and must be
+  updated.
+- **Two of three matrix entries do not build `keymap.c` or `ble.c`.** The Kconfig guard is not tidiness;
+  without it CI breaks.
