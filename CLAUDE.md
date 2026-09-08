@@ -348,7 +348,7 @@ and now `true` in `~/.config/herdr/config.toml`. It puts the host on an ASCII-ca
 prefix mode is open and restores the previous input source when it closes; its comment names the CJK
 IME, which is the same problem arriving from the other direction. Being herdr's own switch it is
 closed-loop — it saves what it replaces — so it cannot desynchronise the language layer the way a
-firmware-side Caps Lock tap would.
+firmware-side Caps Lock tap would. Confirmed working on the device with both halves in place.
 
 **Both halves are required and neither works alone.** The host half alone leaves the firmware sending
 ЙЦУКЕН-positional scancodes into an ASCII layout: position 11 sends `ы` (`0x16`), which is `s` under
