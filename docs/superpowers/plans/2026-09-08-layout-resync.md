@@ -818,10 +818,10 @@ endif()
 
 - [ ] **Step 4: Create the adapter as a stub so the build has something to compile**
 
-Create `module/src/layout_resync.c` with only enough to link. Task 3 fills it in.
+Create `module/src/layout_resync.c` with only enough to link. Task 4 replaces it with the real binding.
 
 ```c
-/* ZMK adapter for the layout resync state machine. Task 3 implements this. */
+/* ZMK binding for the layout resync module. Task 4 implements this. */
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -1343,7 +1343,7 @@ int64_t resync_adapter_last_outage(const struct resync_adapter *a) { return a->s
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run the command from Step 3.
-Expected: PASS — four cases, then `all checks passed`, with no warnings under `-Werror`.
+Expected: PASS — six cases, then `all checks passed`, with no warnings under `-Werror`.
 
 - [ ] **Step 6: Wire it into the suite and put the state machine test under -Werror too**
 
