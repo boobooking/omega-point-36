@@ -54,8 +54,9 @@
 #define L_SYM_RU 4
 #define L_NAV 5
 #define L_NUM_EN 6
-#define L_ADJ 7
-#define L_EN_LTR 8
+#define L_NUM_RU 7
+#define L_ADJ 8
+#define L_EN_LTR 9
 
 // &lt keeps ZMK's own "tap-preferred": the layer waits for the tapping term and
 // a roll always taps, which is what a layer hanging off a letter key needs. The
@@ -288,6 +289,71 @@
             hold-trigger-key-positions = <0 1 2 3 4 10 11 12 13 14 20 21 22 23 24 30 31 32>;
             hold-trigger-on-release;
         };
+
+        // Shift+digit is resolved by the host layout, and "Русская" does not
+        // keep the English symbols there: Shift+2 is ", Shift+4 is % and
+        // Shift+5 is :. It does carry all of them one row over, under Option —
+        // @ # $ % ^ & * sit on Option+2 through Option+8 — so these seven reach
+        // the English symbol directly, with no Caps Lock and no host switching.
+        // Read out of the layout's own data with UCKeyTranslate, with dead-key
+        // processing left on: none of the seven is a dead key.
+        //
+        // Only 2..8 need this. Shift+1, Shift+9 and Shift+0 already give ! ( )
+        // on both layouts, so those three stay plain &kp on numbers_ru and the
+        // drift check requires them to match numbers_en exactly.
+        //
+        // keep-mods is deliberately absent, so ZMK masks the Shift that chose
+        // the morph and the host sees a clean Option+digit rather than
+        // Shift+Option+digit (behavior_mod_morph.c: masked_mods = mods when the
+        // property is missing).
+        d2: digit_2_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N2>, <&kp LA(N2)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        d3: digit_3_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N3>, <&kp LA(N3)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        d4: digit_4_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N4>, <&kp LA(N4)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        d5: digit_5_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N5>, <&kp LA(N5)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        d6: digit_6_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N6>, <&kp LA(N6)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        d7: digit_7_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N7>, <&kp LA(N7)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
+
+        d8: digit_8_ru {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp N8>, <&kp LA(N8)>;
+            mods = <(MOD_LSFT|MOD_RSFT)>;
+        };
     };
 
     macros {
@@ -430,7 +496,7 @@
   &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA           &kp RU_CYRILLIC_IE                                            &kp RU_CYRILLIC_EN    &kp RU_CYRILLIC_GHE                 &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
   &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                                            &kp RU_CYRILLIC_ER    &hmr_ru RGUI RU_CYRILLIC_O          &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
   &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt L_RU_EXT RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                                             &kp RU_CYRILLIC_TE    &lt L_RU_EXT RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
-                                                                                          &kp ESC                      &ltt L_NUM_EN SPACE  &lten L_SYM_RU 0    &ltt L_SYM_RU ENTER  &ltt L_NAV BACKSPACE  &lt L_ADJ TAB
+                                                                                          &kp ESC                      &ltt L_NUM_RU SPACE  &lten L_SYM_RU 0    &ltt L_SYM_RU ENTER  &ltt L_NAV BACKSPACE  &lt L_ADJ TAB
             >;
 
             display-name = "Ru";
@@ -485,6 +551,17 @@
   &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &kp N7  &kp N8  &kp N9  &none
   &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &kp N4  &kp N5  &kp N6  &none
   &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &kp N2  &kp N3  &none
+                                                 &trans                &trans                  &trans    &trans  &trans  &trans
+            >;
+
+            display-name = "Numbers";
+        };
+
+        numbers_ru {
+            bindings = <
+  &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &d7     &d8  &kp N9  &none
+  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &d4     &d5  &d6     &none
+  &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &d2  &d3     &none
                                                  &trans                &trans                  &trans    &trans  &trans  &trans
             >;
 

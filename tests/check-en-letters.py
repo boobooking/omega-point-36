@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail if layer 8 (en_letters) has drifted away from the en layer.
+"""Fail if en_letters has drifted away from the en layer.
 
 en_letters is a deliberate copy: it is raised over ru whenever a modifier or the
 herdr prefix needs Latin scancodes, and it has to carry real bindings because
@@ -13,11 +13,9 @@ answer. If the switch ever moves again, this exception moves with it.
 Nothing in the devicetree enforces that copy, so this does. It runs from
 tests/run.sh before any case is built.
 """
-import re
 import sys
-from pathlib import Path
 
-KEYMAP = Path(__file__).resolve().parent.parent / "config" / "op36_ruen.keymap"
+from keymap_layers import KEYMAP, layers, require
 
 # Thumb index (0..5, i.e. positions 30..35) carrying the layout switch, and so
 # the one position where en_letters must be &trans rather than a copy of en.
@@ -25,25 +23,9 @@ SWITCH_THUMB = 2
 SWITCH_THUMB_BINDING = "&none"
 
 
-def layers(text):
-    """Map layer name -> (three letter rows, six thumb tokens)."""
-    out = {}
-    lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if line.strip() != "bindings = <":
-            continue
-        name = lines[i - 1].strip().rstrip("{").strip()
-        rows = [re.split(r" {2,}", l.strip()) for l in lines[i + 1:i + 4]]
-        thumbs = re.split(r" {2,}", lines[i + 4].strip())
-        out[name] = (rows, thumbs)
-    return out
-
-
 def main():
     found = layers(KEYMAP.read_text())
-    missing = [n for n in ("en", "en_letters") if n not in found]
-    if missing:
-        sys.exit(f"check-en-letters: no {' or '.join(missing)} layer in {KEYMAP.name}")
+    require(found, "en", "en_letters")
 
     en_rows, en_thumbs = found["en"]
     cp_rows, cp_thumbs = found["en_letters"]

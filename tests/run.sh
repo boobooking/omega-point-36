@@ -35,8 +35,10 @@ if [ ! -d "$WS/zmk/zephyr" ]; then
         west update --narrow -o=--depth=1 && west zephyr-export'
 fi
 
-# en_letters is a hand-kept copy of en; nothing in the devicetree enforces it.
+# en_letters is a hand-kept copy of en, and numbers_ru of numbers_en; nothing in
+# the devicetree enforces either.
 python3 "$REPO/tests/check-en-letters.py"
+python3 "$REPO/tests/check-numbers-ru.py"
 
 # The resync state machine and adapter core are plain C with no Zephyr in them,
 # so they run here rather than in the simulator, which has no BLE to exercise

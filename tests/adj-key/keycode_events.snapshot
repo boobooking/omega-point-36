@@ -5,15 +5,15 @@ kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 35, binding name: layer_tap
 ht_binding_pressed: 35 new undecided hold_tap
 ht_decide: 35 decided hold-timer (tap-preferred decision moment timer)
-mo_pressed: position 35 layer 7
-layer 7 position: 6, binding name: bluetooth
+mo_pressed: position 35 layer 8
+layer 8 position: 6, binding name: bluetooth
 layer 0 position: 6, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
-layer 7 position: 6, binding name: bluetooth
+layer 8 position: 6, binding name: bluetooth
 layer 0 position: 6, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x0F implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 35, binding name: layer_tap
-mo_released: position 35 layer 7
+mo_released: position 35 layer 8
 ht_binding_released: 35 cleaning up hold-tap
 layer 0 position: 35, binding name: layer_tap
 ht_binding_pressed: 35 new undecided hold_tap

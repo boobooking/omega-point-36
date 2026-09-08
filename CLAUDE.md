@@ -186,9 +186,9 @@ first attempt; without it the diff would have been full of spurious realignment.
 
 ## Layers
 
-Nine layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3, `sym_ru`=4,
-`nav`=5, `numbers`=6, `adj`=7, `en_letters`=8. The other (unbuilt) `_ruen` keymaps use a different
-order, so never copy a `&mo N` across files.
+Ten layers, and the index order matters: `en`=0, `ru`=1, `ru_ext`=2, `sym_en`=3, `sym_ru`=4,
+`nav`=5, `numbers_en`=6, `numbers_ru`=7, `adj`=8, `en_letters`=9. The other (unbuilt) `_ruen` keymaps
+use a different order, so never copy a `&mo N` across files.
 
 **No binding in this file spells a layer number, though.** `&mo`, `&lt` and `&to` take a plain
 devicetree cell and ZMK has no phandle to a layer — a layer *is* its position in the keymap node — so
@@ -202,12 +202,15 @@ The one layer index the block cannot reach is `CONFIG_ZMK_LAYOUT_RESYNC_ALT_LAYE
 be moved by hand if `ru` ever moves.
 
 `en_letters` is a copy of `en` raised over `ru` whenever a modifier or the herdr prefix needs Latin
-scancodes — see below, including why it must be kept in sync by hand and what checks that. It is last
-so that adding it renumbered nothing.
+scancodes — see below, including why it must be kept in sync by hand and what checks that.
+
+`numbers_en` and `numbers_ru` are the second such pair, and they sit next to each other on purpose —
+see "Two numbers layers" below for what differs between them and why one layer cannot serve both
+languages.
 
 ```
 en ──hold pos 35──> adj                 (tap gives Tab)
- ├──Space────────> numbers
+ ├──Space────────> numbers_en           (numbers_ru from ru)
  ├──Bspc─────────> nav
  └──Esc/Enter────> sym_en
 ru behaves identically, except Esc/Enter reach sym_ru
@@ -432,7 +435,7 @@ Five keys, and which one you hold picks the layer. Each leaves one hand free:
 | held | leads to | free hand |
 |---|---|---|
 | 35 Tab | `adj` | left, and `adj` lives on the right hand |
-| 31 Space | `numbers` | right, where the digits are |
+| 31 Space | `numbers_en` from `en`, `numbers_ru` from `ru` | right, where the digits are |
 | 34 Backspace | `nav` | left, where the arrows are |
 | 32 / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
 | **tap 32** | the layout switch, not a layer | — |
@@ -462,28 +465,29 @@ Tap-preferred waits for the tapping term, so a roll always taps. `tests/adj-key`
 held 250 ms it reaches layer 7, tapped it emits `0x2B` and layer 7 never comes up. Tab left `nav`
 (position 14, now `&none`) when it arrived here.
 
-`adj` is a plain `&mo 7` on position 35 — no chain, no combo. It was on the Space+Backspace hold
+`adj` is a plain `&lt L_ADJ TAB` on position 35 — no chain, no combo. It was on the Space+Backspace hold
 until a tap on those two became the layout switch, which made the gesture ambiguous by construction:
 a ZMK combo fires on simultaneous press and cannot tell a tap from the start of a hold. It then sat
 on position 30 until that position became the layout switch itself, and moved to 35, the last free
 thumb. `adj` is rare, so it gets the least reachable key. `tests/adj-key` pins both halves: position
-35 raises layer 7, and holding Space then Backspace yields `numbers` over `nav` and never `adj`.
+35 raises `adj`, and holding Space then Backspace yields the numbers layer over `nav` and never
+`adj`.
 
 **The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** It now
 holds with **no exceptions at all** — every one of the six thumb positions is `&trans` on all seven
-layers above `ru`. The two `&lt 7 …` exceptions that used to sit on `nav` and `numbers` went away
-with the old `adj` route.
+layers above `ru`. The two `&lt 7 …` exceptions that used to sit on `nav` and the numbers layer went
+away with the old `adj` route.
 
 This rule is load-bearing, not cosmetic. A thumb position is not guaranteed to be the held key, and
 an `&none` left over from when it was **silently kills that key**. Two such dead keys already shipped
 this way. After any thumb-row change, resolve every position against every reachable layer stack —
-`en`/`ru` alone, each with `adj`, `numbers`, `nav` or its symbol layer — accounting for which key is
-held in each case.
+`en`/`ru` alone, each with `adj`, its numbers layer, `nav` or its symbol layer — accounting for which
+key is held in each case.
 
 One stack is reachable and worth knowing about: on `sym_en`/`sym_ru` position 31 is `&trans` and
-falls through to the base `&lt 6 SPACE`, so holding Esc and then Space raises `numbers` on top of the
-symbol layer (6 beats 3). Harmless, and `&none` is not an alternative there — it would kill the space
-tap.
+falls through to the base Space, so holding Esc and then Space raises the numbers layer on top of the
+symbol layer — 6 over 3 from `en`, 7 over 4 from `ru`. Harmless, and `&none` is not an alternative
+there — it would kill the space tap.
 
 ## Timing and hold-tap behaviors
 
@@ -746,15 +750,52 @@ command shortcuts. Bind them directly as `&kp LG(LS(LBKT))`. Splitting `nav` per
 been pointless anyway — the firmware sends a scancode, and `[` has no Cyrillic scancode to send
 instead.
 
-**The digit row is layout-independent by construction**, not by that fallback: `keys_ru.h` defines
+**The digit row is layout-independent unshifted**, not by that fallback: `keys_ru.h` defines
 `RU_N0`..`RU_N9` as the very same HID usages as `N0`..`N9`, because ЙЦУКЕН leaves the number row
-alone. So `numbers` needs no `&en` wrapper anywhere, and neither do its digit-based shortcuts —
+alone. So no digit needs an `&en` wrapper, and neither do the digit-based shortcuts —
 `&kp LA(LC(LG(LS(N2))))` (Term) and `&kp LA(LC(LG(LS(N1))))` (qTerm) send the same thing on either
 layout. Prev Win, `&kp LC(LG(LS(FSLH)))`, does not lean on the Latin fallback either: "Русская"
 keeps `/` on the slash key exactly where ABC has it, which is also why `RU_SLASH` is redefined to a
 bare `FSLH` above. (Under the PC ЙЦУКЕН it would have: there `RU_FSLH` is `LS(BACKSLASH)` and the
 bare FSLH scancode yields `.`, leaving only the Cmd in the chord to rescue it.) Prev App is
 `&kp LG(TAB)` and carries no character at all.
+
+### Two numbers layers
+
+**Shifted, the digit row is not layout-independent at all**, and that is the whole reason
+`numbers_ru` exists. `Shift+2` is `@` under ABC and `"` under "Русская"; `Shift+4` is `$` and `%`;
+`Shift+5` is `%` and `:`. One layer cannot serve both, because the firmware sends a usage and the
+host picks the glyph — the same fact that governs the herdr prefix above.
+
+The English row is the standard here, and "Русская" turns out to carry all of it, one row over:
+
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Shift | `!` | `"` | `№` | `%` | `:` | `,` | `.` | `;` | `(` | `)` |
+| Option | `!` | `@` | `#` | `$` | `%` | `^` | `&` | `*` | `{` | `}` |
+
+So `numbers_ru` needs **no Caps Lock and no host switching**: digits 2 through 8 carry a mod-morph
+(`&d2`..`&d8`) whose Shift form is `&kp LA(N<d>)`, and Option is where the symbol already lives.
+Digits **1, 9 and 0 stay plain `&kp`** — `Shift+1/9/0` already gives `! ( )` on both layouts, so
+morphing them would only add a way to be wrong. Read out of the layout's own data with
+`UCKeyTranslate`, dead-key processing left on; none of the seven is a dead key.
+
+`keep-mods` is deliberately absent from the morphs. Without it ZMK sets `masked_mods = mods`
+(`behavior_mod_morph.c`), so the Shift that selected the morph is masked while it is pressed and the
+host sees a clean `Option+digit` rather than `Shift+Option+digit`. `tests/numbers-ru-symbols` pins
+the whole shape: unshifted the key is a bare `0x1F`, shifted it is `0x1F` with `implicit_mods 0x04`,
+and positions 26 and 8 stay bare under the same Shift.
+
+**`numbers_ru` is a hand-kept copy of `numbers_en`** in everything but those seven keys — the
+left-hand modifiers, the four shortcuts and the `&none` all have to match, or the layer quietly
+behaves differently depending on the language you came from, which is the bug the pair removes.
+`tests/check-numbers-ru.py` enforces that and names the drifting position; it and
+`tests/check-en-letters.py` share `tests/keymap_layers.py`, which finds layers by node name and so
+is untouched by renumbering.
+
+Only `ru` position 31 selects it (`&ltt L_NUM_RU SPACE`); `en` and `en_letters` keep `L_NUM_EN`.
+`en_letters` is right to stay on the English one: it is only ever raised under a held modifier, where
+macOS takes the Latin fallback anyway.
 
 **Glyphs that must go through `&en` on `sym_ru`**, for two distinct reasons. Nine have no Cyrillic
 equivalent at all: `[ ] ' | { } $ ~ ` ` — `keys_ru.h` has no `RU_LBKT`, `RU_RBKT`, `RU_SQT`,
@@ -922,7 +963,7 @@ All checked against upstream ZMK v0.3.0 or the build's own output:
   `static zmk_mod_flags_t implicit_modifiers`, and `hid_listener_keycode_pressed` assigns the
   incoming event's set to it unconditionally. Explicit modifiers, registered when a modifier keycode
   is pressed on its own, accumulate instead. So `LS(LC(LA(X)))` is right for a one-shot chord like
-  `&kp LA(LC(LG(LS(N2))))` on `numbers`, and wrong for anything meant to be *held* across other
+  `&kp LA(LC(LG(LS(N2))))` on the numbers layers, and wrong for anything meant to be *held* across other
   keys. The released path even carries a comment admitting the tracking is approximate.
 - **Macro `wait-ms` is only charged for real bindings**, not for control bindings like
   `&macro_press` (`app/src/behaviors/behavior_macro.c`). `&macro_wait_time <ms>` sets it inline when
@@ -959,6 +1000,13 @@ behavior, each item of which cost a source dive or an on-device test. Record the
 
 Deliberate, pending later work — do not "fix" them unprompted:
 
+- **`sym_ru` routes ten glyphs through `&en` that "Русская" can reach directly.** The Option layer
+  was never swept: `{` `}` are on Option+9/0, `[` `]` on the bracket key, and `' | $ ~ ` *` all
+  exist too — of the eleven, only `\` is genuinely absent. Each one currently costs two Caps Lock
+  taps, about 140 ms, and carries the desync risk that a dropped tap brings. The claim above that
+  "Русская" has no key for `*` is wrong for the same reason: the old sweep covered plain and shift
+  only. **Tim has this queued as the next task** — do not start it unprompted, but do not let it be
+  forgotten either.
 - **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
   four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.
