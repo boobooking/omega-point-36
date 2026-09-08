@@ -1,0 +1,44 @@
+menuconfig ZMK_LAYOUT_RESYNC
+    bool "Keep the language layer in step with the connected host"
+    default y
+    depends on ZMK_BLE
+    depends on !ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL
+    help
+      Remembers which language each BLE profile was left on and restores it
+      when that host comes back, and returns to the default language when a
+      host has been away long enough to have slept and reset its own layout.
+
+      Both dependencies are load bearing. app/CMakeLists.txt builds keymap.c
+      and ble.c only for a central or non-split target, so op36_right has
+      neither; settings_reset is not split and does build keymap.c, but sets
+      CONFIG_ZMK_BLE=n and so has no ble.c. Dropping either dependency breaks
+      the link on one of them.
+
+if ZMK_LAYOUT_RESYNC
+
+config ZMK_LAYOUT_RESYNC_ALT_LAYER
+    int "Layer holding the alternate language"
+    default 1
+    help
+      The layer that is raised for the second language. On op36_ruen this is
+      1, the ru layer. The design assumes exactly two languages.
+
+config ZMK_LAYOUT_RESYNC_DISCONNECT_MS
+    int "Outage above which the host is assumed to have reset"
+    default 10000
+    help
+      A link that comes back after longer than this is treated as a host that
+      slept and reset its own layout. Shorter outages are radio hiccups and
+      restore whatever language the profile was left on. A starting guess:
+      every decision is logged with the measured outage so it can be tuned.
+
+config ZMK_LAYOUT_RESYNC_RESET_PROFILES
+    hex "Bitmask of profiles allowed to reset"
+    default 0xFFFFFFFF
+    help
+      Bit N set means profile N may take the reset branch. A profile outside
+      the mask is restore-only: its language is remembered and restored, but a
+      long outage never clears it to the default. Clear the bit for any host
+      that is known, or not yet known, to preserve its own layout across sleep.
+
+endif # ZMK_LAYOUT_RESYNC

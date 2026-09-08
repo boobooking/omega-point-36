@@ -1,0 +1,6 @@
+# Makes this repository a Zephyr module. .github/workflows/build-user-config.yml
+# looks for exactly this file and, finding it, passes
+# -DZMK_EXTRA_MODULES=<repo root> to the build.
+build:
+  cmake: module
+  kconfig: module/Kconfig
