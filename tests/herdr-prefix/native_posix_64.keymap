@@ -46,7 +46,10 @@
            noticed that sken's release-after-ms expired first.
 
            Position 1 is W on en and й on ru, so 0x1A proves the prefix held en
-           and 0x14 proves it did not. */
+           and 0x14 proves it did not. That is a scancode, not a character: the
+           host decides which glyph 0x1A becomes, and on "Русская" it is ц. The
+           host half of this feature is herdr's own
+           switch_ascii_input_source_in_prefix, which nothing here can test. */
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 

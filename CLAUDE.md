@@ -331,8 +331,33 @@ sent `Q` (`й`) instead of `W`, and herdr matched nothing.
 
 So position 17, the right Ctrl, uses **`hmr_pfx`** — `hmr_ru` with the hold binding swapped for
 `en_mod_prefix`, which is `en_mod` except that its release **arms `sken`** instead of dropping the
-layer. `sken` holds `en_letters` across exactly one key press, then it falls on its own. Verified end
-to end in `tests/herdr-prefix`.
+layer. `sken` holds `en_letters` across exactly one key press, then it falls on its own.
+`tests/herdr-prefix` verifies that much, and only that much: the command key leaves the firmware as
+`0x1A` (`W`) rather than `0x14` (`Q`).
+
+**That is half of the fix, and on its own it changes nothing the user can see.** A keymap layer picks
+the HID usage; the **host** turns that usage into a character, using whichever input source is
+active. With "Русская" active, `0x1A` decodes to `ц` — checked with `UCKeyTranslate` over
+`com.apple.keylayout.Russian`, which likewise gives `0x15` → `к` and `0x16` → `ы`. herdr is a
+terminal application reading crossterm key events, so the character is what it matches on. The layer
+therefore moved the failure from `й` to `ц`, equally unmatched, which is why the prefix went on
+looking broken across two firmware fixes that were each correct in themselves.
+
+**The host half is herdr's own `experimental.switch_ascii_input_source_in_prefix`**, off by default
+and now `true` in `~/.config/herdr/config.toml`. It puts the host on an ASCII-capable layout while
+prefix mode is open and restores the previous input source when it closes; its comment names the CJK
+IME, which is the same problem arriving from the other direction. Being herdr's own switch it is
+closed-loop — it saves what it replaces — so it cannot desynchronise the language layer the way a
+firmware-side Caps Lock tap would.
+
+**Both halves are required and neither works alone.** The host half alone leaves the firmware sending
+ЙЦУКЕН-positional scancodes into an ASCII layout: position 11 sends `ы` (`0x16`), which is `s` under
+ABC, so `prefix+r` would reach the wrong command. The firmware half alone sends `0x15` into
+"Русская" and gets `к`. Together the scancode is `0x15` and the layout is ABC, so herdr reads `r`.
+
+**Do not try to close this from the keymap alone.** The firmware cannot know when prefix mode ends —
+`Esc`, the prefix again, or any unmatched key all leave it — so there is no moment at which it could
+put a Caps Lock back, and every shape of that idea desynchronises the host on an abandoned prefix.
 
 **Releasing the modifier is the only moment this can be done, and that is forced.** The window
 between "Ctrl+Space has been sent" and "the command key is pressed" contains exactly one firmware
