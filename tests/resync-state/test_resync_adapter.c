@@ -22,7 +22,6 @@ static int failures;
 
 #define MAC 0
 #define IPAD 1
-#define THRESHOLD 10000
 
 /* The fake host. */
 static bool fake_alt;
@@ -65,13 +64,13 @@ static void setup(void) {
         fake_has_peer[i] = true;
         fake_peer[i][0] = (uint8_t)(0x10 + i);
     }
-    resync_adapter_init(&ad, &plat, 0xFFFFFFFF, THRESHOLD, fake_now);
+    resync_adapter_init(&ad, &plat, fake_now);
 }
 
 /* Reconciling must never fabricate a link transition for a profile whose peer
-   did not change. Doing so used to swallow a real outage: a stale snapshot said
-   "connected", a real disconnect had just been recorded, and the difference was
-   papered over with a synthetic LINK_UP that reset link_down_at. */
+   did not change. A stale snapshot saying "connected" after a real disconnect
+   had been recorded used to be papered over with a synthetic LINK_UP — after
+   which the real reconnect finds the link already up and never restores. */
 static void test_reconcile_does_not_fabricate_transitions(void) {
     setup();
     fake_connected[MAC] = true;
@@ -88,11 +87,13 @@ static void test_reconcile_does_not_fabricate_transitions(void) {
 
     CHECK(!resync_link_up(&ad.state, MAC), "the real disconnect must stand");
 
-    /* The real reconnect, a minute later, must still be measured. */
+    /* Its memory is intact and the real reconnect is what marks it up again.
+       The assertion above is the one with teeth: under the racy version the
+       fabricated LINK_UP marked the link up while it was really down. */
+    CHECK(ad.state.profiles[MAC].lang_alt, "the Mac still remembers ru");
     fake_now = 61000;
-    fake_connected[MAC] = true;
     resync_adapter_on_link(&ad, MAC, true, fake_now);
-    CHECK(resync_adapter_last_outage(&ad) == 60000, "the full outage is measured, not 0");
+    CHECK(resync_link_up(&ad.state, MAC), "and the real reconnect brings it up");
 }
 
 /* A peer that changed means a different machine behind the index: its history
@@ -114,8 +115,8 @@ static void test_new_peer_clears_history_and_adopts_link(void) {
     resync_adapter_on_profile_changed(&ad, MAC, fake_now);
 
     CHECK(resync_link_up(&ad.state, MAC), "the missed connect is picked up from ZMK");
-    CHECK(!ad.state.profiles[MAC].needs_reset, "the old peer's verdict is gone");
-    CHECK(!ad.state.profiles[MAC].ever_down, "and so is its outage history");
+    CHECK(!ad.state.profiles[MAC].lang_alt,
+          "the old peer's ru is gone; the new one starts on the default");
 }
 
 /* ZMK sets the transport before announcing it, so a connection callback can
@@ -171,28 +172,6 @@ static void test_blocked_window_does_not_advance_state(void) {
     CHECK(!ad.state.profiles[IPAD].lang_alt, "and the iPad does not inherit it");
 }
 
-/* A reset that could not be applied must still be owed. */
-static void test_blocked_reset_survives_the_window(void) {
-    setup();
-    fake_connected[MAC] = true;
-    resync_adapter_on_link(&ad, MAC, true, 0);
-    resync_adapter_on_profile_changed(&ad, MAC, 0);
-    fake_alt = true;
-    resync_adapter_on_profile_changed(&ad, MAC, 0);
-
-    /* Away long enough to reset, but USB is live when it comes back. */
-    resync_adapter_on_link(&ad, MAC, false, 1000);
-    fake_ble = false;
-    resync_adapter_on_link(&ad, MAC, true, 100000);
-    CHECK(ad.state.profiles[MAC].needs_reset, "the verdict is still owed");
-
-    fake_ble = true;
-    set_alt_calls = 0;
-    resync_adapter_on_endpoint_changed(&ad, 101000);
-    CHECK(!fake_alt, "and is applied when BLE comes back");
-    CHECK(set_alt_calls == 1, "exactly once");
-}
-
 /* The USB round trip, through the adapter rather than the bare machine. */
 static void test_usb_round_trip(void) {
     setup();
@@ -220,7 +199,6 @@ int main(void) {
         {"new_peer_clears_history_and_adopts_link", test_new_peer_clears_history_and_adopts_link},
         {"no_layer_change_once_usb_is_selected", test_no_layer_change_once_usb_is_selected},
         {"blocked_window_does_not_advance_state", test_blocked_window_does_not_advance_state},
-        {"blocked_reset_survives_the_window", test_blocked_reset_survives_the_window},
         {"usb_round_trip", test_usb_round_trip},
     };
 

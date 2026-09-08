@@ -36,12 +36,10 @@ struct resync_adapter {
     bool peer_known[RESYNC_MAX_PROFILES];
 };
 
-/* Every entry point takes the time the event happened. The caller reads the
-   clock on entry to its callback, so a wait on the binding's mutex cannot be
-   counted as part of an outage — which near the threshold would change the
-   decision. */
-void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         uint32_t reset_mask, int32_t threshold_ms, int64_t at);
+/* Every entry point takes the time the event happened, read by the caller on
+   entry to its callback rather than after the binding's mutex. Nothing measures
+   durations now, but keeping the timestamp honest costs nothing. */
+void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat, int64_t at);
 
 /* A host link went up or down. Called from the Bluetooth connection callbacks,
    which is the only place an outage may be measured from. */
@@ -52,6 +50,3 @@ void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, 
 
 /* ZMK selected a different transport. */
 void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at);
-
-/* The outage the last call measured, or -1. Diagnostics only. */
-int64_t resync_adapter_last_outage(const struct resync_adapter *a);

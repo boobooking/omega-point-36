@@ -28,10 +28,9 @@ static void feed(struct resync_adapter *a, enum resync_event_kind kind, uint8_t 
     }
 }
 
-void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat,
-                         uint32_t reset_mask, int32_t threshold_ms, int64_t at) {
+void resync_adapter_init(struct resync_adapter *a, const struct resync_platform *plat, int64_t at) {
     a->plat = plat;
-    resync_init(&a->state, plat->profile_count, reset_mask, threshold_ms);
+    resync_init(&a->state, plat->profile_count);
 
     for (uint8_t i = 0; i < RESYNC_MAX_PROFILES; i++) {
         a->peer_known[i] = false;
@@ -94,5 +93,3 @@ void resync_adapter_on_profile_changed(struct resync_adapter *a, uint8_t index, 
 void resync_adapter_on_endpoint_changed(struct resync_adapter *a, int64_t at) {
     feed(a, a->plat->ble_selected() ? RESYNC_EV_BLE_SELECTED : RESYNC_EV_BLE_DESELECTED, 0, at);
 }
-
-int64_t resync_adapter_last_outage(const struct resync_adapter *a) { return a->state.last_outage_ms; }

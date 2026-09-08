@@ -68,8 +68,8 @@ static const struct resync_platform platform = {
 
 /* The role filter is the one ble.c uses to ignore the split peripheral link.
    The clock is read here, on entry, and passed down: taking it after the mutex
-   would fold a wait into the measured outage, and near the threshold that
-   changes the decision. */
+   would attribute the wait to the event. Nothing measures durations now, but
+   an honest timestamp costs nothing. */
 static void resync_connected(struct bt_conn *conn, uint8_t err) {
     int64_t at = k_uptime_get();
     struct bt_conn_info info;
@@ -88,16 +88,7 @@ static void resync_connected(struct bt_conn *conn, uint8_t err) {
 
     k_mutex_lock(&lock, K_FOREVER);
     resync_adapter_on_link(&adapter, (uint8_t)profile, true, at);
-    /* Read under the same lock: last_outage_ms is shared, and another event
-       clears it or replaces it with a different profile's measurement. */
-    int64_t outage = resync_adapter_last_outage(&adapter);
     k_mutex_unlock(&lock);
-
-    if (outage >= 0) {
-        /* The threshold is a guess; this is the data for tuning it. */
-        LOG_INF("resync: profile %d back after %lld ms (threshold %d)", profile, (long long)outage,
-                CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS);
-    }
 }
 
 static void resync_disconnected(struct bt_conn *conn, uint8_t reason) {
@@ -151,11 +142,9 @@ ZMK_SUBSCRIPTION(layout_resync, zmk_endpoint_changed);
 
 static int layout_resync_init(void) {
     k_mutex_init(&lock);
-    resync_adapter_init(&adapter, &platform, CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES,
-                        CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS, k_uptime_get());
+    resync_adapter_init(&adapter, &platform, k_uptime_get());
 
-    LOG_INF("resync: %d profiles, threshold %d ms, reset mask 0x%x", ZMK_BLE_PROFILE_COUNT,
-            CONFIG_ZMK_LAYOUT_RESYNC_DISCONNECT_MS, CONFIG_ZMK_LAYOUT_RESYNC_RESET_PROFILES);
+    LOG_INF("resync: %d profiles, alternate layer %d", ZMK_BLE_PROFILE_COUNT, ALT_LAYER);
     return 0;
 }
 

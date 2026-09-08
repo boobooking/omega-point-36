@@ -57,15 +57,6 @@ struct resync_profile {
     bool lang_alt;
     bool lang_known;
     bool link_up;
-    /* Sticky: an outage longer than the threshold happened and has not been
-       acted on. Set only when a link comes back up, cleared only when a reset
-       is applied. */
-    bool needs_reset;
-    /* Whether a disconnect was ever observed for this profile. Time since boot
-       is not an outage: without this the first connection after a minute of
-       advertising measures a minute and arms a reset that never happened. */
-    bool ever_down;
-    int64_t link_down_at;
 };
 
 struct resync_state {
@@ -75,19 +66,9 @@ struct resync_state {
     /* Profile whose language the current layer state represents, or -1. */
     int owner;
     bool ble_selected;
-    /* Bit N set means profile N may take the reset branch. */
-    uint32_t reset_mask;
-    int32_t threshold_ms;
-    /* The outage measured by the call that is running right now, or -1 if that
-       call measured nothing. Cleared on entry to every resync_handle, so a
-       repeated notification cannot re-report an older measurement — possibly
-       another profile's. Exposed only so the adapter can log it: the threshold
-       is a guess and this is the data for tuning it. */
-    int64_t last_outage_ms;
 };
 
-void resync_init(struct resync_state *s, uint8_t profile_count, uint32_t reset_mask,
-                 int32_t threshold_ms);
+void resync_init(struct resync_state *s, uint8_t profile_count);
 
 enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev);
 

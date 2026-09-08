@@ -19,20 +19,13 @@ static enum resync_action decide(struct resync_state *s) {
         return RESYNC_ACTION_NONE;
     }
 
-    /* Never lost ownership and nothing happened to the host: the layer already
-       is this profile's language, and the stored copy may be older than the
-       user's latest choice. */
-    if (s->owner == (int)p && !s->profiles[p].needs_reset) {
+    /* Never lost ownership: the layer already is this profile's language, and
+       the stored copy may be older than the user's latest choice. */
+    if (s->owner == (int)p) {
         return RESYNC_ACTION_NONE;
     }
 
     s->owner = (int)p;
-
-    if (s->profiles[p].needs_reset) {
-        s->profiles[p].needs_reset = false;
-        save_lang(s, p, false);
-        return RESYNC_ACTION_CLEAR_ALT;
-    }
 
     if (!s->profiles[p].lang_known) {
         /* Nothing is known about this host, so the default language stands.
@@ -50,36 +43,26 @@ bool resync_link_up(const struct resync_state *s, uint8_t profile) {
     return profile < s->profile_count && s->profiles[profile].link_up;
 }
 
-void resync_init(struct resync_state *s, uint8_t profile_count, uint32_t reset_mask,
-                 int32_t threshold_ms) {
+void resync_init(struct resync_state *s, uint8_t profile_count) {
     for (unsigned i = 0; i < RESYNC_MAX_PROFILES; i++) {
         s->profiles[i].lang_alt = false;
         s->profiles[i].lang_known = false;
         s->profiles[i].link_up = false;
-        s->profiles[i].needs_reset = false;
-        s->profiles[i].ever_down = false;
-        s->profiles[i].link_down_at = 0;
     }
     s->profile_count = profile_count > RESYNC_MAX_PROFILES ? RESYNC_MAX_PROFILES : profile_count;
     s->active = 0;
     s->owner = -1;
     s->ble_selected = false;
-    s->reset_mask = reset_mask;
-    s->threshold_ms = threshold_ms;
-    s->last_outage_ms = -1;
 }
 
 enum resync_action resync_handle(struct resync_state *s, const struct resync_event *ev) {
     uint8_t p = ev->profile;
 
-    /* Only this call's own measurement may be reported. */
-    s->last_outage_ms = -1;
-
     /* Reconcile the transport first. Deciding and then refusing to apply would
        leave the layer behind the state: ownership would move, a language would
-       be remembered and needs_reset cleared, with nothing written to the
-       keymap. decide() returns before it mutates anything when BLE is not
-       selected, so this has to be right before it runs. */
+       be remembered, with nothing written to the keymap. decide() returns
+       before it mutates anything when BLE is not selected, so this has to be
+       right before it runs. */
     if (ev->ble_now != s->ble_selected) {
         if (!ev->ble_now && s->owner >= 0) {
             /* Leaving BLE: the layer is still the owner's, so save it. */
@@ -94,11 +77,7 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         if (p >= s->profile_count) {
             return RESYNC_ACTION_NONE;
         }
-        if (s->profiles[p].link_up) {
-            s->profiles[p].link_up = false;
-            s->profiles[p].ever_down = true;
-            s->profiles[p].link_down_at = ev->at;
-        }
+        s->profiles[p].link_up = false;
         /* Snapshot the owner's language before the link is gone: it may change
            before we hear about this profile again. */
         if (s->owner == (int)p) {
@@ -110,22 +89,7 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         if (p >= s->profile_count) {
             return RESYNC_ACTION_NONE;
         }
-        if (!s->profiles[p].link_up) {
-            if (s->profiles[p].ever_down) {
-                int64_t outage = ev->at - s->profiles[p].link_down_at;
-                s->last_outage_ms = outage;
-                if (outage >= s->threshold_ms && (s->reset_mask & (1u << p))) {
-                    /* Decided here, not at decision time, so it measures the
-                       outage and not the time since. Sticky: only ever set. */
-                    s->profiles[p].needs_reset = true;
-                }
-            } else {
-                /* First time this profile has ever connected: there is no
-                   outage to measure, only uptime. */
-                s->last_outage_ms = -1;
-            }
-            s->profiles[p].link_up = true;
-        }
+        s->profiles[p].link_up = true;
         return decide(s);
 
     case RESYNC_EV_ACTIVE_PROFILE:
@@ -148,9 +112,6 @@ enum resync_action resync_handle(struct resync_state *s, const struct resync_eve
         s->profiles[p].lang_alt = false;
         s->profiles[p].lang_known = false;
         s->profiles[p].link_up = false;
-        s->profiles[p].needs_reset = false;
-        s->profiles[p].ever_down = false;
-        s->profiles[p].link_down_at = 0;
         if (s->owner == (int)p) {
             s->owner = -1;
         }
