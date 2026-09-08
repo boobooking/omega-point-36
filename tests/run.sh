@@ -38,6 +38,12 @@ fi
 # en_letters is a hand-kept copy of en; nothing in the devicetree enforces it.
 python3 "$REPO/tests/check-en-letters.py"
 
+# The resync state machine is plain C with no Zephyr in it, so it runs here
+# rather than in the simulator, which has no BLE to exercise it with.
+cc -std=c11 -Wall -Wextra -o "${TMPDIR:-/tmp}/resync_test" \
+    "$REPO/module/src/resync_state.c" "$REPO/tests/resync-state/test_resync_state.c"
+"${TMPDIR:-/tmp}/resync_test" > /dev/null
+
 exec docker run --rm \
     -v "$WS":/ws \
     -v "$REPO/config":/cfg:ro \
