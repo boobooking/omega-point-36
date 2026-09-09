@@ -376,29 +376,37 @@
     };
 
     macros {
-        // GLOBE switches the input language on macOS and iPadOS — consumer
-        // usage 0x29D, the one both platforms use natively for it. It selects
-        // the *next* source, so with exactly two layouts enabled it toggles,
-        // and callers must only invoke it when leaving the layer they are
-        // currently on.
+        // Ctrl+Space switches the input language, and it is the one binding
+        // both target platforms honour: iPadOS treats it as the input-source
+        // shortcut natively, and macOS exposes it under Settings → Keyboard →
+        // Keyboard Shortcuts → Input Sources. **On macOS it has to be enabled
+        // there** — the default arrives switched off, which is why pressing
+        // Ctrl+Space on this host changed nothing before. It selects the
+        // *previous* source, so with exactly two layouts it toggles, and
+        // callers must only invoke it when leaving the layer they are on.
         //
-        // No tap-ms, deliberately: ZMK's default of 30 is right because GLOBE
-        // carries no hold threshold. Caps Lock does — macOS applies
-        // CapsLockDelay, 75 ms on this host — and a tap under it is dropped
-        // silently, moving the firmware's layer while the host stays put. That
-        // is the desync this key exists to avoid, and lengthening the tap only
-        // narrowed it rather than closing it.
+        // GLOBE was tried here and macOS ignores it. That is not a descriptor
+        // problem: the report descriptor read back off the connected keyboard
+        // advertises the consumer page with Usage Max 0xFFF over a 16-bit
+        // field, so 0x29D fits and macOS parses the collection. Apple's
+        // "Press 🌐 key to" simply does not answer to the consumer usage from a
+        // third-party keyboard. iPadOS did honour it. Do not spend another
+        // firmware on GLOBE without new evidence about macOS specifically.
         //
-        // Two host-side prerequisites, both verified rather than assumed:
-        // macOS needs "Press 🌐 key to" set to Change Input Source, which is
-        // AppleFnUsageType = 1 in com.apple.HIToolbox and ships as 0, "do
-        // nothing". And sending 0x29D at all needs
-        // CONFIG_ZMK_HID_CONSUMER_REPORT_USAGES_FULL, which this build has;
-        // BASIC caps consumer usages at 0xFF and would drop it without a word.
+        // Caps Lock is the other thing that used to be here, and it is worse
+        // than both: macOS applies CapsLockDelay, 75 ms on this host, and a tap
+        // under that threshold is dropped silently, moving the firmware's layer
+        // while the host stays put. A plain modifier chord has no threshold at
+        // all, which is the whole reason to prefer it, and no tap-ms is needed.
+        //
+        // This chord was herdr's prefix until it moved to Ctrl+B to free it.
+        // One consequence worth knowing: pressing the right Ctrl and Space by
+        // hand now switches the host without moving the firmware layer, which
+        // is a desync. Nothing sends it but this macro, so it takes an accident.
         os_lang: os_lang {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings = <&kp GLOBE>;
+            bindings = <&kp LC(SPACE)>;
             label = "OS_LANG";
             wait-ms = <0>;
         };

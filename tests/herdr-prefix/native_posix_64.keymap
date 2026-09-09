@@ -34,10 +34,13 @@
 
         /* The herdr prefix, exactly as it is typed: hold the right Ctrl
            (pos 17) long enough for the hold to resolve on the timer, then tap
-           Space (pos 31), then let Ctrl go. */
+           B (pos 4), then let Ctrl go. The prefix is Ctrl+B; Ctrl+Space is the
+           language switch now and must not be confused for it. Position 4 is B
+           on en and е on ru, so 0x05 here also proves the modifier raised
+           en_letters for the prefix key itself. */
         ZMK_MOCK_PRESS(1,7,350)
-        ZMK_MOCK_PRESS(3,1,30)
-        ZMK_MOCK_RELEASE(3,1,30)
+        ZMK_MOCK_PRESS(0,4,30)
+        ZMK_MOCK_RELEASE(0,4,30)
         ZMK_MOCK_RELEASE(1,7,1500)
 
         /* The command key, 1500 ms after the prefix — herdr shows a prompt and
@@ -61,8 +64,8 @@
            R on pos 11. The sticky must survive the Shift press, or R arrives
            as Cyrillic. */
         ZMK_MOCK_PRESS(1,7,350)
-        ZMK_MOCK_PRESS(3,1,30)
-        ZMK_MOCK_RELEASE(3,1,30)
+        ZMK_MOCK_PRESS(0,4,30)
+        ZMK_MOCK_RELEASE(0,4,30)
         ZMK_MOCK_RELEASE(1,7,150)
         ZMK_MOCK_PRESS(1,8,200)
         ZMK_MOCK_PRESS(1,1,30)
