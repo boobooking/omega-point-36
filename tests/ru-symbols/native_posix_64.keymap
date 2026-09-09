@@ -84,7 +84,7 @@
 
         /* \\ (pos 28) is the only glyph left with no key on this layout, so it
            is the only one still going through &en, which flips the host with
-           Caps Lock, types on ABC and flips back. The macro is asynchronous and
+           Globe, types on ABC and flips back. The macro is asynchronous and
            carries wait-ms = 50, so it is spaced like a human reaching for a
            symbol rather than rolled at 30 ms — at 30 ms the macro's own key
            lands after the following one, and that next key gets typed while the

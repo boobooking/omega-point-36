@@ -26,7 +26,7 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* position 30 leaves en for ru, and taps Caps Lock so the
+        /* position 32 leaves en for ru, and taps Globe so the
            host follows. Everything below therefore resolves on ru. */
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,300)

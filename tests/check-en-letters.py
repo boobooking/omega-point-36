@@ -7,7 +7,7 @@ herdr prefix needs Latin scancodes, and it has to carry real bindings because
 position 32, which is &none. That key now carries two jobs — hold for the symbol
 layer, tap to switch language — and under a modifier neither can be right: a copy
 of en would run "go to ru" from ru, and &trans would reach sym_ru, whose symbols
-tap Caps Lock through the &en wrapper. Refusing the press is the only safe
+switch the layout through the &en wrapper. Refusing the press is the only safe
 answer. If the switch ever moves again, this exception moves with it.
 
 Nothing in the devicetree enforces that copy, so this does. It runs from

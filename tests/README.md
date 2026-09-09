@@ -44,7 +44,7 @@ matches how the chord is really used: after a pause in typing.
 There is one node — **no split, no peripheral half, no BLE.** Anything caused by
 event ordering between the halves is invisible here, which is exactly the class
 of bug that `cmd-space-reordered` exists to illustrate rather than reproduce
-faithfully. Host behavior (Caps Lock language switching, Spotlight, the Latin
+faithfully. Host behavior (input-source switching, Spotlight, the Latin
 fallback for Cmd shortcuts) is equally out of scope.
 
 ## The cases
@@ -102,7 +102,7 @@ lead-in: it is `&none` on `en`.
   guards the other half of the change: holding Space then Backspace, the old
   route, must now give `numbers` over `nav` and never reach layer 7.
 - **`thumb-switch`** — the layout switch in its new home. A tap on thumbs 31+34
-  emits one Caps Lock and flips the layer, so position 1 reads `0x14` (й) and
+  emits one Globe and flips the layer, so position 1 reads `0x14` (й) and
   then `0x1A` (W) again. Tapped far apart the same two keys are still Space
   (`0x2C`) and Backspace (`0x2A`): the combo must not fire.
 - **`hyper`** — holds `F` (position 2) past the term and chords `M`, then taps
@@ -119,7 +119,7 @@ lead-in: it is `&none` on `en`.
   scancodes on an *English* host read `&`, `?` and `/`.
 - **`ru-mod-combo`** — the regression for `en_hold`. Holding a modifier on `ru`
   runs `&to 0`, which used to make the highest active layer 0 and re-arm `cmbru`;
-  tapping thumbs 31+34 then emitted a second Caps Lock and desynced the host.
+  tapping thumbs 31+34 then emitted a second switch and desynced the host.
   Exactly one `0x39` may appear in this snapshot.
 - **`ru-mod-switch`** — the reason `hml_ru`/`hyl_ru` exist. On `ru`, right Cmd
   over position 4 must resolve on layer 0 and send `0x05` (B), not `0x17`; right

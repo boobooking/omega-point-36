@@ -124,7 +124,7 @@ Three gotchas worth knowing before writing a case:
 
 **It cannot model the split.** One node, no peripheral half, no BLE — so anything
 caused by event ordering between the halves is out of reach, and so is host
-behavior (Caps Lock switching, Spotlight, the Latin fallback for Cmd shortcuts).
+behavior (layout switching, Spotlight, the Latin fallback for Cmd shortcuts).
 `tests/cmd-space-reordered` illustrates that class of bug by hand-ordering the
 events; it does not reproduce the hardware faithfully, and the difference is
 visible — the simulator emits a `j` there where the real keyboard emits none.
@@ -287,7 +287,7 @@ modifier is down, which puts the letters back where `en` has them. `hml_ru`/`hmr
 **`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with position
 32 replaced by **`&none`**. Under a held modifier neither of that key's two jobs can be right: a copy
 of `en`'s binding would tap "go to ru" while already on `ru`, and a `&trans` would fall through to
-`ru` and reach `sym_ru`, whose symbols go through the `&en` wrapper and tap Caps Lock mid-chord.
+`ru` and reach `sym_ru`, whose `\` goes through the `&en` wrapper and switches the layout mid-chord.
 Refusing the press is the only safe answer, and it costs `Cmd` plus the left thumb reaching a symbol
 layer at all. Enter on position 33 still does, and still reaches `sym_en` with the Latin symbols a
 shortcut needs. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
@@ -307,7 +307,7 @@ raising and Shift only contributes a modifier bit.
 old `en_mod` ran `&to 0` on press and `&to 1` on release, which made `en` the base for the duration —
 so the keymap's own state claimed the language was English while the user was still on `ru`. Position
 30 is direction-specific (`&layer_en` on `ru`, `&layer_ru` on `en`), so it read that lying state and
-ran "go to ru" *from* ru: a Caps Lock with no firmware movement, and a desynchronised host. The fix
+ran "go to ru" *from* ru: a host switch with no firmware movement, and a desynchronised host. The fix
 then was a layer of 35 `&trans` and one `&none` at position 30, raised alongside `&to 0`, whose only
 job was to refuse the press. Earlier still, when the switch was a combo, the same marker layer served
 a different purpose — `combo.c:164` tests `combo_active_on_layer(combo, zmk_keymap_highest_layer_active())`,
@@ -362,7 +362,7 @@ and now `true` in `~/.config/herdr/config.toml`. It puts the host on an ASCII-ca
 prefix mode is open and restores the previous input source when it closes; its comment names the CJK
 IME, which is the same problem arriving from the other direction. Being herdr's own switch it is
 closed-loop — it saves what it replaces — so it cannot desynchronise the language layer the way a
-firmware-side Caps Lock tap would. Confirmed working on the device with both halves in place.
+firmware-side switch tap would. Confirmed working on the device with both halves in place.
 
 **Both halves are required and neither works alone.** The host half alone leaves the firmware sending
 ЙЦУКЕН-positional scancodes into an ASCII layout: position 11 sends `ы` (`0x16`), which is `s` under
@@ -371,7 +371,7 @@ ABC, so `prefix+r` would reach the wrong command. The firmware half alone sends 
 
 **Do not try to close this from the keymap alone.** The firmware cannot know when prefix mode ends —
 `Esc`, the prefix again, or any unmatched key all leave it — so there is no moment at which it could
-put a Caps Lock back, and every shape of that idea desynchronises the host on an abandoned prefix.
+put the layout back, and every shape of that idea desynchronises the host on an abandoned prefix.
 
 **Releasing the modifier is the only moment this can be done, and that is forced.** The window
 between "Ctrl+Space has been sent" and "the command key is pressed" contains exactly one firmware
@@ -655,8 +655,16 @@ permanent.
 ## The RU/EN dual-layout system
 
 `op36_ruen.keymap` keeps a firmware layer (`en`=0, `ru`=1) in sync with the host's input language.
-**The host must have "switch languages using Caps Lock" enabled** — confirmed working on both macOS
-and iPadOS, which are the target platforms.
+**The switch key is `GLOBE`** — consumer usage `0x29D`, `C_AC_NEXT_KEYBOARD_LAYOUT_SELECT`, which
+macOS and iPadOS both use natively for changing input source. On macOS it needs "Press 🌐 key to" set
+to **Change Input Source**: that is `AppleFnUsageType = 1` in `com.apple.HIToolbox`, and it ships as
+`0`, "do nothing". The value was read back after setting it in the UI rather than guessed. iPadOS
+switches on Globe without configuration.
+
+Sending `0x29D` at all depends on `CONFIG_ZMK_HID_CONSUMER_REPORT_USAGES_FULL`, which this build has
+(read out of the resolved `.config` in the CI log). The alternative, `BASIC`, caps consumer usages at
+`0xFF` and would drop the key **silently** — no build error, no HID report, a switch key that simply
+does nothing. Check that symbol before blaming anything else if the language stops switching.
 
 **The host's Russian layout is the Mac-traditional "Русская", and the keymap is targeted at it.**
 `keys_ru.h` is generated for the Windows ЙЦУКЕН, which macOS calls "Русская — ПК"
@@ -701,7 +709,7 @@ Verified by translating each binding through the layout's own data with `UCKeyTr
 off a published chart, and confirmed on real firmware afterwards: the built devicetree in run
 34121271222 carries `,` as `&kp 0x2070023` (`LS(N6)`), `.` as `0x2070024` (`LS(N7)`) and `ё` as
 `0x70031` (`BSLH`). `defaults read com.apple.HIToolbox AppleEnabledInputSources` says which
-sources are actually enabled — it also confirms the Caps Lock cycle has exactly two keyboard
+sources are actually enabled — it also confirms the input-source cycle has exactly two keyboard
 layouts, which is what the `en` macro's balance depends on.
 
 **The `&en` wrapper is asynchronous, and at typing speed it reorders.** With `wait-ms = <50>`, a key
@@ -712,11 +720,12 @@ that came out as `%`. Only `\` is left on the wrapper, and the case still spaces
 neighbours; the hazard is real but needs a roll no one performs on a symbol layer. Raising `wait-ms`
 widens the window rather than closing it.
 
-The critical constraint: Caps Lock is a **toggle**, not a selector. There is no "set the host to EN"
+The critical constraint: the switch is **relative**, not a selector — `GLOBE` selects the *next*
+input source, which with exactly two enabled layouts is a toggle. There is no "set the host to EN"
 on these platforms — Windows' `Ctrl+Shift+1`/`Ctrl+Shift+2`, which this keymap used to send, does
 nothing on iPadOS. Everything below follows from that.
 
-- `os_lang` sends `&kp CAPS` and nothing else. `to_en`/`to_ru` no longer exist, because under a
+- `os_lang` sends `&kp GLOBE` and nothing else. `to_en`/`to_ru` no longer exist, because under a
   toggle they would be the same action.
 - `layer_en` / `layer_ru` are `&to 0 &os_lang` / `&to 1 &os_lang`, correct **only when invoked from
   the layer they are leaving**. They are bound directly at position 32 — `&layer_en` on `ru`,
@@ -730,15 +739,14 @@ nothing on iPadOS. Everything below follows from that.
 - The `en` one-param macro types a single key in EN and returns, for glyphs absent from Cyrillic. It
   survives toggle semantics because it is balanced — flip, type, flip back — which holds as long as
   the host's language cycle has exactly two stops (verified: the emoji keyboard stays out of it).
-- `os_lang` taps Caps Lock for `tap-ms = <100>`, not the 30 ms it carried originally. macOS applies a
-  hold threshold to Caps Lock — `CapsLockDelay = 75` is visible in the internal keyboard's HID
-  service properties (`ioreg -r -c IOHIDEventService -l`). The op36's own service does not expose the
-  property, so whether the same threshold reaches an external BLE keyboard is unproven, but 30 ms was
-  the shortest tap in the whole keymap and sat under any such value. It costs the `&en` keys on
-  `sym_ru` about 140 ms each, since every one of them taps Caps Lock twice; that was accepted rather
-  than split into a fast and a slow `os_lang`, because a dropped tap inside `&en` is worse than a
-  slow one — see the next point.
-- **A dropped Caps Lock inside `&en` desynchronises the host.** The macro is balanced — flip, type,
+- **`os_lang` carries no `tap-ms`, and must not grow one.** ZMK's default is 30, which is right
+  because `GLOBE` has no hold threshold. Caps Lock does: macOS applies `CapsLockDelay`, 75 ms on this
+  host, visible in the internal keyboard's HID service properties
+  (`ioreg -r -c IOHIDEventService -l`). A tap under it is dropped without a word, so the firmware's
+  layer moved while the host stayed put — and that failure was frequent enough in daily use to be
+  the reason the switch key changed at all. Raising the tap to 100 narrowed the window and never
+  closed it; a threshold you have to out-wait is not a thing to tune, it is a thing to leave.
+- **A dropped switch inside `&en` desynchronises the host.** The macro is balanced — flip, type,
   flip back — so if the first flip is lost and the second lands, the glyph comes out Cyrillic *and*
   the host ends up on the other layout while the firmware never moved. The balance that makes `&en`
   safe under toggle semantics is exactly what makes a single lost tap permanent.
@@ -777,7 +785,7 @@ The English row is the standard here, and "Русская" turns out to carry al
 | Shift | `!` | `"` | `№` | `%` | `:` | `,` | `.` | `;` | `(` | `)` |
 | Option | `!` | `@` | `#` | `$` | `%` | `^` | `&` | `*` | `{` | `}` |
 
-So `numbers_ru` needs **no Caps Lock and no host switching**: digits 2 through 8 carry a mod-morph
+So `numbers_ru` needs **no host switching at all**: digits 2 through 8 carry a mod-morph
 (`&d2`..`&d8`) whose Shift form is `&kp LA(N<d>)`, and Option is where the symbol already lives.
 Digits **1, 9 and 0 stay plain `&kp`** — `Shift+1/9/0` already gives `! ( )` on both layouts, so
 morphing them would only add a way to be wrong. Read out of the layout's own data with
@@ -823,27 +831,27 @@ in the repo includes it, even ones with no Cyrillic bindings.
 ### Every way the layer and the host can drift apart
 
 Worked out in full after intermittent desync was reported on the old combo switch. **The system is
-open-loop**: the firmware issues a *relative* command (Caps Lock toggles) and never learns whether it
-landed. Two consequences follow and neither is fixable from the keymap — any lost Caps Lock is a
-permanent desync, and any host-side change is undetectable.
+open-loop**: the firmware issues a *relative* command (`GLOBE` selects the next source) and never
+learns whether it landed. Two consequences follow and neither is fixable from the keymap — any lost
+switch is a permanent desync, and any host-side change is undetectable.
 
 | # | Cause | Status |
 |---|---|---|
-| 1 | Firmware switched, host never saw the Caps Lock — dropped HID report, or a tap under the host's hold threshold | reduced: `tap-ms` 30 → 100 |
+| 1 | Firmware switched, host never saw the switch — dropped HID report, or a tap under the host's hold threshold | **removed**: `GLOBE` has no hold threshold, unlike Caps Lock |
 | 2 | Host switched by itself — menu bar, another shortcut, a secure-input field | **irreducible** |
 | 3 | Switch key pressed while a modifier is held on `ru`, running the wrong direction | fixed: modifiers raise `en_letters` instead of switching the base, so the direction is never wrong |
 | 4 | Unintended switch — a fast space-then-backspace firing the old combo | fixed: the switch is a dedicated key |
 | 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: the switch key is on the central half |
 | 6 | A modifier hold's release never runs, so `&to 1` never restores `ru` | reduced only; recovery is one keystroke |
 | 7 | Boot — layer 0 is the hardcoded default and layer state is not persisted, so every reflash and every battery pull starts on `en` regardless of the host | **irreducible**; the module's memory is RAM-only and shares this fate after a deep sleep |
-| 8 | A third keyboard layout enabled on the host — Caps Lock then cycles through three, and the binary model breaks silently | avoid; currently ABC + Russian only |
-| 9 | Typing inside the window between `&to` and the host acting on Caps Lock | one character, self-correcting |
-| 10 | A Caps Lock lost inside the `&en` macro, which flips twice per keypress | reduced by the same `tap-ms` |
+| 8 | A third keyboard layout enabled on the host — the switch then cycles through three, and the binary model breaks silently | avoid; currently ABC + Russian only |
+| 9 | Typing inside the window between `&to` and the host acting on the switch | one character, self-correcting |
+| 10 | A switch lost inside the `&en` macro, which flips twice per keypress | reduced with cause 1, and now reaches one key: `\` |
 | 11 | Two hosts on different languages — one firmware layer describing whichever profile you last switched to | fixed by the layout resync module, below |
 
 Two things were checked and **excluded** as causes: macOS's "automatically switch to a document's
 input source" is off here (`TextInputGlobalPropertyPerContextInput = 0` in `com.apple.HIToolbox`), and
-the behavior queue cannot drop the Caps Lock half of `layer_en`/`layer_ru` — `ZMK_BEHAVIORS_QUEUE_SIZE`
+the behavior queue cannot drop the `os_lang` half of `layer_en`/`layer_ru` — `ZMK_BEHAVIORS_QUEUE_SIZE`
 is 64 and those macros queue two items.
 
 **Closing the loop is not available on a stock host, and both routes were checked rather than
@@ -866,10 +874,13 @@ Cause 11 is the one that turned out to be fixable in firmware after all, because
 knowledge of the host's layout — only of which host you are talking to, which BLE does tell the
 keyboard. That is the layout resync module. Nothing else in this table moved because of it.
 
-**Still to try:** `GLOBE` (`C_AC_NEXT_KEYBOARD_LAYOUT_SELECT`, defined in ZMK v0.3.0) instead of
-Caps Lock. It is the native switch on both platforms and has no hold threshold, but whether macOS and
-iPadOS honour that consumer usage from a non-Apple BLE keyboard is unverified, and on macOS it needs
-the Fn behaviour set to "Change Input Source" (`AppleFnUsageType` is 0, "do nothing", here).
+**`GLOBE` replaced Caps Lock**, which is what removed cause 1 above. One thing about it stayed
+unverified until the firmware ran: whether macOS and iPadOS honour that consumer usage from a
+**non-Apple BLE keyboard**. Setting `AppleFnUsageType` and pressing the MacBook's own Globe proves
+the host setting, not the path from this keyboard — the internal keyboard does not travel over BLE
+and Apple may treat its own hardware apart. If the switch key ever stops working after a host
+update, that is the first thing to re-test, and the fallback is `nav` 6 and 7, which move the
+firmware without needing the host at all.
 
 ## The layout resync module
 

@@ -47,7 +47,7 @@
         ZMK_MOCK_RELEASE(0,7,300)
 
         /* The layout switch has moved to the thumbs, so positions 2+3 carry
-           nothing special any more: this must type f and p, with no Caps Lock
+           nothing special any more: this must type f and p, with no switch
            and no layer change. Position 2 is purely Hyper now. */
         ZMK_MOCK_PRESS(0,2,5)
         ZMK_MOCK_PRESS(0,3,30)

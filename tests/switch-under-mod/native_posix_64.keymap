@@ -28,19 +28,19 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* position 30 leaves en for ru: one Caps Lock. */
+        /* position 32 leaves en for ru: one Globe. */
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,300)
 
         /* Hold right Cmd (pos 16), then press the switch key. It must do
-           nothing at all: no Caps Lock, and ru still active at the end.
+           nothing at all: no switch, and ru still active at the end.
 
            Position 32 carries two jobs, hold for the symbol layer and tap to
            switch language, and under a modifier neither can be right. A copy of
            en's binding would run layer_ru — "go to ru" from ru — tapping Caps
            Lock without moving the firmware. A &trans would fall through to ru
            and reach sym_ru, whose symbols go through the &en wrapper and tap
-           Caps Lock too, under a held Cmd. So en_letters has &none there and the
+           the layout too, under a held Cmd. So en_letters has &none there and the
            press is refused.
 
            The cost is that Cmd plus the left thumb no longer reaches a symbol

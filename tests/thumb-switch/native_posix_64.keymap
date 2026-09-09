@@ -28,21 +28,22 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Tap thumbs 31+34 together: cmbru, one Caps Lock, and pos 1 must
-           read as й (0x14) afterwards rather than W (0x1A). */
+        /* Tap position 32: layer_ru, one Globe, and pos 1 must read as
+           й (0x14) afterwards rather than W (0x1A). */
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,300)
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 
-        /* And back: cmben, one more Caps Lock, pos 1 is W again. */
+        /* And back: layer_en, one more Globe, pos 1 is W again. */
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,300)
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 
-        /* Tapped one at a time they are still Space and Backspace: the combo
-           must not fire when the two presses are far apart. */
+        /* Space and Backspace are still just that. They carried the switch
+           as a combo once, and this guards the gesture that replaced it: two
+           thumbs tapped in sequence must not switch anything. */
         ZMK_MOCK_PRESS(3,1,50)
         ZMK_MOCK_RELEASE(3,1,200)
         ZMK_MOCK_PRESS(3,4,50)

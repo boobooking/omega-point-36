@@ -376,16 +376,31 @@
     };
 
     macros {
-        // Caps Lock switches the input language on macOS and iPadOS. It toggles
-        // between the two layouts, so callers must only invoke it when leaving
-        // the layer they are currently on.
+        // GLOBE switches the input language on macOS and iPadOS — consumer
+        // usage 0x29D, the one both platforms use natively for it. It selects
+        // the *next* source, so with exactly two layouts enabled it toggles,
+        // and callers must only invoke it when leaving the layer they are
+        // currently on.
+        //
+        // No tap-ms, deliberately: ZMK's default of 30 is right because GLOBE
+        // carries no hold threshold. Caps Lock does — macOS applies
+        // CapsLockDelay, 75 ms on this host — and a tap under it is dropped
+        // silently, moving the firmware's layer while the host stays put. That
+        // is the desync this key exists to avoid, and lengthening the tap only
+        // narrowed it rather than closing it.
+        //
+        // Two host-side prerequisites, both verified rather than assumed:
+        // macOS needs "Press 🌐 key to" set to Change Input Source, which is
+        // AppleFnUsageType = 1 in com.apple.HIToolbox and ships as 0, "do
+        // nothing". And sending 0x29D at all needs
+        // CONFIG_ZMK_HID_CONSUMER_REPORT_USAGES_FULL, which this build has;
+        // BASIC caps consumer usages at 0xFF and would drop it without a word.
         os_lang: os_lang {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings = <&kp CAPS>;
+            bindings = <&kp GLOBE>;
             label = "OS_LANG";
             wait-ms = <0>;
-            tap-ms = <100>;
         };
 
         layer_en: layer_en {
