@@ -884,6 +884,22 @@ firmware without needing the host at all.
 
 ## The layout resync module
 
+**It is switched off right now.** `CONFIG_ZMK_LAYOUT_RESYNC=n` in `config/op36.conf`, while a fault
+is isolated: switching BLE profiles left the iPad unable to type letters on either language layer.
+The module is the newest thing that touches layer state, so it goes first — but note before assuming
+it is guilty that its whole reach is `zmk_keymap_layer_activate` and `..._deactivate` on layer 1, and
+letters work on both layer 0 and layer 1. If the fault outlives this setting, the module is
+exonerated and the cause is below the keymap, in the split or the BLE link.
+
+That reading has support: earlier the same day, Enter at position 33 and the `nav` hold at position
+34 both failed on the iPad and worked on the Mac, then came back on their own after nothing but a
+profile switch. Nothing host-dependent exists in the firmware to explain that —
+`CONFIG_ZMK_HID_INDICATORS` is off, so the keyboard reads nothing back from either host, and layer
+raising is decided entirely on the keyboard. A transient that clears on reconnection is the
+connection, which is what "suspect the split connection before the keymap" already says.
+
+Everything below describes the module as written, for when it comes back.
+
 `module/` is a Zephyr module this repository carries, enabled by `zephyr/module.yml`, which the build
 workflow finds and turns into `-DZMK_EXTRA_MODULES`. It gives every BLE profile its own remembered
 input language and restores it when you come back to that host. That is the whole of it.
