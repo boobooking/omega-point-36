@@ -905,14 +905,12 @@ treat its own hardware apart. Whatever the switch key is, the fallback when it f
 
 ## The layout resync module
 
-**It is switched off right now.** `CONFIG_ZMK_LAYOUT_RESYNC=n` in `config/op36.conf`, while a fault
-is isolated: switching BLE profiles left the iPad unable to type letters on either language layer.
-The module is the newest thing that touches layer state, so it goes first — but note before assuming
-it is guilty that its whole reach is `zmk_keymap_layer_activate` and `..._deactivate` on layer 1, and
-letters work on both layer 0 and layer 1. If the fault outlives this setting, the module is
-exonerated and the cause is below the keymap, in the split or the BLE link.
-
-That reading has support. **Three separate iPad faults in one day were all transient and none was
+**It was switched off once, to isolate a fault, and is on again.** Switching BLE profiles had left
+the iPad unable to type letters on either language layer, and the module was the newest thing
+touching layer state. It was the wrong suspect, and the reason to doubt it was available before the
+firmware was ever flashed: its whole reach is `zmk_keymap_layer_activate` and `..._deactivate` on
+layer 1, and letters work on both layer 0 and layer 1, so it has no way to kill them on both.
+`config/op36.conf` sets nothing for the module now; it runs on its Kconfig default. **Three separate iPad faults in one day were all transient and none was
 the keymap:**
 
 | symptom | cleared by |
@@ -928,8 +926,8 @@ even when opened by a swipe, with the keyboard not involved in opening it at all
 
 **So on iPadOS, exhaust the host before touching the keymap: reconnect the profile, then restart the
 iPad.** That is the same instinct as "suspect the split connection before the keymap", extended to
-the host's own state. Chasing any of the three into the devicetree would have found nothing, and the
-second one is why this module is currently off.
+the host's own state. Chasing any of the three into the devicetree would have found nothing — and
+the second one cost this module a firmware in exile before the pattern was visible.
 
 Everything below describes the module as written, for when it comes back.
 
