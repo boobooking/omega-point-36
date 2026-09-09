@@ -512,13 +512,12 @@ Space and Enter running through a hold-tap is the main ergonomic risk in this ke
 `balanced`, pressing and releasing the next key before releasing the thumb hands the layer the win.
 `tapping-term-ms` is the knob if that shows up in real typing.
 
-`hml_en` is `hml` with `bindings = <&kp>, <&en>` instead of `<&kp>, <&kp>`. A hold-tap passes its
-first parameter to the hold binding and the second to the tap binding, so `&hml_en LGUI DLLR` gives
-Cmd on hold and `$` through the language-switching macro on tap. It exists because `$` cannot be
-reached with a plain `&kp` on the Cyrillic layout. Note that it references `&en` from the
-`behaviors` block while the macro is defined further down in `macros` — devicetree resolves labels
-after parsing the whole tree, so referring forward like this is fine (verified in the built
-devicetree, where the node comes out as `bindings = < &kp >, < &en >`).
+`hml_en` was `hml` with `bindings = <&kp>, <&en>`, carrying `$` through the language-switching macro
+on tap because `$` was thought unreachable with a plain `&kp` on the Cyrillic layout. Option+4 gives
+it directly, so position 13 is an ordinary `&hml LGUI RU_DLLR` and the behavior is **gone**, having
+had exactly one user. Forward references from `behaviors` into `macros` are still fine, though —
+devicetree resolves labels after parsing the whole tree, which `hml_ru` and the `hyper_en` pair still
+rely on.
 
 ## Positional hold-tap: how it actually decides
 
@@ -685,14 +684,17 @@ moves** — every other Cyrillic key, including the ones on punctuation position
 identical between the variants. That is exactly why the bug read as "`sym_ru` broke" and hid for so
 long.
 
-**"Русская" has no key at all for `*` or `\`.** A sweep of every keycode 0-127 in both the plain and
-shifted states finds `*` only on the numeric keypad and `\` nowhere, so both moved to the `&en`
-wrapper on `sym_ru` (positions 10 and 28). `RU_ASTERISK` and `RU_BACKSLASH` are left `#undef`'d
-rather than redefined, so a future `&kp RU_STAR` fails the devicetree build instead of quietly
-emitting the wrong glyph.
+**"Русская" has no key for `\` — and that is the only one.** An earlier sweep concluded the same of
+`*`, but it had covered only the plain and shifted states; `*` is Option+8, and `RU_ASTERISK` is
+redefined to `LA(N8)` accordingly. `RU_BACKSLASH` stays `#undef`'d, so a future `&kp RU_BSLH` fails
+the devicetree build instead of quietly emitting the wrong glyph — the key that would carry `\`
+carries `ё` here, which is why `RU_CYRILLIC_IO` is `BSLH`. **Sweep the Option and Option+Shift states
+too before concluding a glyph is absent**; that omission hid ten reachable glyphs behind the `&en`
+wrapper for as long as the wrapper existed.
 
-If the host is ever switched to "Русская — ПК", the whole override block comes out and the two `&en`
-keys go back to `&kp`.
+If the host is ever switched to "Русская — ПК", both override blocks come out — the punctuation
+corrections and the ten Option-layer definitions alike, since the PC layout puts those glyphs
+elsewhere again — and `\` goes back to a plain `&kp`.
 
 Verified by translating each binding through the layout's own data with `UCKeyTranslate` over
 `TISCreateInputSourceList`, for both `com.apple.keylayout.Russian` and `…RussianWin`, rather than
@@ -704,11 +706,11 @@ layouts, which is what the `en` macro's balance depends on.
 
 **The `&en` wrapper is asynchronous, and at typing speed it reorders.** With `wait-ms = <50>`, a key
 pressed within about 50 ms of an `&en` key gets its own scancode emitted *before* the macro's, and
-worse, it is typed while the host is still flipped to ABC. `tests/ru-symbols` shows this directly:
-rolled at 30 ms, `*` landed after the following `/`, and the `:` after that came out as `%`. The
-case now spaces the two `&en` keys 200 ms apart, which is how a symbol is actually reached; the
-hazard is real but needs a roll no one performs on a symbol layer. Raising `wait-ms` widens the
-window rather than closing it.
+worse, it is typed while the host is still flipped to ABC. `tests/ru-symbols` showed this directly back when `*`
+went through the wrapper: rolled at 30 ms, `*` landed after the following `/`, and the `:` after
+that came out as `%`. Only `\` is left on the wrapper, and the case still spaces it 200 ms from its
+neighbours; the hazard is real but needs a roll no one performs on a symbol layer. Raising `wait-ms`
+widens the window rather than closing it.
 
 The critical constraint: Caps Lock is a **toggle**, not a selector. There is no "set the host to EN"
 on these platforms — Windows' `Ctrl+Shift+1`/`Ctrl+Shift+2`, which this keymap used to send, does
@@ -741,8 +743,9 @@ nothing on iPadOS. Everything below follows from that.
   the host ends up on the other layout while the firmware never moved. The balance that makes `&en`
   safe under toggle semantics is exactly what makes a single lost tap permanent.
 - `wait-ms = <50>` on the `en` macro is a guess at how long the host needs, not a measured value.
-  Eleven keys on `sym_ru` route through it — ten `&en` plus the `$` tap of `&hml_en` — so a wrong
-  glyph there means raising it. Raising it also widens the reordering window described above.
+  One key on `sym_ru` routes through it now — `\` at position 28 — so a wrong glyph there means
+  raising it. Raising it also widens the reordering window described above. It used to be eleven,
+  which is what made this value worth worrying about.
 
 **Cmd shortcuts do not need the `en` wrapper.** Verified on device: `Cmd+Shift+[` works with the
 Russian layout active, because macOS and iPadOS fall back to the Latin equivalent when matching
@@ -797,12 +800,22 @@ Only `ru` position 31 selects it (`&ltt L_NUM_RU SPACE`); `en` and `en_letters` 
 `en_letters` is right to stay on the English one: it is only ever raised under a held modifier, where
 macOS takes the Latin fallback anyway.
 
-**Glyphs that must go through `&en` on `sym_ru`**, for two distinct reasons. Nine have no Cyrillic
-equivalent at all: `[ ] ' | { } $ ~ ` ` — `keys_ru.h` has no `RU_LBKT`, `RU_RBKT`, `RU_SQT`,
-`RU_PIPE`, `RU_LBRC`, `RU_RBRC`, `RU_DLLR`, `RU_TILDE` or `RU_GRAVE`. The other two, `*` and `\`, do
-have `RU_*` forms in the header but no key in the "Русская" layout the host runs, so they were
-`#undef`'d and moved to the wrapper as well. Everything else has an `RU_*` form that lands somewhere;
-check the header *and* the layout before assuming.
+**One glyph goes through `&en` on `sym_ru`: `\`.** The other ten that used to — `[ ] ' | { } $ ~ ` *`
+— are reached directly now, because "Русская" carries them under Option even though `keys_ru.h` has
+no macro for nine of them. The keymap defines those nine itself, next to the `RU_*` overrides:
+
+| | | | |
+|---|---|---|---|
+| `{` `LA(N9)` | `}` `LA(N0)` | `*` `LA(N8)` | `$` `LA(N4)` |
+| `[` `LS(GRAVE)` | `]` `GRAVE` | `~` `LA(M)` | `` ` `` `LA(LS(N0))` |
+| `'` `LA(LS(N9))` | `\|` `LA(LS(N1))` | | |
+
+Each was read out of the layout's own data with `UCKeyTranslate`, dead-key processing left on — none
+of the ten is a dead key — and the identity of each physical key was confirmed against ABC rather
+than assumed, which is how `~` on Option+M and the bracket pair on the `` ` `` key were found.
+`tests/ru-symbols` pins all ten: Option shows up as `implicit_mods 0x04`, Option+Shift as `0x06`, and
+`]` carries none at all. **The header is not the authority on what a layout can reach** — it is
+generated for the PC ЙЦУКЕН. Check the layout.
 
 `keys_ru.h` itself is a generated Unicode-licensed header — vendored, don't hand-edit. Every keymap
 in the repo includes it, even ones with no Cyrillic bindings.
@@ -1000,13 +1013,6 @@ behavior, each item of which cost a source dive or an on-device test. Record the
 
 Deliberate, pending later work — do not "fix" them unprompted:
 
-- **`sym_ru` routes ten glyphs through `&en` that "Русская" can reach directly.** The Option layer
-  was never swept: `{` `}` are on Option+9/0, `[` `]` on the bracket key, and `' | $ ~ ` *` all
-  exist too — of the eleven, only `\` is genuinely absent. Each one currently costs two Caps Lock
-  taps, about 140 ms, and carries the desync risk that a dropped tap brings. The claim above that
-  "Русская" has no key for `*` is wrong for the same reason: the old sweep covered plain and shift
-  only. **Tim has this queued as the next task** — do not start it unprompted, but do not let it be
-  forgotten either.
 - **`;` `,` `.` `'` are not on the base layer.** The Colemak-DH rework took their positions; all
   four live on `sym_en`, at positions 24, 26, 27 and 16.
 - **Home, End, Insert, Delete, PageUp, PageDown, PrintScreen** are likewise unbound.

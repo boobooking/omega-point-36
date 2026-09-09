@@ -37,8 +37,7 @@
            PC ЙЦУКЕН position: ? (5), * (10), / (15), : (23), ; (24), % (25),
            , (26), . (27) and \\ (28). Positions 23 and 26 are the ru_ext
            entrances on ru, and 10 is a home row mod, so sym_ru has to win over
-           all three. * and \\ have no key in this layout and go through &en,
-           so they bracket themselves in Caps Lock. */
+           all three. */
         ZMK_MOCK_PRESS(3,2,350)
         ZMK_MOCK_PRESS(0,5,30)
         ZMK_MOCK_RELEASE(0,5,30)
@@ -55,14 +54,41 @@
         ZMK_MOCK_PRESS(2,7,30)
         ZMK_MOCK_RELEASE(2,7,30)
 
-        /* * (pos 10) and \\ (pos 28) go through &en, which flips the host with
+        /* Then the ten that keys_ru.h has no macro for, or defines wrongly.
+           "Русская" carries all but one of them under Option, so these are
+           plain &kp now and roll at 30 ms like any other key: { (2), | (4),
+           [ (6), ] (8), * (10), } (12), $ (13), ' (16), ~ (21) and ` (22).
+           Option shows up as implicit_mods 0x04 and Option+Shift as 0x06; ]
+           is the one with no modifier at all. Position 13 is a hold-tap, so
+           it has to come out as a tap. */
+        ZMK_MOCK_PRESS(0,2,30)
+        ZMK_MOCK_RELEASE(0,2,30)
+        ZMK_MOCK_PRESS(0,4,30)
+        ZMK_MOCK_RELEASE(0,4,30)
+        ZMK_MOCK_PRESS(0,6,30)
+        ZMK_MOCK_RELEASE(0,6,30)
+        ZMK_MOCK_PRESS(0,8,30)
+        ZMK_MOCK_RELEASE(0,8,30)
+        ZMK_MOCK_PRESS(1,0,30)
+        ZMK_MOCK_RELEASE(1,0,30)
+        ZMK_MOCK_PRESS(1,2,30)
+        ZMK_MOCK_RELEASE(1,2,30)
+        ZMK_MOCK_PRESS(1,3,30)
+        ZMK_MOCK_RELEASE(1,3,30)
+        ZMK_MOCK_PRESS(1,6,30)
+        ZMK_MOCK_RELEASE(1,6,30)
+        ZMK_MOCK_PRESS(2,1,30)
+        ZMK_MOCK_RELEASE(2,1,30)
+        ZMK_MOCK_PRESS(2,2,30)
+        ZMK_MOCK_RELEASE(2,2,30)
+
+        /* \\ (pos 28) is the only glyph left with no key on this layout, so it
+           is the only one still going through &en, which flips the host with
            Caps Lock, types on ABC and flips back. The macro is asynchronous and
-           carries wait-ms = 50, so these two are spaced like a human reaching
-           for a symbol rather than rolled at 30 ms — at 30 ms the macro's own
-           key lands after the following one, and that next key gets typed while
-           the host is still on ABC. */
-        ZMK_MOCK_PRESS(1,0,200)
-        ZMK_MOCK_RELEASE(1,0,200)
+           carries wait-ms = 50, so it is spaced like a human reaching for a
+           symbol rather than rolled at 30 ms — at 30 ms the macro's own key
+           lands after the following one, and that next key gets typed while the
+           host is still on ABC. */
         ZMK_MOCK_PRESS(2,8,200)
         ZMK_MOCK_RELEASE(2,8,200)
         ZMK_MOCK_RELEASE(3,2,300)

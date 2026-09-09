@@ -31,11 +31,46 @@
 #undef RU_CYRILLIC_IO
 #define RU_CYRILLIC_IO (BSLH)
 
-// "Русская" has no key for * or \ at all — a full sweep of every plain and
-// shifted keycode finds * only on the numeric keypad and \ nowhere. Both go
-// through the &en wrapper on sym_ru instead. Undefining them keeps a future
-// &kp RU_STAR from compiling to a silently wrong glyph.
+// The glyphs keys_ru.h has no macro for at all, plus * which it defines
+// wrongly for this layout. "Русская" does carry every one of them — most under
+// Option, which the earlier sweep missed by looking only at the plain and
+// shifted states — so none of these needs the &en wrapper and its two Caps Lock
+// taps. Read out of the layout's own data with UCKeyTranslate, dead-key
+// processing left on; none of the ten is a dead key, and the identity of each
+// physical key was confirmed against ABC rather than assumed:
+//
+//   {  Option+9          }  Option+0          *  Option+8
+//   [  Shift+`           ]  `                 $  Option+4
+//   '  Option+Shift+9    |  Option+Shift+1    ~  Option+M
+//   `  Option+Shift+0
+//
+// Undef first: none of the nine exists in keys_ru.h today, and this way a
+// future header that gains them cannot collide silently. RU_STAR is an alias
+// of (RU_ASTERISK) and expands lazily, so redefining the base carries it.
+#undef RU_LBRC
+#define RU_LBRC (LA(N9))
+#undef RU_RBRC
+#define RU_RBRC (LA(N0))
+#undef RU_LBKT
+#define RU_LBKT (LS(GRAVE))
+#undef RU_RBKT
+#define RU_RBKT (GRAVE)
+#undef RU_SQT
+#define RU_SQT (LA(LS(N9)))
+#undef RU_PIPE
+#define RU_PIPE (LA(LS(N1)))
+#undef RU_DLLR
+#define RU_DLLR (LA(N4))
+#undef RU_TILDE
+#define RU_TILDE (LA(M))
+#undef RU_GRAVE
+#define RU_GRAVE (LA(LS(N0)))
 #undef RU_ASTERISK
+#define RU_ASTERISK (LA(N8))
+
+// \ is the one that really is absent: its key carries ё on this layout, which
+// is why RU_CYRILLIC_IO is BSLH above. It stays on the &en wrapper, and staying
+// undefined keeps a future &kp RU_BSLH from compiling to a silently wrong glyph.
 #undef RU_BACKSLASH
 
 // Layer indices. A layer *is* its position in the keymap node — &mo, &lt and
@@ -91,22 +126,6 @@
             bindings = <&kp>, <&kp>;
 
             hold-trigger-key-positions = <0 1 2 3 4 10 11 12 13 14 20 21 22 23 24 30 31 32>;
-            hold-trigger-on-release;
-        };
-
-        // Same as hml, but taps through the en macro. Needed on the Cyrillic
-        // symbol layer for glyphs that only exist on the Latin layout and so
-        // cannot be reached with a plain &kp.
-        hml_en: home_row_mod_left_en {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            flavor = "balanced";
-            require-prior-idle-ms = <100>;
-            tapping-term-ms = <280>;
-            quick-tap-ms = <175>;
-            bindings = <&kp>, <&en>;
-
-            hold-trigger-key-positions = <5 6 7 8 9 15 16 17 18 19 25 26 27 28 29 33 34 35>;
             hold-trigger-on-release;
         };
 
@@ -526,10 +545,10 @@
 
         sym_ru {
             bindings = <
-  &none     &kp RU_LPAR          &en LBRC   &kp RU_RPAR        &en PIPE                       &kp RU_QMARK  &en LBKT      &kp RU_PLUS   &en RBKT    &none
-  &en STAR  &hml LSHFT RU_UNDER  &en RBRC   &hml_en LGUI DLLR  &none                          &kp RU_FSLH   &en SQT       &kp RU_MINUS  &kp RU_DQT  &kp RU_EQUAL
-  &none     &en TILDE            &en GRAVE  &kp RU_COLON       &kp RU_SEMI                    &kp RU_PRCNT  &kp RU_COMMA  &kp RU_DOT    &en BSLH    &none
-                                            &trans             &trans       &trans    &trans  &trans        &trans
+  &none        &kp RU_LPAR          &kp RU_LBRC   &kp RU_RPAR        &kp RU_PIPE                    &kp RU_QMARK  &kp RU_LBKT   &kp RU_PLUS   &kp RU_RBKT  &none
+  &kp RU_STAR  &hml LSHFT RU_UNDER  &kp RU_RBRC   &hml LGUI RU_DLLR  &none                          &kp RU_FSLH   &kp RU_SQT    &kp RU_MINUS  &kp RU_DQT   &kp RU_EQUAL
+  &none        &kp RU_TILDE         &kp RU_GRAVE  &kp RU_COLON       &kp RU_SEMI                    &kp RU_PRCNT  &kp RU_COMMA  &kp RU_DOT    &en BSLH     &none
+                                                  &trans             &trans       &trans    &trans  &trans        &trans
             >;
 
             display-name = "Symbols";
