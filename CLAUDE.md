@@ -1082,10 +1082,14 @@ Deliberate, pending later work — do not "fix" them unprompted:
   replaced, which needed two keys and a 150 ms prior-idle window. That is the point — it can no
   longer be missed — but it also cannot be un-pressed. If brushing the outer left thumb turns out to
   switch layouts in real use, the fix is to make it a hold rather than to reinstate a combo.
-- `adj` is stripped to `&bootloader`, **three** `&bt BT_SEL` (0-2), `&bt BT_CLR`, both `&out` and
-  `&studio_unlock`; everything else on it is `&none` by intent. Profile 3 has no key — ZMK still
-  keeps its bond, there is just no way to select it from the keymap. `&bt BT_CLR` sits on the bottom
-  row, away from the home row it used to share with the outputs, because it is the destructive one.
+- `adj` is stripped to `&bootloader`, **two** `&bt BT_SEL` (0-1), `&bt BT_CLR`, both `&out` and
+  `&studio_unlock`; everything else on it is `&none` by intent. Two profiles is two hosts, the Mac
+  and the iPad. Profiles 2 and 3 have no key — ZMK still keeps their bonds, there is just no way to
+  select them from the keymap, and adding one back is a binding on any of the free positions.
+  **The profile keys sit on the left hand, at positions 1 and 2**, because `adj` is held with the
+  right thumb and the left hand is the free one; the rest of the layer has not followed them yet.
+  `&bt BT_CLR` sits on the bottom row, away from the home row it used to share with the outputs,
+  because it is the destructive one.
 
 ## Dormant config (not built)
 
