@@ -376,37 +376,40 @@
     };
 
     macros {
-        // Ctrl+Space switches the input language, and it is the one binding
-        // both target platforms honour: iPadOS treats it as the input-source
-        // shortcut natively, and macOS exposes it under Settings → Keyboard →
-        // Keyboard Shortcuts → Input Sources. **On macOS it has to be enabled
-        // there** — the default arrives switched off, which is why pressing
-        // Ctrl+Space on this host changed nothing before. It selects the
-        // *previous* source, so with exactly two layouts it toggles, and
-        // callers must only invoke it when leaving the layer they are on.
+        // The language switch sends two keys, because no single one works on
+        // both platforms. iPadOS honours GLOBE (consumer 0x29D) and gives no
+        // way to bind anything else — its input-source shortcuts are fixed.
+        // macOS ignores GLOBE but lets any chord be bound, under Settings →
+        // Keyboard → Keyboard Shortcuts → Input Sources. So each host acts on
+        // the one it understands and ignores the other, and neither sees a
+        // double switch.
         //
-        // GLOBE was tried here and macOS ignores it. That is not a descriptor
-        // problem: the report descriptor read back off the connected keyboard
-        // advertises the consumer page with Usage Max 0xFFF over a 16-bit
-        // field, so 0x29D fits and macOS parses the collection. Apple's
-        // "Press 🌐 key to" simply does not answer to the consumer usage from a
-        // third-party keyboard. iPadOS did honour it. Do not spend another
-        // firmware on GLOBE without new evidence about macOS specifically.
+        // That macOS ignores GLOBE is not a descriptor problem: the report
+        // descriptor read back off the connected keyboard (ioreg -c IOHIDDevice
+        // -r -l, then decode the ReportDescriptor bytes) advertises the consumer
+        // page with Usage Max 0xFFF over a 16-bit field, so 0x29D fits and macOS
+        // parses the collection. Apple's "Press 🌐 key to" is wired to their own
+        // Fn, which a third-party keyboard cannot produce.
         //
-        // Caps Lock is the other thing that used to be here, and it is worse
-        // than both: macOS applies CapsLockDelay, 75 ms on this host, and a tap
-        // under that threshold is dropped silently, moving the firmware's layer
-        // while the host stays put. A plain modifier chord has no threshold at
-        // all, which is the whole reason to prefer it, and no tap-ms is needed.
+        // Hyper+F13 is chosen for being unpressable: this keyboard has no F13,
+        // so the chord cannot be struck by accident, and nothing on either
+        // platform claims it. That matters because the switch is open-loop —
+        // one stray press desynchronises the firmware from the host until you
+        // notice. Ctrl+Space was tried and rejected for exactly that: it works
+        // on both platforms, and it is far too easy to hit.
         //
-        // This chord was herdr's prefix until it moved to Ctrl+B to free it.
-        // One consequence worth knowing: pressing the right Ctrl and Space by
-        // hand now switches the host without moving the firmware layer, which
-        // is a desync. Nothing sends it but this macro, so it takes an accident.
+        // To bind it on macOS you cannot type it. Open the shortcut recorder and
+        // press the keyboard's own switch key (position 32): this macro sends the
+        // chord and the recorder captures it.
+        //
+        // Neither key carries a hold threshold, so no tap-ms is needed. Caps
+        // Lock did — macOS applies CapsLockDelay, 75 ms on this host, and a tap
+        // under it is dropped silently, moving the firmware's layer while the
+        // host stays put.
         os_lang: os_lang {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings = <&kp LC(SPACE)>;
+            bindings = <&kp GLOBE>, <&kp LC(LA(LG(LS(F13))))>;
             label = "OS_LANG";
             wait-ms = <0>;
         };

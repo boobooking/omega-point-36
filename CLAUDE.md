@@ -338,8 +338,10 @@ The symbol layers carry only two mods, both on the left: Shift on `_` and Cmd on
 ### The right Ctrl keeps `en` for one key after the chord, for herdr's prefix
 
 herdr takes a prefix — **Ctrl+B** — and then a command key: prefix then `W` opens Spaces, prefix
-then `Shift+R` renames one. It was Ctrl+Space until the language switch needed that chord; `prefix`
-in `~/.config/herdr/config.toml` is the only place it lives, and Ctrl+B is herdr's own default. On
+then `Shift+R` renames one. `prefix` in `~/.config/herdr/config.toml` is the only place it
+lives, and Ctrl+B is herdr's own default. It sat on Ctrl+Space until the language switch briefly
+claimed that chord; the switch has since moved on, so Ctrl+Space is free again if the prefix is ever
+wanted back there. On
 `ru` the prefix itself arrives fine, because the right Ctrl raises `en_letters` for its own duration,
 but the **command key** used to arrive as Cyrillic: the modifier hold dropped `en_letters` the
 instant Ctrl was released, which is before the command key is pressed. Position 1 sent `Q` (`й`)
@@ -658,26 +660,31 @@ permanent.
 ## The RU/EN dual-layout system
 
 `op36_ruen.keymap` keeps a firmware layer (`en`=0, `ru`=1) in sync with the host's input language.
-**The switch key is `Ctrl+Space`**, the one binding both target platforms honour. iPadOS treats it
-as the input-source shortcut natively. macOS exposes it under Settings → Keyboard → Keyboard
-Shortcuts → Input Sources, but **ships it switched off** — pressing Ctrl+Space here changed nothing
-until it was enabled, and `com.apple.symbolichotkeys` carried no entry for it at all. Enabling it is
-a one-time host setting, and without it the Mac has no language switch.
+**The switch sends two keys, `GLOBE` and `Hyper+F13`**, because no single one serves both platforms.
+Each host acts on the one it understands and ignores the other, so neither sees a double switch.
 
-It is a plain modifier chord, which is the whole point: no hold threshold, no consumer usage, nothing
-Apple-specific. That is what neither of its predecessors managed.
+- **iPadOS honours `GLOBE`** (consumer `0x29D`) and offers no alternative: its input-source shortcuts
+  are fixed, so an obscure chord is impossible there.
+- **macOS ignores `GLOBE`** but binds any chord, under Settings → Keyboard → Keyboard Shortcuts →
+  Input Sources. `Hyper+F13` is bound there.
 
-**`GLOBE` was tried and macOS ignores it.** Not a descriptor problem — the report descriptor read
-back off the connected keyboard (`ioreg -c IOHIDDevice -r -l`, then decode the `ReportDescriptor`
-bytes) advertises the consumer page with Usage Max `0xFFF` over a 16-bit field, so `0x29D` fits and
-macOS parses the collection. Apple's "Press 🌐 key to" setting, `AppleFnUsageType = 1` in
-`com.apple.HIToolbox`, simply does not answer to that consumer usage from a third-party keyboard;
-it appears to be wired to Apple's own Fn. **iPadOS did honour it.** Do not spend another firmware on
-`GLOBE` without new evidence about macOS specifically.
+That macOS ignores `GLOBE` is **not** a descriptor problem. The report descriptor read back off the
+connected keyboard — `ioreg -c IOHIDDevice -r -l`, then decode the `ReportDescriptor` bytes —
+advertises the consumer page with Usage Max `0xFFF` over a 16-bit field, so `0x29D` fits and macOS
+parses the collection. Apple's "Press 🌐 key to" setting, `AppleFnUsageType = 1` in
+`com.apple.HIToolbox`, does not answer to that consumer usage from a third-party keyboard; it appears
+wired to Apple's own Fn. Do not spend another firmware on `GLOBE` for macOS without new evidence.
 
-Ctrl+Space was herdr's prefix until that moved to Ctrl+B to free it. One consequence: pressing the
-right Ctrl and Space by hand now switches the host without moving the firmware layer, which is a
-desync. Nothing but `os_lang` sends it, so it takes an accident.
+**`Hyper+F13` is chosen for being unpressable.** This keyboard has no F13, so the chord cannot be
+struck by accident, and nothing on either platform claims it. That matters because the switch is
+open-loop: one stray press desynchronises the firmware from the host until you notice it. Ctrl+Space
+was tried and rejected for exactly that — it works on both platforms and is far too easy to hit.
+
+**To bind it on macOS you cannot type it.** Open the shortcut recorder and press the keyboard's own
+switch key: `os_lang` sends the chord and the recorder captures it. The keyboard configures the host
+for itself.
+
+Neither key carries a hold threshold, so `os_lang` needs no `tap-ms`.
 
 **The host's Russian layout is the Mac-traditional "Русская", and the keymap is targeted at it.**
 `keys_ru.h` is generated for the Windows ЙЦУКЕН, which macOS calls "Русская — ПК"
@@ -733,12 +740,12 @@ that came out as `%`. Only `\` is left on the wrapper, and the case still spaces
 neighbours; the hazard is real but needs a roll no one performs on a symbol layer. Raising `wait-ms`
 widens the window rather than closing it.
 
-The critical constraint: the switch is **relative**, not a selector — Ctrl+Space selects the
-*previous* input source, which with exactly two enabled layouts is a toggle. There is no "set the host to EN"
+The critical constraint: the switch is **relative**, not a selector — both keys select the next or
+previous input source, which with exactly two enabled layouts is a toggle. There is no "set the host to EN"
 on these platforms — Windows' `Ctrl+Shift+1`/`Ctrl+Shift+2`, which this keymap used to send, does
 nothing on iPadOS. Everything below follows from that.
 
-- `os_lang` sends `&kp LC(SPACE)` and nothing else. `to_en`/`to_ru` no longer exist, because under a
+- `os_lang` sends `&kp GLOBE` and `&kp LC(LA(LG(LS(F13))))`, and nothing else. `to_en`/`to_ru` no longer exist, because under a
   toggle they would be the same action.
 - `layer_en` / `layer_ru` are `&to 0 &os_lang` / `&to 1 &os_lang`, correct **only when invoked from
   the layer they are leaving**. They are bound directly at position 32 — `&layer_en` on `ru`,
@@ -844,7 +851,7 @@ in the repo includes it, even ones with no Cyrillic bindings.
 ### Every way the layer and the host can drift apart
 
 Worked out in full after intermittent desync was reported on the old combo switch. **The system is
-open-loop**: the firmware issues a *relative* command (Ctrl+Space selects the previous source) and never
+open-loop**: the firmware issues a *relative* command (select the next or previous source) and never
 learns whether it landed. Two consequences follow and neither is fixable from the keymap — any lost
 switch is a permanent desync, and any host-side change is undetectable.
 
@@ -887,9 +894,10 @@ Cause 11 is the one that turned out to be fixable in firmware after all, because
 knowledge of the host's layout — only of which host you are talking to, which BLE does tell the
 keyboard. That is the layout resync module. Nothing else in this table moved because of it.
 
-**The switch key went Caps Lock → `GLOBE` → Ctrl+Space**, and the middle step is worth not
-repeating: `GLOBE` works on iPadOS and is ignored by macOS, which left the Mac with no language
-switch at all for one firmware. The lesson generalises — **testing a host setting is not testing the
+**The switch key went Caps Lock → `GLOBE` → Ctrl+Space → `GLOBE` plus `Hyper+F13`**, and the whole
+detour is worth not repeating: `GLOBE` works on iPadOS and is ignored by macOS, which left the Mac
+with no language switch at all for one firmware; Ctrl+Space then worked on both and was rejected for
+being trivially easy to hit by accident. The lesson generalises — **testing a host setting is not testing the
 path from this keyboard.** Setting `AppleFnUsageType` and pressing the MacBook's own Globe proved
 the setting and nothing else, because the internal keyboard does not travel over BLE and Apple may
 treat its own hardware apart. Whatever the switch key is, the fallback when it fails is `nav` 6 and

@@ -7,8 +7,10 @@ ht_binding_pressed: 32 new undecided hold_tap
 layer 0 position: 32, binding name: layer_tap_to_ru
 ht_decide: 32 decided tap (balanced decision moment key-up)
 ht_binding_released: 32 cleaning up hold-tap
-kp_pressed: usage_page 0x07 keycode 0x2C implicit_mods 0x01 explicit_mods 0x00
-kp_released: usage_page 0x07 keycode 0x2C implicit_mods 0x01 explicit_mods 0x00
+kp_pressed: usage_page 0x0C keycode 0x29D implicit_mods 0x00 explicit_mods 0x00
+kp_released: usage_page 0x0C keycode 0x29D implicit_mods 0x00 explicit_mods 0x00
+kp_pressed: usage_page 0x07 keycode 0x68 implicit_mods 0x0F explicit_mods 0x00
+kp_released: usage_page 0x07 keycode 0x68 implicit_mods 0x0F explicit_mods 0x00
 layer 1 position: 17, binding name: home_row_mod_right_prefix
 ht_binding_pressed: 17 new undecided hold_tap
 ht_decide: 17 decided hold-timer (balanced decision moment timer)
