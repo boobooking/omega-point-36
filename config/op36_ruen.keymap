@@ -321,57 +321,145 @@
         // on both layouts, so those three stay plain &kp on numbers_ru and the
         // drift check requires them to match numbers_en exactly.
         //
-        // keep-mods is deliberately absent, so ZMK masks the Shift that chose
-        // the morph and the host sees a clean Option+digit rather than
-        // Shift+Option+digit (behavior_mod_morph.c: masked_mods = mods when the
-        // property is missing).
+        // **Shift alone means "type the symbol"; Shift with any other modifier
+        // means "this is a shortcut, pass it through untouched".** A single
+        // mod-morph cannot say that — its condition is a bitwise AND, so any
+        // Shift triggers it no matter what else is held, and Cmd+Shift+4 came
+        // out as Cmd+Option+4. That broke every screenshot shortcut on ru while
+        // leaving en fine, because only numbers_ru carries these morphs.
+        //
+        // Hence the nesting, which hangs on how masking works in
+        // behavior_mod_morph.c:
+        //
+        //   - The outer morph fires on Shift and masks Shift.
+        //   - With no Cmd/Ctrl/Alt the inner takes its *normal* branch and never
+        //     calls zmk_hid_masked_modifiers_set at all, so the outer's mask
+        //     stands and a clean Option+digit reaches the host.
+        //   - With one of them held the inner takes its *morph* branch, whose
+        //     first act is masked_modifiers_set(masked_mods). keep-mods equals
+        //     mods there, so masked_mods is zero and that call **clears the
+        //     outer's Shift mask**. A plain &kp digit then goes out with Shift
+        //     and Cmd both live.
+        //
+        // tests/numbers-ru-symbols pins all three cases on one key.
+
         d2: digit_2_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N2>, <&kp LA(N2)>;
+            bindings = <&kp N2>, <&d2_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "2";
+        };
+
+        d2_sft: digit_2_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N2)>, <&kp N2>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "@";
         };
 
         d3: digit_3_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N3>, <&kp LA(N3)>;
+            bindings = <&kp N3>, <&d3_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "3";
+        };
+
+        d3_sft: digit_3_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N3)>, <&kp N3>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "#";
         };
 
         d4: digit_4_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N4>, <&kp LA(N4)>;
+            bindings = <&kp N4>, <&d4_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "4";
+        };
+
+        d4_sft: digit_4_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N4)>, <&kp N4>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "$";
         };
 
         d5: digit_5_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N5>, <&kp LA(N5)>;
+            bindings = <&kp N5>, <&d5_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "5";
+        };
+
+        d5_sft: digit_5_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N5)>, <&kp N5>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "%";
         };
 
         d6: digit_6_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N6>, <&kp LA(N6)>;
+            bindings = <&kp N6>, <&d6_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "6";
+        };
+
+        d6_sft: digit_6_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N6)>, <&kp N6>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "^";
         };
 
         d7: digit_7_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N7>, <&kp LA(N7)>;
+            bindings = <&kp N7>, <&d7_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "7";
+        };
+
+        d7_sft: digit_7_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N7)>, <&kp N7>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "&";
         };
 
         d8: digit_8_ru {
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
-            bindings = <&kp N8>, <&kp LA(N8)>;
+            bindings = <&kp N8>, <&d8_sft>;
             mods = <(MOD_LSFT|MOD_RSFT)>;
+            display-name = "8";
+        };
+
+        d8_sft: digit_8_ru_shifted {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LA(N8)>, <&kp N8>;
+            mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            keep-mods = <(MOD_LGUI|MOD_RGUI|MOD_LCTL|MOD_RCTL|MOD_LALT|MOD_RALT)>;
+            display-name = "*";
         };
     };
 

@@ -43,6 +43,22 @@ layer 7 position: 8, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x26 implicit_mods 0x00 explicit_mods 0x00
 layer 7 position: 11, binding name: key_press
 kp_released: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 13, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 11, binding name: key_press
+kp_pressed: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 16, binding name: digit_4_ru
+kp_pressed: usage_page 0x07 keycode 0x21 implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 16, binding name: digit_4_ru
+kp_released: usage_page 0x07 keycode 0x21 implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 27, binding name: digit_2_ru
+kp_pressed: usage_page 0x07 keycode 0x1F implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 27, binding name: digit_2_ru
+kp_released: usage_page 0x07 keycode 0x1F implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 11, binding name: key_press
+kp_released: usage_page 0x07 keycode 0xE1 implicit_mods 0x00 explicit_mods 0x00
+layer 7 position: 13, binding name: key_press
+kp_released: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
 layer 1 position: 31, binding name: layer_tap_thumb
 mo_released: position 31 layer 7
 ht_binding_released: 31 cleaning up hold-tap

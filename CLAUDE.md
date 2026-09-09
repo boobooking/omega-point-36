@@ -811,11 +811,32 @@ Digits **1, 9 and 0 stay plain `&kp`** — `Shift+1/9/0` already gives `! ( )` o
 morphing them would only add a way to be wrong. Read out of the layout's own data with
 `UCKeyTranslate`, dead-key processing left on; none of the seven is a dead key.
 
-`keep-mods` is deliberately absent from the morphs. Without it ZMK sets `masked_mods = mods`
-(`behavior_mod_morph.c`), so the Shift that selected the morph is masked while it is pressed and the
-host sees a clean `Option+digit` rather than `Shift+Option+digit`. `tests/numbers-ru-symbols` pins
-the whole shape: unshifted the key is a bare `0x1F`, shifted it is `0x1F` with `implicit_mods 0x04`,
-and positions 26 and 8 stay bare under the same Shift.
+**Each of the seven is a *pair* of morphs, and the nesting is load-bearing.** The rule they encode is
+*Shift alone means "type the symbol"; Shift with any other modifier means "this is a shortcut, pass
+it through untouched"*. One mod-morph cannot say that: its condition is a bitwise AND, so any Shift
+fires it no matter what else is held. A single morph therefore turned `Cmd+Shift+4` into
+`Cmd+Option+4` and **broke every screenshot shortcut on `ru`** while leaving `en` untouched, because
+only `numbers_ru` carries these keys. That reached the device.
+
+The nesting hangs on how masking works in `behavior_mod_morph.c`:
+
+- The outer morph fires on Shift and masks Shift (`masked_mods = mods` when `keep-mods` is absent).
+- With no Cmd/Ctrl/Alt the inner takes its **normal** branch, which never calls
+  `zmk_hid_masked_modifiers_set` at all — so the outer's mask stands and a clean `Option+digit`
+  reaches the host.
+- With one of them held the inner takes its **morph** branch, whose first act *is*
+  `masked_modifiers_set(masked_mods)`. Its `keep-mods` equals its `mods`, so that value is zero and
+  the call **clears the outer's Shift mask**. A plain `&kp` digit then goes out with Shift and Cmd
+  both live.
+
+`tests/numbers-ru-symbols` pins all three cases on one key, position 27: bare `0x1F` with no
+modifier, `0x1F` with `implicit_mods 0x04` under Shift alone, and `0x1F` with `implicit_mods 0x00`
+under Cmd+Shift while `0xE3` and `0xE1` stay down. Positions 26 and 8 stay bare under Shift, being
+the unmorphed 1 and 9.
+
+Both halves of every pair carry a `display-name` — the digit outside, the symbol inside — because an
+editor renders a `&kp` from its parameter and a mod-morph has none, so without it the keys show as
+bare labels like `&d4` with no hint of what they do.
 
 **`numbers_ru` is a hand-kept copy of `numbers_en`** in everything but those seven keys — the
 left-hand modifiers, the four shortcuts and the `&none` all have to match, or the layer quietly
