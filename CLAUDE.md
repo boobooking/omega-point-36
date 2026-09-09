@@ -912,12 +912,24 @@ it is guilty that its whole reach is `zmk_keymap_layer_activate` and `..._deacti
 letters work on both layer 0 and layer 1. If the fault outlives this setting, the module is
 exonerated and the cause is below the keymap, in the split or the BLE link.
 
-That reading has support: earlier the same day, Enter at position 33 and the `nav` hold at position
-34 both failed on the iPad and worked on the Mac, then came back on their own after nothing but a
-profile switch. Nothing host-dependent exists in the firmware to explain that —
+That reading has support. **Three separate iPad faults in one day were all transient and none was
+the keymap:**
+
+| symptom | cleared by |
+|---|---|
+| Enter at position 33 dead, `nav` hold at 34 dead; both fine on the Mac | a BLE profile switch |
+| no letters on either language layer after a profile switch | — (prompted this setting) |
+| Spotlight accepted no input at all, while a text editor on the same iPad took everything | restarting the iPad |
+
+Nothing host-dependent exists in the firmware to explain any of them:
 `CONFIG_ZMK_HID_INDICATORS` is off, so the keyboard reads nothing back from either host, and layer
-raising is decided entirely on the keyboard. A transient that clears on reconnection is the
-connection, which is what "suspect the split connection before the keymap" already says.
+raising is decided entirely on the keyboard. The Spotlight one is the clearest — it refused input
+even when opened by a swipe, with the keyboard not involved in opening it at all.
+
+**So on iPadOS, exhaust the host before touching the keymap: reconnect the profile, then restart the
+iPad.** That is the same instinct as "suspect the split connection before the keymap", extended to
+the host's own state. Chasing any of the three into the devicetree would have found nothing, and the
+second one is why this module is currently off.
 
 Everything below describes the module as written, for when it comes back.
 
