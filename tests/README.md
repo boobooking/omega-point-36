@@ -96,6 +96,14 @@ lead-in: it is `&none` on `en`.
   The tail taps position 11 on its own, where Shift carries Escape: it must come
   out `0x29`. Space is long resolved by then, which this key needs — inside
   Space's undecided window a second hold-tap is dropped whole.
+- **`numbers-esc-timing`** — how long the Escape tap on position 11 may last.
+  Space is held throughout, since that is the only way to reach the layer, and
+  the tap is made with the same hand — which is why it runs long. Balanced with
+  no other key in play decides on the timer, so this measures the tapping term:
+  at 200 ms a 250 ms press came out a silent Shift and the key read as dead on
+  the device; at 500 ms all of 100, 150, 250 and 400 ms give `0x29`. Re-run it
+  and `numbers-ru-symbols` together before touching that term — the second one
+  is what proves the value costs `Shift+digit` nothing.
 - **`adj-key`** — `adj` hangs off position 35 as `&ltadj L_ADJ 0`, a hold-tap
   whose tap is `&none`. Held past the tapping term, position 1 must resolve on
   `adj` as `bluetooth`; tapped, the key emits nothing at all and `adj` never

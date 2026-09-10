@@ -257,14 +257,24 @@ whole point of the layer is `Shift+digit`, so a guard window would resolve Shift
 a digit and type Escape instead of the symbol. It is balanced rather than tap-preferred for the same
 gesture: the hold has to win as soon as the digit is released, not after a term.
 
-Two things about it were checked rather than assumed. The mod-morphs still see the Shift: the
-hold-tap decides on the digit's release, presses `0xE1`, and only then replays the captured digit, so
-`tests/numbers-ru-symbols` still shows `implicit_mods 0x04` under Shift alone and a bare digit under
-Cmd+Shift. And **the known cost is real**: Space raises this layer and is itself a hold-tap, and only
-one hold-tap may be undecided at a time (`behavior_hold_tap.c:611` returns `ZMK_BEHAVIOR_OPAQUE` for
-the second), so Shift pressed inside Space's undecided window is dropped whole — no Shift, no Escape.
-Let the layer come up first. That cost was accepted knowingly; it is the price of putting a tap on a
-key reached through another hold-tap.
+**Its `tapping-term-ms` is 500, not the 200 every other hold-tap here uses, and the length is the
+point.** With balanced and another key in play the hold is decided by *that key's release*, never by
+the timer, so `Shift+digit` is untouched by this value — `tests/numbers-ru-symbols` did not move by a
+line when it changed. The timer governs one case only: this key pressed with nothing after it, which
+is always meant as Escape. At 200 ms a press held longer than that became a **silent Shift**, and the
+key read as dead on the device — a tap made while the same hand's thumb holds Space easily runs past
+200 ms. `tests/numbers-esc-timing` measures the boundary at 100, 150, 250 and 400 ms.
+
+The mod-morphs still see the Shift, which was the other thing worth checking: the hold-tap decides on
+the digit's release, presses `0xE1`, and only then replays the captured digit, so
+`tests/numbers-ru-symbols` shows `implicit_mods 0x04` under Shift alone and a bare digit under
+Cmd+Shift.
+
+**Pressing this key inside Space's undecided window is fine**, contrary to what the
+one-undecided-hold-tap rule suggests at first reading. That rule drops a *behavior* invoked while
+another is undecided; a position event is instead **captured** by the undecided hold-tap and replayed
+once it resolves, by which time this key can start its own cleanly. Measured, not reasoned: the fast
+gesture and the slow one give the same `0x29`.
 
 **Hyper sits on the top row of both letter layers**, positions 2 and 7 — `F`/`U` on `en`, `у`/`ш` on
 `ru` — through `hyl`/`hyr`. Those are `hml`/`hmr` with the hold binding swapped, same flavour, same

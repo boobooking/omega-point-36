@@ -163,16 +163,23 @@
         // the hold has to win as soon as the digit is released, not after a
         // term. No quick-tap-ms either: repeating Escape is never wanted.
         //
-        // Known cost, accepted: Space raises this layer and is itself a
-        // hold-tap, and only one hold-tap may be undecided at a time
-        // (behavior_hold_tap.c:611 returns OPAQUE for the second). Pressing
-        // Shift inside Space's undecided window therefore drops it whole — no
-        // Shift, no Escape. Let the layer come up first.
+        // tapping-term-ms is 500, not the 200 every other hold-tap here uses,
+        // and the length is the whole point. With balanced and another key in
+        // play the hold is decided by *that key's release*, never by the timer,
+        // so Shift+digit is unaffected by this value. The timer governs one
+        // case only: this key pressed with nothing after it — which is always
+        // meant as Escape. At 200 ms a press held longer became a silent Shift,
+        // and that is exactly what a tap made while the same hand's thumb holds
+        // Space looks like. tests/numbers-esc-timing measures the boundary.
+        //
+        // Pressing this inside Space's undecided window is fine, incidentally:
+        // the position event is captured by Space's hold-tap and replayed once
+        // it resolves, so nothing is lost.
         sesc: shift_escape {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
             flavor = "balanced";
-            tapping-term-ms = <200>;
+            tapping-term-ms = <500>;
             bindings = <&kp>, <&kp>;
         };
 
