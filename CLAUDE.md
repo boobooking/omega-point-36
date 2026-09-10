@@ -675,6 +675,11 @@ parses the collection. Apple's "Press 🌐 key to" setting, `AppleFnUsageType = 
 `com.apple.HIToolbox`, does not answer to that consumer usage from a third-party keyboard; it appears
 wired to Apple's own Fn. Do not spend another firmware on `GLOBE` for macOS without new evidence.
 
+**`GLOBE` is sent last, and the order is not arbitrary.** iPadOS flashes an input-source indicator
+when it switches, and anything arriving immediately after `GLOBE` suppresses it — with the chord
+second, the switch happened but showed nothing. The Mac is indifferent to the order, since it acts
+on the chord and ignores `GLOBE` either way.
+
 **`Hyper+F13` is chosen for being unpressable.** This keyboard has no F13, so the chord cannot be
 struck by accident, and nothing on either platform claims it. That matters because the switch is
 open-loop: one stray press desynchronises the firmware from the host until you notice it. Ctrl+Space

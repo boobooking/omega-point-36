@@ -479,6 +479,12 @@
         // parses the collection. Apple's "Press 🌐 key to" is wired to their own
         // Fn, which a third-party keyboard cannot produce.
         //
+        // **Order matters, and GLOBE goes last.** iPadOS flashes an
+        // input-source indicator when it switches, and anything arriving right
+        // after GLOBE suppresses it — with the chord second the switch happened
+        // silently. The Mac does not care which order they come in, since it
+        // acts on the chord and ignores GLOBE either way.
+        //
         // Hyper+F13 is chosen for being unpressable: this keyboard has no F13,
         // so the chord cannot be struck by accident, and nothing on either
         // platform claims it. That matters because the switch is open-loop —
@@ -497,7 +503,7 @@
         os_lang: os_lang {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings = <&kp GLOBE>, <&kp LC(LA(LG(LS(F13))))>;
+            bindings = <&kp LC(LA(LG(LS(F13))))>, <&kp GLOBE>;
             label = "OS_LANG";
             wait-ms = <0>;
         };
