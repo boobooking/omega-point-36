@@ -247,9 +247,24 @@ half does not. See "Positional hold-tap" below for why the thumbs are in both li
 
 On `nav` the right-hand mods are deliberately **plain `&kp RGUI/RCTRL/RSHFT/LALT`, not hold-taps**:
 the arrows moved to the left hand, so there is nothing to tap, and `require-prior-idle-ms` would
-make a hold-tap resolve as a useless tap right after typing. `numbers` carries its left-hand mods
-the same way and for the same reason — the digits are on the right hand, and there is no letter
-under the mod worth tapping.
+make a hold-tap resolve as a useless tap right after typing. The numbers layers carry Alt, Ctrl and
+Cmd the same way and for the same reason — the digits are on the right hand, and nothing under those
+three is worth tapping.
+
+**Shift on the numbers layers is the exception**: position 11 is `&sesc LSHFT ESC`, a hold-tap with
+Escape on the tap. It carries **no `require-prior-idle-ms`**, and that absence is load bearing — the
+whole point of the layer is `Shift+digit`, so a guard window would resolve Shift to a tap right after
+a digit and type Escape instead of the symbol. It is balanced rather than tap-preferred for the same
+gesture: the hold has to win as soon as the digit is released, not after a term.
+
+Two things about it were checked rather than assumed. The mod-morphs still see the Shift: the
+hold-tap decides on the digit's release, presses `0xE1`, and only then replays the captured digit, so
+`tests/numbers-ru-symbols` still shows `implicit_mods 0x04` under Shift alone and a bare digit under
+Cmd+Shift. And **the known cost is real**: Space raises this layer and is itself a hold-tap, and only
+one hold-tap may be undecided at a time (`behavior_hold_tap.c:611` returns `ZMK_BEHAVIOR_OPAQUE` for
+the second), so Shift pressed inside Space's undecided window is dropped whole — no Shift, no Escape.
+Let the layer come up first. That cost was accepted knowingly; it is the price of putting a tap on a
+key reached through another hold-tap.
 
 **Hyper sits on the top row of both letter layers**, positions 2 and 7 — `F`/`U` on `en`, `у`/`ш` on
 `ru` — through `hyl`/`hyr`. Those are `hml`/`hmr` with the hold binding swapped, same flavour, same

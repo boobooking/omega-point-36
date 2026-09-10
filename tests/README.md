@@ -90,9 +90,12 @@ lead-in: it is `&none` on `en`.
   times. Both keys are on the right half, so the same refusal applies: position 16
   resolves to a bare `0x11` and the five `0x28` arrive unmodified.
 - **`numbers-layer`** — holds Space (position 31) past the tapping term to raise
-  `numbers`, then checks what that layer resolves to: `0x1E` on position 26, Prev
+  `numbers_en`, then checks what that layer resolves to: `0x1E` on position 26, Prev
   Win as `0x38` with `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain
   `&kp LGUI` on position 13 held over a digit, and Space still tapping afterwards.
+  The tail taps position 11 on its own, where Shift carries Escape: it must come
+  out `0x29`. Space is long resolved by then, which this key needs — inside
+  Space's undecided window a second hold-tap is dropped whole.
 - **`adj-key`** — `adj` hangs off position 35 as `&ltadj L_ADJ 0`, a hold-tap
   whose tap is `&none`. Held past the tapping term, position 1 must resolve on
   `adj` as `bluetooth`; tapped, the key emits nothing at all and `adj` never

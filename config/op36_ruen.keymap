@@ -153,6 +153,29 @@
         //
         // No quick-tap-ms: that property exists so tap-then-hold repeats the
         // tapped key, and there is no key here to repeat.
+        // Shift on the numbers layers, with Escape on the tap. The other mods
+        // there stay plain &kp; this one has something worth tapping.
+        //
+        // No require-prior-idle-ms, and that absence is load bearing: the whole
+        // point of the layer is Shift+digit, so a guard window would resolve
+        // Shift to a tap right after a digit and type Escape instead of the
+        // symbol. Balanced rather than tap-preferred for the same gesture —
+        // the hold has to win as soon as the digit is released, not after a
+        // term. No quick-tap-ms either: repeating Escape is never wanted.
+        //
+        // Known cost, accepted: Space raises this layer and is itself a
+        // hold-tap, and only one hold-tap may be undecided at a time
+        // (behavior_hold_tap.c:611 returns OPAQUE for the second). Pressing
+        // Shift inside Space's undecided window therefore drops it whole — no
+        // Shift, no Escape. Let the layer come up first.
+        sesc: shift_escape {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            bindings = <&kp>, <&kp>;
+        };
+
         ltadj: layer_tap_adj {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
@@ -707,7 +730,7 @@
         numbers_en {
             bindings = <
   &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &kp N7  &kp N8  &kp N9  &none
-  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &kp N4  &kp N5  &kp N6  &none
+  &kp LALT  &sesc LSHFT ESC         &kp LCTRL    &kp LGUI              &none                                     &none   &kp N4  &kp N5  &kp N6  &none
   &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &kp N2  &kp N3  &none
                                                  &trans                &trans                  &trans    &trans  &trans  &trans
             >;
@@ -718,7 +741,7 @@
         numbers_ru {
             bindings = <
   &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &d7     &d8  &kp N9  &none
-  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &d4     &d5  &d6     &none
+  &kp LALT  &sesc LSHFT ESC         &kp LCTRL    &kp LGUI              &none                                     &none   &d4     &d5  &d6     &none
   &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &d2  &d3     &none
                                                  &trans                &trans                  &trans    &trans  &trans  &trans
             >;
