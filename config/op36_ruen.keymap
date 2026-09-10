@@ -142,6 +142,25 @@
             bindings = <&mo>, <&kp>;
         };
 
+        // adj with nothing to tap. It has to stay a hold-tap rather than become
+        // a plain &mo, because tap-preferred is what keeps a roll off this key:
+        // the layer only comes up once the tapping term expires, so pressing it
+        // and a letter together taps nothing and the letter lands on the base
+        // layer. A bare &mo raises adj on the press, and adj carries
+        // &bootloader at position 10 and &bt BT_SEL at 1 and 2 — all on the
+        // left hand, exactly where a rolled letter goes. "35 then a" would
+        // reboot into the bootloader.
+        //
+        // No quick-tap-ms: that property exists so tap-then-hold repeats the
+        // tapped key, and there is no key here to repeat.
+        ltadj: layer_tap_adj {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <200>;
+            bindings = <&mo>, <&none>;
+        };
+
         // Position 32 carries both jobs: hold for the symbol layer, tap to
         // switch language. &ltt cannot express it — its tap binding is &kp and
         // the switch is a macro — so these are the same behavior with the tap
@@ -621,10 +640,10 @@
 
         en {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                                         &kp Z                 &kp L          &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                                         &kp M                 &hmr RGUI N    &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                                         &kp K                 &kp H          &kp J         &kp Q         &none
-                                           &kp ESC      &ltt L_NUM_EN SPACE  &ltru L_SYM_EN 0    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &lt L_ADJ TAB
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                                         &kp Z                 &kp L           &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                                         &kp M                 &hmr RGUI N     &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                                         &kp K                 &kp H           &kp J         &kp Q         &none
+                                           &none        &ltt L_NUM_EN SPACE  &ltru L_SYM_EN 0    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &ltadj L_ADJ 0
             >;
 
             display-name = "Base";
@@ -635,7 +654,7 @@
   &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA           &kp RU_CYRILLIC_IE                                            &kp RU_CYRILLIC_EN    &kp RU_CYRILLIC_GHE                 &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
   &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                                            &kp RU_CYRILLIC_ER    &hmr_ru RGUI RU_CYRILLIC_O          &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
   &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt L_RU_EXT RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                                             &kp RU_CYRILLIC_TE    &lt L_RU_EXT RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
-                                                                                          &kp ESC                      &ltt L_NUM_RU SPACE  &lten L_SYM_RU 0    &ltt L_SYM_RU ENTER  &ltt L_NAV BACKSPACE  &lt L_ADJ TAB
+                                                                                          &none                        &ltt L_NUM_RU SPACE  &lten L_SYM_RU 0    &ltt L_SYM_RU ENTER  &ltt L_NAV BACKSPACE  &ltadj L_ADJ 0
             >;
 
             display-name = "Ru";
@@ -676,10 +695,10 @@
 
         nav {
             bindings = <
-  &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                     &none   &to L_EN  &to L_RU   &none      &none
-  &none  &kp LEFT          &kp DOWN  &kp RIGHT         &none                     &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
-  &none  &none             &none     &none             &none                     &none   &none     &none      &none      &none
-                                     &trans            &trans  &trans    &trans  &trans  &trans
+  &none    &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                      &none   &to L_EN  &to L_RU   &none      &none
+  &kp ESC  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                    &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
+  &none    &none             &none     &none             &none                      &none   &none     &none      &none      &none
+                                       &trans            &trans   &trans    &trans  &trans  &trans
             >;
 
             display-name = "Nav";
@@ -720,10 +739,10 @@
 
         en_letters {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                              &kp Z                 &kp L          &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                              &kp M                 &hmr RGUI N    &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                              &kp K                 &kp H          &kp J         &kp Q         &none
-                                           &kp ESC      &ltt L_NUM_EN SPACE  &none    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &lt L_ADJ TAB
+  &none        &kp W         &hyl 0 F      &kp P        &kp B                                              &kp Z                 &kp L           &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                              &kp M                 &hmr RGUI N     &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D        &kp V                                              &kp K                 &kp H           &kp J         &kp Q         &none
+                                           &none        &ltt L_NUM_EN SPACE  &none    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &ltadj L_ADJ 0
             >;
 
             display-name = "En letters";

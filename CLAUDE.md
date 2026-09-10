@@ -209,14 +209,14 @@ see "Two numbers layers" below for what differs between them and why one layer c
 languages.
 
 ```
-en ──hold pos 35──> adj                 (tap gives Tab)
+en ──hold pos 35──> adj                 (tap gives nothing, on purpose)
  ├──Space────────> numbers_en           (numbers_ru from ru)
  ├──Bspc─────────> nav
  └──Esc/Enter────> sym_en
 ru behaves identically, except Esc/Enter reach sym_ru
 ru ──hold pos 23 or 26──> ru_ext        (the seven letters that did not fit)
 en <──tap pos 32──> ru                  (layer_ru / layer_en, and the host follows)
-nav has &to 0 / &to 1 for language resync
+nav has &to 0 / &to 1 for language resync, and Esc/Tab flanking the arrows
 ```
 
 Positions are 0-9 / 10-19 / 20-29 for the three rows, then 30-32 (left thumbs) and 33-35 (right).
@@ -439,14 +439,15 @@ Five keys, and which one you hold picks the layer. Each leaves one hand free:
 
 | held | leads to | free hand |
 |---|---|---|
-| 35 Tab | `adj` | left, and `adj` lives on the right hand |
+| 35 | `adj` | left; `adj`'s profile keys now sit there too |
 | 31 Space | `numbers_en` from `en`, `numbers_ru` from `ru` | right, where the digits are |
 | 34 Backspace | `nav` | left, where the arrows are |
 | 32 / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
 | **tap 32** | the layout switch, not a layer | — |
 
-Position 30 is a plain `&kp ESC` and reaches no layer at all. Every other thumb carries something;
-none is spare.
+**Position 30 is `&none`, and 35 has no tap.** Escape and Tab used to live there; both moved to
+`nav`, Escape at position 10 and Tab at 14, flanking the arrows on the hand that position 34 leaves
+free. So position 30 is the one spare thumb, and every other one still carries something.
 
 **Position 32 does two jobs**, hold for the symbol layer and tap for the layout switch, through
 `ltru` on `en` and `lten` on `ru`. `&ltt` cannot express it: its tap binding is `&kp` and the switch
@@ -463,14 +464,16 @@ language switch.
 Read any "position 30" below that talks about the layout switch as history: the switch has lived on
 2+3, then 31+34, then 30, and now 32.
 
-**Position 35 is `&lt 7 TAB`, deliberately the stock tap-preferred `&lt` and not `&ltt`.** Every other
-thumb is balanced, but `adj` carries `&bootloader` and `&bt BT_CLR`, and Tab is frequent: with
-balanced, a fast Tab-then-letter roll would raise `adj` and drop that letter onto one of them.
-Tap-preferred waits for the tapping term, so a roll always taps. `tests/adj-key` pins both halves —
-held 250 ms it reaches layer 7, tapped it emits `0x2B` and layer 7 never comes up. Tab left `nav`
-(position 14, now `&none`) when it arrived here.
+**Position 35 is `&ltadj L_ADJ 0` — a hold-tap whose tap is `&none`, and it must not become a plain
+`&mo`.** Every other thumb is balanced; this one is tap-preferred, which is what keeps a roll off it.
+`adj` carries `&bootloader` at position 10 and `&bt BT_SEL` at 1 and 2 — all on the **left** hand,
+exactly where a letter rolled after the right thumb lands. With `&mo` the layer comes up on the
+press, so "35 then a" reboots into the bootloader. Tap-preferred waits out the tapping term instead,
+so a roll resolves as a tap of nothing and the letter falls through to the base layer. The key kept
+its guard when Tab left it; only the tap changed, from `TAB` to `&none`. `tests/adj-key` pins both
+halves — held 250 ms it reaches `adj`, tapped it emits nothing and `adj` never comes up.
 
-`adj` is a plain `&lt L_ADJ TAB` on position 35 — no chain, no combo. It was on the Space+Backspace hold
+`adj` hangs off position 35 alone — no chain, no combo. It was on the Space+Backspace hold
 until a tap on those two became the layout switch, which made the gesture ambiguous by construction:
 a ZMK combo fires on simultaneous press and cannot tell a tap from the start of a hold. It then sat
 on position 30 until that position became the layout switch itself, and moved to 35, the last free

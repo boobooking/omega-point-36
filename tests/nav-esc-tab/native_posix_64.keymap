@@ -28,35 +28,31 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* The reported loop: Cmd+Space, Esc to dismiss, Cmd+Space (fails on
-           hardware), Cmd+Space (works again).
-           N = pos 16 = RC(1,6), Space = pos 31 = RC(3,1). Escape is no longer a
-           thumb: it lives on nav at position 10, so dismissing means holding
-           pos 34 and tapping pos 10. */
+        /* Escape and Tab live on nav now, flanking the arrows: Escape at
+           position 10, left of &kp LEFT, and Tab at position 14, right of
+           &kp RIGHT. Both are on the left hand, which is the one held free by
+           the right thumb on position 34.
 
-        /* --- attempt 1 --- */
-        ZMK_MOCK_PRESS(1,6,20)
-        ZMK_MOCK_PRESS(3,1,30)
-        ZMK_MOCK_RELEASE(3,1,20)
-        ZMK_MOCK_RELEASE(1,6,300)
-
-        /* --- Esc: hold nav, tap position 10, let go --- */
-        ZMK_MOCK_PRESS(3,4,250)
+           Hold 34 past the tapping term, then press each. Escape is 0x29 and
+           Tab is 0x2B; the arrow between them is 0x50, proving the layer is
+           really nav and not something falling through. */
+        ZMK_MOCK_PRESS(3,4,300)
         ZMK_MOCK_PRESS(1,0,30)
         ZMK_MOCK_RELEASE(1,0,30)
+        ZMK_MOCK_PRESS(1,1,30)
+        ZMK_MOCK_RELEASE(1,1,30)
+        ZMK_MOCK_PRESS(1,4,30)
+        ZMK_MOCK_RELEASE(1,4,30)
         ZMK_MOCK_RELEASE(3,4,300)
 
-        /* --- attempt 2 (the one that fails) --- */
-        ZMK_MOCK_PRESS(1,6,20)
-        ZMK_MOCK_PRESS(3,1,30)
-        ZMK_MOCK_RELEASE(3,1,20)
-        ZMK_MOCK_RELEASE(1,6,300)
-
-        /* --- attempt 3 --- */
-        ZMK_MOCK_PRESS(1,6,20)
-        ZMK_MOCK_PRESS(3,1,30)
-        ZMK_MOCK_RELEASE(3,1,20)
-        ZMK_MOCK_RELEASE(1,6,100)
+        /* With 34 up, the same three positions are ordinary letters again:
+           A (0x04), R (0x15) and G (0x0A) on en. */
+        ZMK_MOCK_PRESS(1,0,30)
+        ZMK_MOCK_RELEASE(1,0,30)
+        ZMK_MOCK_PRESS(1,1,30)
+        ZMK_MOCK_RELEASE(1,1,30)
+        ZMK_MOCK_PRESS(1,4,30)
+        ZMK_MOCK_RELEASE(1,4,300)
     >;
 };
 

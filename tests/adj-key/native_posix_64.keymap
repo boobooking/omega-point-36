@@ -28,7 +28,7 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Position 35 is &lt L_ADJ TAB: tap-preferred, so adj only comes up
+        /* Position 35 is &ltadj L_ADJ 0: tap-preferred, so adj only comes up
            once the 200 ms tapping term has passed. Held that long, pos 1 must
            resolve on the adj layer as the bluetooth behavior; released,
            ordinary letters come back. The profile keys sit on the left hand
@@ -39,9 +39,12 @@
         ZMK_MOCK_RELEASE(0,1,30)
         ZMK_MOCK_RELEASE(3,5,300)
 
-        /* Tapped instead of held, position 35 is Tab (0x2B) and adj never
-           comes up. This is what tap-preferred buys: a roll cannot drop a
-           letter onto &bootloader or &bt BT_CLR. */
+        /* Tapped instead of held, position 35 emits nothing at all — its tap
+           binding is &none — and adj never comes up. That emptiness is why the
+           key stays a hold-tap instead of becoming a plain &mo: tap-preferred
+           makes a roll resolve as a tap, so the letter that follows lands on
+           the base layer rather than on adj, where &bootloader sits at position
+           10 and the BT profile keys at 1 and 2. */
         ZMK_MOCK_PRESS(3,5,30)
         ZMK_MOCK_RELEASE(3,5,30)
         ZMK_MOCK_PRESS(0,6,30)

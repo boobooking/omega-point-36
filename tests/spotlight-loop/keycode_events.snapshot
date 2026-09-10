@@ -10,8 +10,13 @@ kp_released: usage_page 0x07 keycode 0x2C implicit_mods 0x00 explicit_mods 0x00
 ht_binding_released: 31 cleaning up hold-tap
 kp_released: usage_page 0x07 keycode 0xE7 implicit_mods 0x00 explicit_mods 0x00
 ht_binding_released: 16 cleaning up hold-tap
+ht_binding_pressed: 34 new undecided hold_tap
+ht_decide: 34 decided hold-timer (balanced decision moment timer)
+mo_pressed: position 34 layer 5
 kp_pressed: usage_page 0x07 keycode 0x29 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x29 implicit_mods 0x00 explicit_mods 0x00
+mo_released: position 34 layer 5
+ht_binding_released: 34 cleaning up hold-tap
 ht_binding_pressed: 16 new undecided hold_tap
 ht_decide: 16 decided hold-interrupt (balanced decision moment other-key-up)
 kp_pressed: usage_page 0x07 keycode 0xE7 implicit_mods 0x00 explicit_mods 0x00

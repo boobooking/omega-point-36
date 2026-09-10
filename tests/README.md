@@ -75,8 +75,18 @@ lead-in: it is `&none` on `en`.
   to re-run before touching `require-prior-idle-ms`.
 - **`spotlight-loop`** — Cmd+Space, Esc, Cmd+Space, Cmd+Space: the loop as
   reported on hardware, where the second attempt fails. All three succeed here
-  (`0xE7` + `0x2C` three times, with one `0x29` for the Esc). The simulator not
-  reproducing it is the finding — the remaining gap lives below the keymap.
+  and attempts 2 and 3 are identical line for line. **The simulator not
+  reproducing it is the finding** — the remaining gap lives below the keymap.
+  The name records where the symptom was seen, not anything the firmware knows;
+  to the keyboard this is only a chord repeated three times. The Esc between the
+  attempts is now the real gesture, holding `nav` and tapping position 10, and
+  removing it changed no decision at all — so it is scenery, and
+  `chord-repeat-fast` is the case that actually measures repetition.
+- **`nav-esc-tab`** — Escape and Tab left the thumbs for `nav`, flanking the
+  arrows: Escape at position 10, left of `&kp LEFT`, and Tab at 14, right of
+  `&kp RIGHT`. Holding position 34 they must give `0x29` and `0x2B`, with the
+  arrow's `0x50` between them proving the layer really is `nav`; released, the
+  same three positions are `A`, `R` and `G` again.
 - **`cmd-enter-crosshand`** — Enter (position 33, right half) chorded with the
   LEFT Cmd (position 13), four times with shrinking gaps. All four give
   `0xE3` + `0x28`: the opposite-hand rule satisfied.
@@ -97,10 +107,14 @@ lead-in: it is `&none` on `en`.
   `numbers`, then checks what that layer resolves to: `0x1E` on position 26, Prev
   Win as `0x38` with `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain
   `&kp LGUI` on position 13 held over a digit, and Space still tapping afterwards.
-- **`adj-key`** — `adj` is a plain `&mo 7` on position 30. Held, position 5 must
-  resolve on layer 7 as `bluetooth`; released, it is a letter again. The tail
-  guards the other half of the change: holding Space then Backspace, the old
-  route, must now give `numbers` over `nav` and never reach layer 7.
+- **`adj-key`** — `adj` hangs off position 35 as `&ltadj L_ADJ 0`, a hold-tap
+  whose tap is `&none`. Held past the tapping term, position 1 must resolve on
+  `adj` as `bluetooth`; tapped, the key emits nothing at all and `adj` never
+  comes up. That second half is the guard, not a formality: `adj` carries
+  `&bootloader` and the BT profile keys on the left hand, so a roll that raised
+  the layer would drop the next letter onto one of them. The tail checks the old
+  route too — holding Space then Backspace gives `numbers` over `nav`, never
+  `adj`.
 - **`thumb-switch`** — the layout switch in its new home. A tap on thumbs 31+34
   emits one Globe and flips the layer, so position 1 reads `0x14` (й) and
   then `0x1A` (W) again. Tapped far apart the same two keys are still Space
