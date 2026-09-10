@@ -73,20 +73,6 @@ lead-in: it is `&none` on `en`.
   with no modifier. This is what stops a narrower guard, or thumbs put back into
   the own-hand lists, from turning ordinary typing into Spotlight. The other case
   to re-run before touching `require-prior-idle-ms`.
-- **`spotlight-loop`** — Cmd+Space, Esc, Cmd+Space, Cmd+Space: the loop as
-  reported on hardware, where the second attempt fails. All three succeed here
-  and attempts 2 and 3 are identical line for line. **The simulator not
-  reproducing it is the finding** — the remaining gap lives below the keymap.
-  The name records where the symptom was seen, not anything the firmware knows;
-  to the keyboard this is only a chord repeated three times. The Esc between the
-  attempts is now the real gesture, holding `nav` and tapping position 10, and
-  removing it changed no decision at all — so it is scenery, and
-  `chord-repeat-fast` is the case that actually measures repetition.
-- **`nav-esc-tab`** — Escape and Tab left the thumbs for `nav`, flanking the
-  arrows: Escape at position 10, left of `&kp LEFT`, and Tab at 14, right of
-  `&kp RIGHT`. Holding position 34 they must give `0x29` and `0x2B`, with the
-  arrow's `0x50` between them proving the layer really is `nav`; released, the
-  same three positions are `A`, `R` and `G` again.
 - **`cmd-enter-crosshand`** — Enter (position 33, right half) chorded with the
   LEFT Cmd (position 13), four times with shrinking gaps. All four give
   `0xE3` + `0x28`: the opposite-hand rule satisfied.
