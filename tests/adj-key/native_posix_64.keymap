@@ -28,34 +28,40 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Position 35 is &ltadj L_ADJ 0: tap-preferred, so adj only comes up
-           once the 200 ms tapping term has passed. Held that long, pos 1 must
-           resolve on the adj layer as the bluetooth behavior; released,
-           ordinary letters come back. The profile keys sit on the left hand
-           because the thumb that holds adj is on the right, so the probe is a
-           left-hand position. */
+        /* adj hangs off position 30 now, as &ltadj L_ADJ 0: tap-preferred, so
+           the layer only comes up once the 200 ms term has passed. Held that
+           long, position 6 must resolve on adj as the bluetooth behavior. The
+           probe is a right-hand position because the thumb holding adj is on
+           the left, which is also why the layer's keys moved there. */
+        ZMK_MOCK_PRESS(3,0,250)
+        ZMK_MOCK_PRESS(0,6,30)
+        ZMK_MOCK_RELEASE(0,6,30)
+        ZMK_MOCK_RELEASE(3,0,300)
+
+        /* Tapped instead of held, position 30 emits nothing at all — its tap
+           binding is &none — and adj never comes up. That emptiness is the
+           guard: tap-preferred makes a roll resolve as a tap, so the letter
+           after it lands on the base layer rather than on adj, where
+           &bootloader sits at position 15 and the BT profile keys at 6 and 7.
+           Position 6 is L (0x0F) on en. */
+        ZMK_MOCK_PRESS(3,0,30)
+        ZMK_MOCK_RELEASE(3,0,30)
+        ZMK_MOCK_PRESS(0,6,30)
+        ZMK_MOCK_RELEASE(0,6,300)
+
+        /* Position 35 is the thumb adj left behind, and it is &none until the
+           globe layer lands there: pressing it does nothing, and the letter
+           after it is still L. */
         ZMK_MOCK_PRESS(3,5,250)
-        ZMK_MOCK_PRESS(0,1,30)
-        ZMK_MOCK_RELEASE(0,1,30)
+        ZMK_MOCK_PRESS(0,6,30)
+        ZMK_MOCK_RELEASE(0,6,30)
         ZMK_MOCK_RELEASE(3,5,300)
 
-        /* Tapped instead of held, position 35 emits nothing at all — its tap
-           binding is &none — and adj never comes up. That emptiness is why the
-           key stays a hold-tap instead of becoming a plain &mo: tap-preferred
-           makes a roll resolve as a tap, so the letter that follows lands on
-           the base layer rather than on adj, where &bootloader sits at position
-           10 and the BT profile keys at 1 and 2. */
-        ZMK_MOCK_PRESS(3,5,30)
-        ZMK_MOCK_RELEASE(3,5,30)
-        ZMK_MOCK_PRESS(0,6,30)
-        ZMK_MOCK_RELEASE(0,6,300)
-
-        /* Pos 6 is L on en once the key is up. */
-        ZMK_MOCK_PRESS(0,6,30)
-        ZMK_MOCK_RELEASE(0,6,300)
-
-        /* Holding Space then Backspace gives numbers with nav over it, never
-           adj. They are no longer a combo either, so nothing switches. */
+        /* Holding Space and then Backspace still gives numbers with nav over
+           it, never adj — and it does not switch the language either, because
+           the two presses are 300 ms apart and a combo needs both inside
+           timeout-ms. Struck together they are the switch; held in sequence
+           they are two layers. */
         ZMK_MOCK_PRESS(3,1,300)
         ZMK_MOCK_PRESS(3,4,300)
         ZMK_MOCK_PRESS(0,6,30)

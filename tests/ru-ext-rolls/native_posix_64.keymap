@@ -26,10 +26,12 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* position 32 leaves en for ru, and taps Globe so the
-           host follows. Everything below therefore resolves on ru. */
-        ZMK_MOCK_PRESS(3,2,30)
-        ZMK_MOCK_RELEASE(3,2,300)
+        /* cmbru (thumbs 31+34) leaves en for ru, and taps Globe so
+           the host follows. Everything below therefore resolves on ru. */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
 
         /* "мо" rolled: о goes down and up while м (pos 23) is still held, and
            м is released inside the tapping term. Under the file's balanced

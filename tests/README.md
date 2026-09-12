@@ -93,29 +93,24 @@ lead-in: it is `&none` on `en`.
   `numbers_en`, then checks what that layer resolves to: `0x1E` on position 26, Prev
   Win as `0x38` with `implicit_mods 0x0B`, Term as `0x1F` with `0x0F`, the plain
   `&kp LGUI` on position 13 held over a digit, and Space still tapping afterwards.
-  The tail taps position 11 on its own, where Shift carries Escape: it must come
-  out `0x29`. Space is long resolved by then, which this key needs — inside
-  Space's undecided window a second hold-tap is dropped whole.
-- **`numbers-esc-timing`** — how long the Escape tap on position 11 may last.
-  Space is held throughout, since that is the only way to reach the layer, and
-  the tap is made with the same hand — which is why it runs long. Balanced with
-  no other key in play decides on the timer, so this measures the tapping term:
-  at 200 ms a 250 ms press came out a silent Shift and the key read as dead on
-  the device; at 500 ms all of 100, 150, 250 and 400 ms give `0x29`. Re-run it
-  and `numbers-ru-symbols` together before touching that term — the second one
-  is what proves the value costs `Shift+digit` nothing.
-- **`adj-key`** — `adj` hangs off position 35 as `&ltadj L_ADJ 0`, a hold-tap
-  whose tap is `&none`. Held past the tapping term, position 1 must resolve on
+  The tail taps position 11 on its own, the layer's Shift: a plain `&kp LSHFT`
+  now that Escape lives on the thumb cluster, so it goes down and up as `0xE1`
+  with no keycode of its own.
+- **`adj-key`** — `adj` hangs off position 30 as `&ltadj L_ADJ 0`, a hold-tap
+  whose tap is `&none`. Held past the tapping term, position 6 must resolve on
   `adj` as `bluetooth`; tapped, the key emits nothing at all and `adj` never
   comes up. That second half is the guard, not a formality: `adj` carries
-  `&bootloader` and the BT profile keys on the left hand, so a roll that raised
-  the layer would drop the next letter onto one of them. The tail checks the old
-  route too — holding Space then Backspace gives `numbers` over `nav`, never
-  `adj`.
-- **`thumb-switch`** — the layout switch in its new home. A tap on thumbs 31+34
-  emits one Globe and flips the layer, so position 1 reads `0x14` (й) and
-  then `0x1A` (W) again. Tapped far apart the same two keys are still Space
-  (`0x2C`) and Backspace (`0x2A`): the combo must not fire.
+  `&bootloader` and the BT profile keys on the right hand now, which is where a
+  letter rolled after the left thumb lands. Position 35, the thumb `adj` left
+  behind, must do nothing at all. The tail holds Space and then Backspace 300 ms
+  apart: that still gives `numbers` over `nav`, and does not switch the
+  language, because a combo needs both presses inside `timeout-ms`.
+- **`thumb-switch`** — the layout switch, back on the `cmbru`/`cmben` combo.
+  Thumbs 31+34 struck together emit one Globe and flip the layer, so position 1
+  reads `0x14` (й) and then `0x1A` (W) again. Position 32, the key the switch
+  vacated, taps Escape (`0x29`) and nothing else. Tapped far apart the same two
+  thumbs are still Space (`0x2C`) and Backspace (`0x2A`): outside `timeout-ms`
+  the combo must not fire.
 - **`hyper`** — holds `F` (position 2) past the term and chords `M`, then taps
   `F`, then holds `U` (position 7) and chords `G`. Each hold must emit all four
   modifiers as separate `0xE0`-`0xE3` keycodes that are still down when the
@@ -128,10 +123,12 @@ lead-in: it is `&none` on `en`.
   them. Position 26 is the `ru_ext` entrance on `ru`, so `sym_ru` has to win over
   it. Written to separate a keymap fault from a host-language desync; those
   scancodes on an *English* host read `&`, `?` and `/`.
-- **`ru-mod-combo`** — the regression for `en_hold`. Holding a modifier on `ru`
-  runs `&to 0`, which used to make the highest active layer 0 and re-arm `cmbru`;
-  tapping thumbs 31+34 then emitted a second switch and desynced the host.
-  Exactly one `0x39` may appear in this snapshot.
+- **`switch-under-mod`** — the switch combo struck while a modifier is held on
+  `ru`. It must not fire: the modifier raises `en_letters`, and a combo's
+  `layers` is checked against the highest active layer alone, so neither
+  direction is armed there. No Globe may appear inside the hold, and `ru` must
+  still be active afterwards. Position 32 under the same modifier taps Escape,
+  which is the safe answer that key could not give while it carried the switch.
 - **`ru-mod-switch`** — the reason `hml_ru`/`hyl_ru` exist. On `ru`, right Cmd
   over position 4 must resolve on layer 0 and send `0x05` (B), not `0x17`; right
   Alt and left Hyper must do the same; right **Shift** must not, so position 1

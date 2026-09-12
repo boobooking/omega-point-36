@@ -2,11 +2,6 @@ layer 0 position: 1, binding name: key_press
 kp_pressed: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
 layer 0 position: 1, binding name: key_press
 kp_released: usage_page 0x07 keycode 0x1A implicit_mods 0x00 explicit_mods 0x00
-layer 0 position: 32, binding name: layer_tap_to_ru
-ht_binding_pressed: 32 new undecided hold_tap
-layer 0 position: 32, binding name: layer_tap_to_ru
-ht_decide: 32 decided tap (balanced decision moment key-up)
-ht_binding_released: 32 cleaning up hold-tap
 kp_pressed: usage_page 0x07 keycode 0x68 implicit_mods 0x0F explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x68 implicit_mods 0x0F explicit_mods 0x00
 kp_pressed: usage_page 0x0C keycode 0x29D implicit_mods 0x00 explicit_mods 0x00
@@ -56,11 +51,6 @@ kp_released: usage_page 0x07 keycode 0xE2 implicit_mods 0x00 explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0xE3 implicit_mods 0x00 explicit_mods 0x00
 mo_released: position 7 layer 9
 ht_binding_released: 7 cleaning up hold-tap
-layer 1 position: 32, binding name: layer_tap_to_en
-ht_binding_pressed: 32 new undecided hold_tap
-layer 1 position: 32, binding name: layer_tap_to_en
-ht_decide: 32 decided tap (balanced decision moment key-up)
-ht_binding_released: 32 cleaning up hold-tap
 kp_pressed: usage_page 0x07 keycode 0x68 implicit_mods 0x0F explicit_mods 0x00
 kp_released: usage_page 0x07 keycode 0x68 implicit_mods 0x0F explicit_mods 0x00
 kp_pressed: usage_page 0x0C keycode 0x29D implicit_mods 0x00 explicit_mods 0x00

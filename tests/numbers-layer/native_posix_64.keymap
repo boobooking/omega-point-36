@@ -47,11 +47,9 @@
         ZMK_MOCK_RELEASE(1,6,30)
         ZMK_MOCK_RELEASE(1,3,30)
 
-        /* Position 11 is the layer's Shift, and its tap is Escape. Pressed and
-           released on its own, well inside the tapping term, it must come out
-           as 0x29 and not as a modifier. Space is long since resolved by here,
-           which is what this key needs — inside Space's undecided window a
-           second hold-tap is dropped whole. */
+        /* Position 11 is the layer's Shift, and it is a plain &kp now that
+           Escape lives on the thumbs: pressed and released on its own it is
+           0xE1 going down and up, with no keycode of its own. */
         ZMK_MOCK_PRESS(1,1,30)
         ZMK_MOCK_RELEASE(1,1,30)
 

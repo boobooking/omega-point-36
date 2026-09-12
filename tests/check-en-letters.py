@@ -3,12 +3,15 @@
 
 en_letters is a deliberate copy: it is raised over ru whenever a modifier or the
 herdr prefix needs Latin scancodes, and it has to carry real bindings because
-&trans there would fall straight back through to ru. The one difference is
-position 32, which is &none. That key now carries two jobs — hold for the symbol
-layer, tap to switch language — and under a modifier neither can be right: a copy
-of en would run "go to ru" from ru, and &trans would reach sym_ru, whose symbols
-switch the layout through the &en wrapper. Refusing the press is the only safe
-answer. If the switch ever moves again, this exception moves with it.
+&trans there would fall straight back through to ru. The copy has no exceptions
+— all 36 positions must match en.
+
+There used to be one. Position 32 was &none while its tap carried the layout
+switch, because under a held modifier neither of that key's two jobs could be
+right: a copy of en would run "go to ru" from ru, and &trans would reach sym_ru,
+whose symbols switch the layout through the &en wrapper. The switch moved to the
+31+34 combo and the tap became Escape, which is safe under a modifier, so the
+exception went with it.
 
 Nothing in the devicetree enforces that copy, so this does. It runs from
 tests/run.sh before any case is built.
@@ -16,11 +19,6 @@ tests/run.sh before any case is built.
 import sys
 
 from keymap_layers import KEYMAP, layers, require
-
-# Thumb index (0..5, i.e. positions 30..35) carrying the layout switch, and so
-# the one position where en_letters must be &trans rather than a copy of en.
-SWITCH_THUMB = 2
-SWITCH_THUMB_BINDING = "&none"
 
 
 def main():
@@ -37,19 +35,17 @@ def main():
                 problems.append(f"position {r * 10 + c}: en has {x!r}, en_letters has {y!r}")
 
     for i, (x, y) in enumerate(zip(en_thumbs, cp_thumbs)):
-        want = SWITCH_THUMB_BINDING if i == SWITCH_THUMB else x
-        if y != want:
-            problems.append(f"position {30 + i}: en_letters has {y!r}, expected {want!r}")
+        if x != y:
+            problems.append(f"position {30 + i}: en has {x!r}, en_letters has {y!r}")
 
     if problems:
         print("en_letters has drifted from en:", file=sys.stderr)
         for p in problems:
             print(f"  {p}", file=sys.stderr)
         print(
-            f"\nen_letters is a copy of en with {SWITCH_THUMB_BINDING} at position "
-            f"{30 + SWITCH_THUMB}, where the layout switch lives. Mirror the\n"
-            "change into both layers, or the English letters under a modifier\n"
-            "on ru stop matching the ones you actually type.",
+            "\nen_letters is a copy of en, every position. Mirror the change into both\n"
+            "layers, or the English letters under a modifier on ru stop matching the\n"
+            "ones you actually type.",
             file=sys.stderr,
         )
         sys.exit(1)

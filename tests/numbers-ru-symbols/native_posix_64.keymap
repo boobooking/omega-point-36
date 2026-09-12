@@ -26,9 +26,11 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* tap position 32 to leave en for ru */
-        ZMK_MOCK_PRESS(3,2,30)
-        ZMK_MOCK_RELEASE(3,2,300)
+        /* strike cmbru, thumbs 31+34, to leave en for ru */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
 
         /* hold Space (pos 31) past the tapping term to raise numbers_ru */
         ZMK_MOCK_PRESS(3,1,300)

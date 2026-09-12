@@ -28,22 +28,33 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Tap position 32: layer_ru, one Globe, and pos 1 must read as
-           й (0x14) afterwards rather than W (0x1A). */
+        /* cmbru: thumbs 31 and 34 tapped together leave en for ru and send one
+           Globe, so pos 1 must read as й (0x14) rather than W (0x1A). */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
+        ZMK_MOCK_PRESS(0,1,30)
+        ZMK_MOCK_RELEASE(0,1,300)
+
+        /* cmben, the other direction: one more Globe, pos 1 is W again. */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
+        ZMK_MOCK_PRESS(0,1,30)
+        ZMK_MOCK_RELEASE(0,1,300)
+
+        /* Position 32 is the key the switch vacated. Tapped, it is Escape
+           (0x29) and nothing else: no Globe, and pos 1 still reads W. */
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,300)
         ZMK_MOCK_PRESS(0,1,30)
         ZMK_MOCK_RELEASE(0,1,300)
 
-        /* And back: layer_en, one more Globe, pos 1 is W again. */
-        ZMK_MOCK_PRESS(3,2,30)
-        ZMK_MOCK_RELEASE(3,2,300)
-        ZMK_MOCK_PRESS(0,1,30)
-        ZMK_MOCK_RELEASE(0,1,300)
-
-        /* Space and Backspace are still just that. They carried the switch
-           as a combo once, and this guards the gesture that replaced it: two
-           thumbs tapped in sequence must not switch anything. */
+        /* Tapped in sequence rather than together, the same two thumbs are
+           still Space (0x2C) and Backspace (0x2A): outside timeout-ms the
+           combo must not fire. */
         ZMK_MOCK_PRESS(3,1,50)
         ZMK_MOCK_RELEASE(3,1,200)
         ZMK_MOCK_PRESS(3,4,50)

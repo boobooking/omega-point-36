@@ -28,14 +28,13 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* Escape and Tab live on nav now, flanking the arrows: Escape at
-           position 10, left of &kp LEFT, and Tab at position 14, right of
-           &kp RIGHT. Both are on the left hand, which is the one held free by
-           the right thumb on position 34.
+        /* Tab stays on nav at position 14, right of &kp RIGHT, on the hand the
+           right thumb leaves free. Escape has left the layer: position 10, the
+           other flank of the arrows, is &none now, and Escape lives on the
+           thumb cluster alone.
 
-           Hold 34 past the tapping term, then press each. Escape is 0x29 and
-           Tab is 0x2B; the arrow between them is 0x50, proving the layer is
-           really nav and not something falling through. */
+           Hold 34 past the tapping term, then press all three. Position 10
+           must emit nothing, the arrow at 11 is 0x50, and Tab is 0x2B. */
         ZMK_MOCK_PRESS(3,4,300)
         ZMK_MOCK_PRESS(1,0,30)
         ZMK_MOCK_RELEASE(1,0,30)
@@ -43,6 +42,13 @@
         ZMK_MOCK_RELEASE(1,1,30)
         ZMK_MOCK_PRESS(1,4,30)
         ZMK_MOCK_RELEASE(1,4,30)
+
+        /* Escape is still one key away from here: position 32 is &trans on
+           nav, so it falls through to the base layer's &ltt L_SYM_EN ESC and
+           taps 0x29 with nav still held. That fall-through is what makes "on
+           the thumb cluster on every layer" true. */
+        ZMK_MOCK_PRESS(3,2,30)
+        ZMK_MOCK_RELEASE(3,2,30)
         ZMK_MOCK_RELEASE(3,4,300)
 
         /* With 34 up, the same three positions are ordinary letters again:

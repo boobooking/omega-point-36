@@ -147,79 +147,18 @@
         // the layer only comes up once the tapping term expires, so pressing it
         // and a letter together taps nothing and the letter lands on the base
         // layer. A bare &mo raises adj on the press, and adj carries
-        // &bootloader at position 10 and &bt BT_SEL at 1 and 2 — all on the
-        // left hand, exactly where a rolled letter goes. "35 then a" would
-        // reboot into the bootloader.
+        // &bootloader at position 15 and &bt BT_SEL at 6 and 7 — all on the
+        // right hand, exactly where a letter rolled after the left thumb goes.
+        // "30 then m" would reboot into the bootloader.
         //
         // No quick-tap-ms: that property exists so tap-then-hold repeats the
         // tapped key, and there is no key here to repeat.
-        // Shift on the numbers layers, with Escape on the tap. The other mods
-        // there stay plain &kp; this one has something worth tapping.
-        //
-        // No require-prior-idle-ms, and that absence is load bearing: the whole
-        // point of the layer is Shift+digit, so a guard window would resolve
-        // Shift to a tap right after a digit and type Escape instead of the
-        // symbol. Balanced rather than tap-preferred for the same gesture —
-        // the hold has to win as soon as the digit is released, not after a
-        // term. No quick-tap-ms either: repeating Escape is never wanted.
-        //
-        // tapping-term-ms is 500, not the 200 every other hold-tap here uses,
-        // and the length is the whole point. With balanced and another key in
-        // play the hold is decided by *that key's release*, never by the timer,
-        // so Shift+digit is unaffected by this value. The timer governs one
-        // case only: this key pressed with nothing after it — which is always
-        // meant as Escape. At 200 ms a press held longer became a silent Shift,
-        // and that is exactly what a tap made while the same hand's thumb holds
-        // Space looks like. tests/numbers-esc-timing measures the boundary.
-        //
-        // Pressing this inside Space's undecided window is fine, incidentally:
-        // the position event is captured by Space's hold-tap and replayed once
-        // it resolves, so nothing is lost.
-        sesc: shift_escape {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            flavor = "balanced";
-            tapping-term-ms = <500>;
-            bindings = <&kp>, <&kp>;
-        };
-
         ltadj: layer_tap_adj {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
             flavor = "tap-preferred";
             tapping-term-ms = <200>;
             bindings = <&mo>, <&none>;
-        };
-
-        // Position 32 carries both jobs: hold for the symbol layer, tap to
-        // switch language. &ltt cannot express it — its tap binding is &kp and
-        // the switch is a macro — so these are the same behavior with the tap
-        // swapped, one per direction. The second parameter goes to that macro,
-        // which takes none, so it is written 0 and ignored; the schema demands
-        // two cells regardless, the same as `&hyl 0 F`.
-        //
-        // No quick-tap-ms here on purpose. Repeating a tapped key is what that
-        // is for, and repeating a language switch is never wanted: tap then
-        // hold would switch twice instead of raising the layer.
-        //
-        // Balanced like the other thumbs, and here it is also the safer
-        // flavour: a roll resolves as a hold, so it yields the symbol layer
-        // rather than an accidental language switch. Tap-preferred would do the
-        // opposite.
-        ltru: layer_tap_to_ru {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            flavor = "balanced";
-            tapping-term-ms = <200>;
-            bindings = <&mo>, <&layer_ru>;
-        };
-
-        lten: layer_tap_to_en {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            flavor = "balanced";
-            tapping-term-ms = <200>;
-            bindings = <&mo>, <&layer_en>;
         };
 
         // Hyper on the top row. The hold binding has to be the &hyper macro, not
@@ -665,15 +604,54 @@
         };
     };
 
+    combos {
+        compatible = "zmk,combos";
+
+        // The layout switch. Every thumb carries something of its own now —
+        // position 32 went back to Escape on the tap — so the switch is this
+        // pair instead of a key: Space and Backspace tapped together.
+        //
+        // Two combos, one per direction, scoped by layer. `layers` is checked
+        // against zmk_keymap_highest_layer_active() (app/src/combo.c), not
+        // against the whole stack, so only the one for the layer being left is
+        // armed. The same rule means neither fires while a higher layer is up:
+        // under a held modifier on ru, en_letters sits on top and the switch is
+        // refused, which is the answer that key needs there anyway.
+        //
+        // require-prior-idle-ms is what this pair needed the last time it
+        // carried the switch: a fast space-then-backspace correction mid-word
+        // fired it. 150 ms is the value it had then.
+        //
+        // Two costs that no property can remove. A combo fires on **press**, so
+        // holding Space and then Backspace switches exactly as tapping them
+        // does — numbers over nav cannot be reached through this pair. And the
+        // two keys sit on opposite halves, so the right one's event crosses BLE
+        // and can miss the 50 ms window, which reads as a switch that simply
+        // did not happen.
+        cmbru {
+            bindings = <&layer_ru>;
+            key-positions = <31 34>;
+            layers = <L_EN>;
+            require-prior-idle-ms = <150>;
+        };
+
+        cmben {
+            bindings = <&layer_en>;
+            key-positions = <31 34>;
+            layers = <L_RU>;
+            require-prior-idle-ms = <150>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
 
         en {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                                         &kp Z                 &kp L           &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                                         &kp M                 &hmr RGUI N     &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                                         &kp K                 &kp H           &kp J         &kp Q         &none
-                                           &none        &ltt L_NUM_EN SPACE  &ltru L_SYM_EN 0    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &ltadj L_ADJ 0
+  &none        &kp W         &hyl 0 F      &kp P           &kp B                                                          &kp Z                 &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T     &kp G                                                          &kp M                 &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D           &kp V                                                          &kp K                 &kp H        &kp J         &kp Q         &none
+                                           &ltadj L_ADJ 0  &ltt L_NUM_EN SPACE  &ltt L_SYM_EN ESC    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &none
             >;
 
             display-name = "Base";
@@ -681,10 +659,10 @@
 
         ru {
             bindings = <
-  &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA           &kp RU_CYRILLIC_IE                                            &kp RU_CYRILLIC_EN    &kp RU_CYRILLIC_GHE                 &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
-  &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                                            &kp RU_CYRILLIC_ER    &hmr_ru RGUI RU_CYRILLIC_O          &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
-  &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt L_RU_EXT RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                                             &kp RU_CYRILLIC_TE    &lt L_RU_EXT RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
-                                                                                          &none                        &ltt L_NUM_RU SPACE  &lten L_SYM_RU 0    &ltt L_SYM_RU ENTER  &ltt L_NAV BACKSPACE  &ltadj L_ADJ 0
+  &none                        &kp RU_CYRILLIC_SHORT_I      &hyl_ru 0 RU_CYRILLIC_U       &kp RU_CYRILLIC_KA           &kp RU_CYRILLIC_IE                                             &kp RU_CYRILLIC_EN    &kp RU_CYRILLIC_GHE                 &hyr_ru 0 RU_CYRILLIC_SHA      &kp RU_CYRILLIC_ZE         &none
+  &hml_ru LALT RU_CYRILLIC_YA  &hml LSHFT RU_CYRILLIC_YERU  &hml_ru LCTRL RU_CYRILLIC_VE  &hml_ru LGUI RU_CYRILLIC_A   &kp RU_CYRILLIC_PE                                             &kp RU_CYRILLIC_ER    &hmr_ru RGUI RU_CYRILLIC_O          &hmr_pfx RCTRL RU_CYRILLIC_EL  &hmr RSHFT RU_CYRILLIC_DE  &hmr_ru LALT RU_CYRILLIC_ZHE
+  &none                        &kp RU_CYRILLIC_CHE          &kp RU_CYRILLIC_ES            &lt L_RU_EXT RU_CYRILLIC_EM  &kp RU_CYRILLIC_I                                              &kp RU_CYRILLIC_TE    &lt L_RU_EXT RU_CYRILLIC_SOFT_SIGN  &kp RU_CYRILLIC_BE             &kp RU_CYRILLIC_YU         &none
+                                                                                          &ltadj L_ADJ 0               &ltt L_NUM_RU SPACE  &ltt L_SYM_RU ESC    &ltt L_SYM_RU ENTER  &ltt L_NAV BACKSPACE  &none
             >;
 
             display-name = "Ru";
@@ -725,10 +703,10 @@
 
         nav {
             bindings = <
-  &none    &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                      &none   &to L_EN  &to L_RU   &none      &none
-  &kp ESC  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                    &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
-  &none    &none             &none     &none             &none                      &none   &none     &none      &none      &none
-                                       &trans            &trans   &trans    &trans  &trans  &trans
+  &none  &kp LG(LS(LBKT))  &kp UP    &kp LG(LS(RBKT))  &none                      &none   &to L_EN  &to L_RU   &none      &none
+  &none  &kp LEFT          &kp DOWN  &kp RIGHT         &kp TAB                    &none   &kp RGUI  &kp RCTRL  &kp RSHFT  &kp LALT
+  &none  &none             &none     &none             &none                      &none   &none     &none      &none      &none
+                                     &trans            &trans   &trans    &trans  &trans  &trans
             >;
 
             display-name = "Nav";
@@ -737,7 +715,7 @@
         numbers_en {
             bindings = <
   &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &kp N7  &kp N8  &kp N9  &none
-  &kp LALT  &sesc LSHFT ESC         &kp LCTRL    &kp LGUI              &none                                     &none   &kp N4  &kp N5  &kp N6  &none
+  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &kp N4  &kp N5  &kp N6  &none
   &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &kp N2  &kp N3  &none
                                                  &trans                &trans                  &trans    &trans  &trans  &trans
             >;
@@ -748,7 +726,7 @@
         numbers_ru {
             bindings = <
   &none     &kp LA(LC(LG(LS(N2))))  &kp LG(TAB)  &kp LC(LG(LS(FSLH)))  &kp LA(LC(LG(LS(N1))))                    &none   &d7     &d8  &kp N9  &none
-  &kp LALT  &sesc LSHFT ESC         &kp LCTRL    &kp LGUI              &none                                     &none   &d4     &d5  &d6     &none
+  &kp LALT  &kp LSHFT               &kp LCTRL    &kp LGUI              &none                                     &none   &d4     &d5  &d6     &none
   &none     &none                   &none        &none                 &none                                     &kp N0  &kp N1  &d2  &d3     &none
                                                  &trans                &trans                  &trans    &trans  &trans  &trans
             >;
@@ -758,10 +736,10 @@
 
         adj {
             bindings = <
-  &none        &bt BT_SEL 0  &bt BT_SEL 1  &none   &none                     &none   &none         &none         &none  &none
-  &bootloader  &none         &none         &none   &none                     &none   &out OUT_BLE  &out OUT_USB  &none  &studio_unlock
-  &none        &none         &none         &none   &none                     &none   &none         &bt BT_CLR    &none  &none
-                                           &trans  &trans  &trans    &trans  &trans  &trans
+  &none  &none  &none  &none   &none                     &none        &bt BT_SEL 0  &bt BT_SEL 1  &none  &none
+  &none  &none  &none  &none   &none                     &bootloader  &out OUT_BLE  &out OUT_USB  &none  &studio_unlock
+  &none  &none  &none  &none   &none                     &none        &none         &bt BT_CLR    &none  &none
+                       &trans  &trans  &trans    &trans  &trans       &trans
             >;
 
             display-name = "Adjust";
@@ -769,10 +747,10 @@
 
         en_letters {
             bindings = <
-  &none        &kp W         &hyl 0 F      &kp P        &kp B                                              &kp Z                 &kp L           &hyr 0 U      &kp Y         &none
-  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T  &kp G                                              &kp M                 &hmr RGUI N     &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
-  &none        &kp X         &kp C         &kp D        &kp V                                              &kp K                 &kp H           &kp J         &kp Q         &none
-                                           &none        &ltt L_NUM_EN SPACE  &none    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &ltadj L_ADJ 0
+  &none        &kp W         &hyl 0 F      &kp P           &kp B                                                          &kp Z                 &kp L        &hyr 0 U      &kp Y         &none
+  &hml LALT A  &hml LSHFT R  &hml LCTRL S  &hml LGUI T     &kp G                                                          &kp M                 &hmr RGUI N  &hmr RCTRL E  &hmr RSHFT I  &hmr LALT O
+  &none        &kp X         &kp C         &kp D           &kp V                                                          &kp K                 &kp H        &kp J         &kp Q         &none
+                                           &ltadj L_ADJ 0  &ltt L_NUM_EN SPACE  &ltt L_SYM_EN ESC    &ltt L_SYM_EN ENTER  &ltt L_NAV BACKSPACE  &none
             >;
 
             display-name = "En letters";

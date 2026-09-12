@@ -26,9 +26,11 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* position 30 leaves en for ru */
-        ZMK_MOCK_PRESS(3,2,30)
-        ZMK_MOCK_RELEASE(3,2,300)
+        /* cmbru, a tap on thumbs 31+34, leaves en for ru */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
 
         /* Right Cmd (pos 16) with pos 4. Pos 4 is on the LEFT half, so the
            opposite-hand rule wants the right modifier. It must resolve on en

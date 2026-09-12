@@ -26,10 +26,12 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* position 32 leaves en for ru, and taps Globe so the
-           host follows. Everything below therefore resolves on ru. */
-        ZMK_MOCK_PRESS(3,2,30)
-        ZMK_MOCK_RELEASE(3,2,300)
+        /* cmbru (thumbs 31+34) leaves en for ru, and taps Globe so
+           the host follows. Everything below therefore resolves on ru. */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
 
         /* Hold м (pos 23) past the 200 ms term: the right hand is free, so
            this entrance reaches щ, э, х and ъ — including ъ, which sits on

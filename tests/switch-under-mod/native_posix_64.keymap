@@ -28,24 +28,30 @@
         ZMK_MOCK_PRESS(0,1,10)
         ZMK_MOCK_RELEASE(0,1,400)
 
-        /* position 32 leaves en for ru: one Globe. */
-        ZMK_MOCK_PRESS(3,2,30)
-        ZMK_MOCK_RELEASE(3,2,300)
+        /* cmbru leaves en for ru: one Globe. */
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,300)
 
-        /* Hold right Cmd (pos 16), then press the switch key. It must do
-           nothing at all: no switch, and ru still active at the end.
+        /* Hold right Cmd (pos 16) past its term, then strike the switch combo
+           under it. It must not fire: the modifier raises en_letters over ru,
+           and a combo's `layers` is checked against the highest active layer
+           only, so neither cmbru nor cmben is armed there. No Globe may appear
+           between these two events, and ru must still be active at the end.
 
-           Position 32 carries two jobs, hold for the symbol layer and tap to
-           switch language, and under a modifier neither can be right. A copy of
-           en's binding would run layer_ru — "go to ru" from ru — tapping Caps
-           Lock without moving the firmware. A &trans would fall through to ru
-           and reach sym_ru, whose symbols go through the &en wrapper and tap
-           the layout too, under a held Cmd. So en_letters has &none there and the
-           press is refused.
+           That refusal is the answer this key needs. Running either direction
+           from under the modifier would be a guess about which language the
+           user is in, and the one that guessed wrong desynced the host. */
+        ZMK_MOCK_PRESS(1,6,350)
+        ZMK_MOCK_PRESS(3,1,5)
+        ZMK_MOCK_PRESS(3,4,20)
+        ZMK_MOCK_RELEASE(3,1,10)
+        ZMK_MOCK_RELEASE(3,4,200)
+        ZMK_MOCK_RELEASE(1,6,300)
 
-           The cost is that Cmd plus the left thumb no longer reaches a symbol
-           layer. Enter on pos 33 still does, and still reaches sym_en with its
-           Latin symbols, which is the one that matters for shortcuts. */
+        /* Position 32 under the same modifier is Escape now, and that is safe:
+           Cmd+Esc is a shortcut, not a language switch. 0x29 with 0xE7 down. */
         ZMK_MOCK_PRESS(1,6,350)
         ZMK_MOCK_PRESS(3,2,30)
         ZMK_MOCK_RELEASE(3,2,200)
