@@ -83,7 +83,7 @@ and none of them are gitignored — build outside the repo, or just push and let
 ## Simulating the keymap
 
 `./tests/run.sh` first runs two checks that need no simulator — `tests/check-en-letters.py`, that
-layer 8 has not drifted from `en`, and the host-compiled tests under `tests/resync-state/`, which
+`en_letters` has not drifted from `en`, and the host-compiled tests under `tests/resync-state/`, which
 exercise the layout resync module's logic that the simulator cannot reach for want of BLE — and then
 builds `config/op36_ruen.keymap` for ZMK's `native_posix_64`
 board — the firmware becomes an ordinary Linux binary whose key matrix is a mock
@@ -174,9 +174,8 @@ re-rendering silently breaks alignment. The layout algorithm is:
 - Columns start at 2 and advance by `w[c] + 2`, except between the halves: after column 4's slot
   come the two middle thumb tokens (separated by 4 spaces, not 2), and column 5 starts after them.
 
-**Layer 8 (`en_letters`) is a copy of the `en` layer** — rows 0-2 verbatim, plus `en`'s thumb row
-with the layout switch position replaced by `&none`. Change one and you must change the other in the
-same commit;
+**`en_letters` is a copy of the `en` layer** — all 36 positions, rows and thumb row alike, with no
+exception left. Change one and you must change the other in the same commit;
 `tests/check-en-letters.py` fails the run and names the drifting position if you forget. See
 "Modifiers on `ru` raise the English letters over it" for why the copy exists.
 
@@ -209,14 +208,14 @@ see "Two numbers layers" below for what differs between them and why one layer c
 languages.
 
 ```
-en ──hold pos 35──> adj                 (tap gives nothing, on purpose)
+en ──hold pos 30──> adj                 (tap gives nothing, on purpose)
  ├──Space────────> numbers_en           (numbers_ru from ru)
  ├──Bspc─────────> nav
- └──Esc/Enter────> sym_en
+ └──Esc/Enter────> sym_en               (pos 32 taps Escape, pos 33 is Enter)
 ru behaves identically, except Esc/Enter reach sym_ru
 ru ──hold pos 23 or 26──> ru_ext        (the seven letters that did not fit)
-en <──tap pos 32──> ru                  (layer_ru / layer_en, and the host follows)
-nav has &to 0 / &to 1 for language resync, and Esc/Tab flanking the arrows
+en <──31+34 combo──> ru                 (layer_ru / layer_en, and the host follows)
+nav has &to 0 / &to 1 for language resync, and Tab right of the arrows
 ```
 
 Positions are 0-9 / 10-19 / 20-29 for the three rows, then 30-32 (left thumbs) and 33-35 (right).
@@ -251,30 +250,17 @@ make a hold-tap resolve as a useless tap right after typing. The numbers layers 
 Cmd the same way and for the same reason — the digits are on the right hand, and nothing under those
 three is worth tapping.
 
-**Shift on the numbers layers is the exception**: position 11 is `&sesc LSHFT ESC`, a hold-tap with
-Escape on the tap. It carries **no `require-prior-idle-ms`**, and that absence is load bearing — the
-whole point of the layer is `Shift+digit`, so a guard window would resolve Shift to a tap right after
-a digit and type Escape instead of the symbol. It is balanced rather than tap-preferred for the same
-gesture: the hold has to win as soon as the digit is released, not after a term.
+**Shift on the numbers layers is a plain `&kp LSHFT` as well**, and it is the one that used to be
+different. It was `&sesc LSHFT ESC`, a hold-tap with Escape on its tap, balanced, carrying no
+`require-prior-idle-ms` — a guard window there would have resolved Shift to a tap right after a digit
+and typed Escape instead of the symbol — and a `tapping-term-ms` of 500 rather than 200, because a
+tap made while the same hand's thumb holds Space runs well past 200 ms and came out a silent Shift,
+which read as a dead key on the device. Escape moved to the thumb cluster, the hold-tap went with it,
+and `tests/numbers-esc-timing` went with that.
 
-**Its `tapping-term-ms` is 500, not the 200 every other hold-tap here uses, and the length is the
-point.** With balanced and another key in play the hold is decided by *that key's release*, never by
-the timer, so `Shift+digit` is untouched by this value — `tests/numbers-ru-symbols` did not move by a
-line when it changed. The timer governs one case only: this key pressed with nothing after it, which
-is always meant as Escape. At 200 ms a press held longer than that became a **silent Shift**, and the
-key read as dead on the device — a tap made while the same hand's thumb holds Space easily runs past
-200 ms. `tests/numbers-esc-timing` measures the boundary at 100, 150, 250 and 400 ms.
-
-The mod-morphs still see the Shift, which was the other thing worth checking: the hold-tap decides on
-the digit's release, presses `0xE1`, and only then replays the captured digit, so
+The mod-morphs see the Shift either way, which was the thing worth checking on that layer:
 `tests/numbers-ru-symbols` shows `implicit_mods 0x04` under Shift alone and a bare digit under
 Cmd+Shift.
-
-**Pressing this key inside Space's undecided window is fine**, contrary to what the
-one-undecided-hold-tap rule suggests at first reading. That rule drops a *behavior* invoked while
-another is undecided; a position event is instead **captured** by the undecided hold-tap and replayed
-once it resolves, by which time this key can start its own cleanly. Measured, not reasoned: the fast
-gesture and the slow one give the same `0x29`.
 
 **Hyper sits on the top row of both letter layers**, positions 2 and 7 — `F`/`U` on `en`, `у`/`ш` on
 `ru` — through `hyl`/`hyr`. Those are `hml`/`hmr` with the hold binding swapped, same flavour, same
@@ -303,21 +289,22 @@ sends `B` on `en` and `T` on `ru`. Shortcuts are matched on the scancode — thr
 for Cmd, and straight through the virtual keycode for anything a hotkey daemon registers — so
 `Cmd+B` fired from the same finger worked before the Colemak-DH rework and stopped afterwards.
 
-So on `ru`, **holding Cmd, Ctrl, Alt or Hyper raises `en_letters` (`&mo 8`)** for as long as the
+So on `ru`, **holding Cmd, Ctrl, Alt or Hyper raises `en_letters` (`&mo L_EN_LTR`)** for as long as the
 modifier is down, which puts the letters back where `en` has them. `hml_ru`/`hmr_ru` and
 `hyl_ru`/`hyr_ru` are the `hml`/`hmr` and `hyl`/`hyr` pairs with the hold binding swapped for the
 `en_mod` / `hyper_en` macros; flavour, guards and trigger lists are untouched. Verified end to end in
 `tests/ru-mod-switch`.
 
-**`en_letters` is a hand-kept copy of `en`** — rows 0-2 verbatim, plus `en`'s thumb row with position
-32 replaced by **`&none`**. Under a held modifier neither of that key's two jobs can be right: a copy
-of `en`'s binding would tap "go to ru" while already on `ru`, and a `&trans` would fall through to
-`ru` and reach `sym_ru`, whose `\` goes through the `&en` wrapper and switches the layout mid-chord.
-Refusing the press is the only safe answer, and it costs `Cmd` plus the left thumb reaching a symbol
-layer at all. Enter on position 33 still does, and still reaches `sym_en` with the Latin symbols a
-shortcut needs. It has to hold real bindings: `&trans` on a layer sitting *over* `ru` falls
-straight back through to `ru`, which is the thing being overridden. Position 30 is the exception
-precisely because falling through is what is wanted there — see below.
+**`en_letters` is a hand-kept copy of `en`** — every position, thumbs included. It carried one
+exception for as long as position 32's tap was the layout switch: `&none`, because under a held
+modifier neither of that key's two jobs could be right. A copy of `en`'s binding would have tapped
+"go to ru" while already on `ru`, and a `&trans` would have fallen through to `ru` and reached
+`sym_ru`, whose `\` goes through the `&en` wrapper and switches the layout mid-chord. The switch is
+the 31+34 combo now and that tap is Escape, which is safe under any modifier — `Cmd+Esc` is a
+shortcut, not a language switch — so the copy is exact again and `Cmd` plus the left thumb reaches
+`sym_en` the way Enter on position 33 always did. The layer still has to hold real bindings:
+`&trans` on a layer sitting *over* `ru` falls straight back through to `ru`, which is the thing being
+overridden.
 
 **Editing `en` means editing `en_letters` in the same commit.** Nothing in the devicetree enforces
 the copy, so `tests/check-en-letters.py` does; `tests/run.sh` runs it before building any case and
@@ -330,9 +317,10 @@ raising and Shift only contributes a modifier bit.
 
 **This used to switch the base layer instead, and that is why an empty marker layer existed.** The
 old `en_mod` ran `&to 0` on press and `&to 1` on release, which made `en` the base for the duration —
-so the keymap's own state claimed the language was English while the user was still on `ru`. Position
-30 is direction-specific (`&layer_en` on `ru`, `&layer_ru` on `en`), so it read that lying state and
-ran "go to ru" *from* ru: a host switch with no firmware movement, and a desynchronised host. The fix
+so the keymap's own state claimed the language was English while the user was still on `ru`. The
+switch was direction-specific then as it is now — `&layer_en` from `ru`, `&layer_ru` from `en`, on
+position 30 at the time — so it read that lying state and ran "go to ru" *from* ru: a host switch
+with no firmware movement, and a desynchronised host. The fix
 then was a layer of 35 `&trans` and one `&none` at position 30, raised alongside `&to 0`, whose only
 job was to refuse the press. Earlier still, when the switch was a combo, the same marker layer served
 a different purpose — `combo.c:164` tests `combo_active_on_layer(combo, zmk_keymap_highest_layer_active())`,
@@ -464,47 +452,50 @@ Five keys, and which one you hold picks the layer. Each leaves one hand free:
 
 | held | leads to | free hand |
 |---|---|---|
-| 35 | `adj` | left; `adj`'s profile keys now sit there too |
+| 30 | `adj` | right, where every one of `adj`'s keys now sits |
 | 31 Space | `numbers_en` from `en`, `numbers_ru` from `ru` | right, where the digits are |
 | 34 Backspace | `nav` | left, where the arrows are |
 | 32 / 33 Enter | `sym_en` from `en`, `sym_ru` from `ru` | the other one |
-| **tap 32** | the layout switch, not a layer | — |
+| **tap 32** | Escape | — |
+| **31+34 struck together** | the layout switch, not a layer | — |
 
-**Position 30 is `&none`, and 35 has no tap.** Escape and Tab used to live there; both moved to
-`nav`, Escape at position 10 and Tab at 14, flanking the arrows on the hand that position 34 leaves
-free. So position 30 is the one spare thumb, and every other one still carries something.
+**Escape lives on the thumb cluster and nowhere else.** Position 32's tap is the only one, and every
+layer above `en`/`ru` leaves that position `&trans`, so the same thumb reaches it from `nav`, the
+numbers layers and the symbol layers alike (`tests/nav-tab` presses it from under a held `nav`). It
+used to sit on `nav` at position 10 and on the numbers layers as the tap of a Shift hold-tap; both
+went, and position 10 is `&none` now.
 
-**Position 32 does two jobs**, hold for the symbol layer and tap for the layout switch, through
-`ltru` on `en` and `lten` on `ru`. `&ltt` cannot express it: its tap binding is `&kp` and the switch
-is a macro, so these are the same hold-tap with the tap swapped, one per direction. The second
-parameter is written `0` and ignored, because the macro takes none and the schema demands two cells —
-the same shape as `&hyl 0 F`.
+**Position 32 does two jobs**, hold for the symbol layer and tap for Escape, through plain `&ltt` on
+both base layers. It carried the layout switch on its tap until that moved to the combo, which is
+why the direction-specific `ltru`/`lten` hold-taps existed; they are gone, and nothing in the thumb
+row needs a macro on its tap any more.
 
-They carry **no `quick-tap-ms`**, deliberately. That property exists so tap-then-hold repeats the
-tapped key, and repeating a language switch is never wanted — it would switch twice instead of
-raising the layer. Balanced is also the safer flavour here rather than merely the consistent one: a
-roll resolves as a hold, so it yields the symbol layer, where tap-preferred would yield an accidental
-language switch.
+Read any "position 30" or "position 32" below that talks about the layout switch as history: the
+switch has lived on 2+3, then 31+34, then 30, then 32, and now 31+34 again.
 
-Read any "position 30" below that talks about the layout switch as history: the switch has lived on
-2+3, then 31+34, then 30, and now 32.
-
-**Position 35 is `&ltadj L_ADJ 0` — a hold-tap whose tap is `&none`, and it must not become a plain
+**Position 30 is `&ltadj L_ADJ 0` — a hold-tap whose tap is `&none`, and it must not become a plain
 `&mo`.** Every other thumb is balanced; this one is tap-preferred, which is what keeps a roll off it.
-`adj` carries `&bootloader` at position 10 and `&bt BT_SEL` at 1 and 2 — all on the **left** hand,
-exactly where a letter rolled after the right thumb lands. With `&mo` the layer comes up on the
-press, so "35 then a" reboots into the bootloader. Tap-preferred waits out the tapping term instead,
-so a roll resolves as a tap of nothing and the letter falls through to the base layer. The key kept
-its guard when Tab left it; only the tap changed, from `TAB` to `&none`. `tests/adj-key` pins both
-halves — held 250 ms it reaches `adj`, tapped it emits nothing and `adj` never comes up.
+`adj` carries `&bootloader` at position 15 and `&bt BT_SEL` at 6 and 7 — all on the **right** hand,
+exactly where a letter rolled after the left thumb lands. With `&mo` the layer comes up on the press,
+so "30 then m" reboots into the bootloader. Tap-preferred waits out the tapping term instead, so a
+roll resolves as a tap of nothing and the letter falls through to the base layer. The guard moved
+with the key when `adj` came over from position 35; only the hand it protects changed.
 
-`adj` hangs off position 35 alone — no chain, no combo. It was on the Space+Backspace hold
-until a tap on those two became the layout switch, which made the gesture ambiguous by construction:
-a ZMK combo fires on simultaneous press and cannot tell a tap from the start of a hold. It then sat
-on position 30 until that position became the layout switch itself, and moved to 35, the last free
-thumb. `adj` is rare, so it gets the least reachable key. `tests/adj-key` pins both halves: position
-35 raises `adj`, and holding Space then Backspace yields the numbers layer over `nav` and never
-`adj`.
+`adj` hangs off position 30 alone — no chain, no combo. It was on the Space+Backspace hold until a
+tap on those two became the layout switch, which made the gesture ambiguous by construction: a ZMK
+combo fires on simultaneous press and cannot tell a tap from the start of a hold. It then sat on
+position 30, moved to 35 when 30 became the switch key, and came back to 30 once the switch left for
+the combo again. `adj` is rare, so it gets the least reachable key, and its keys sit on the hand the
+holding thumb leaves free — which is why they all moved to the right half when it moved to the left
+thumb.
+
+**Position 35 is `&none`.** It is the thumb `adj` vacated, held for a `globe` layer that is not built
+yet. That layer is on hold for a reason worth not re-deriving: ZMK's `GLOBE` is
+`C_AC_NEXT_KEYBOARD_LAYOUT_SELECT`, a **consumer usage** (`0x29D`, `app/include/dt-bindings/zmk/keys.h:1444`),
+while Apple's Globe is the **fn modifier** — and the HID keyboard report has no fn bit at all, only
+the eight in `modifiers.h`. So a chord like "Globe+F" cannot be expressed: a macro holding `0x29D`
+while tapping `F` sends a consumer report and a keyboard report, which the host reads as "switch
+layout" plus the letter, not as the shortcut.
 
 **The rule: base layers (`en`, `ru`) hold the real bindings; every higher layer is `&trans`.** It now
 holds with **no exceptions at all** — every one of the six thumb positions is `&trans` on all seven
@@ -645,9 +636,11 @@ were taken back out of the own-hand lists at the same time. Leaving both changes
 typing "of" open Spotlight — a worse bug than the one being fixed. **Change one of these two without
 re-running `typing-roll` and `chord-repeat-fast` and you will trade one bug for the other.**
 
-The layout switch used to carry its own `require-prior-idle-ms = 150` for a different accident — a
-fast space-then-backspace correction firing the combo mid-word. That guard went with the combo: a
-dedicated key cannot be hit by a correction, so there is nothing left to suppress.
+The layout switch carries its own `require-prior-idle-ms = <150>` for a different accident — a fast
+space-then-backspace correction firing the combo mid-word. It went without that guard for as long as
+the switch was a dedicated key, which a correction cannot hit, and got it back when the switch
+returned to the combo on positions 31+34. That window is separate from the 100 ms on the home row
+mods, and moving one says nothing about the other.
 
 **Outcome: reduced, not eliminated, and accepted.** At 100 the symptom is still reachable if the
 chord is repeated fast enough — it is inherent to the mechanism, since any guard window at all will
@@ -781,8 +774,9 @@ nothing on iPadOS. Everything below follows from that.
 - `os_lang` sends `&kp GLOBE` and `&kp LC(LA(LG(LS(F13))))`, and nothing else. `to_en`/`to_ru` no longer exist, because under a
   toggle they would be the same action.
 - `layer_en` / `layer_ru` are `&to 0 &os_lang` / `&to 1 &os_lang`, correct **only when invoked from
-  the layer they are leaving**. They are bound directly at position 32 — `&layer_en` on `ru`,
-  `&layer_ru` on `en` — so the ordinary top-down layer lookup picks the right direction. Never bind
+  the layer they are leaving**. Each is bound to its own combo on positions 31+34, scoped by
+  `layers` — `cmbru` to `L_EN`, `cmben` to `L_RU` — so only the one for the layer you are on is
+  armed. Never bind
   these to anything unconditional, and never let a layer make the base stop reflecting the user's
   language while the switch key can still be pressed: reading a base that lies is what made "go to RU"
   fire from RU and desynchronize the host. `en_letters` sits *over* `ru` rather than replacing it
@@ -912,10 +906,10 @@ switch is a permanent desync, and any host-side change is undetectable.
 | # | Cause | Status |
 |---|---|---|
 | 1 | Firmware switched, host never saw the switch — dropped HID report, or a tap under the host's hold threshold | **removed**: a plain chord has no hold threshold, unlike Caps Lock |
-| 2 | Host switched by itself — menu bar, another shortcut, a secure-input field | **irreducible** |
+| 2 | Host switched by itself — menu bar, another shortcut, a secure-input field, or Ctrl+Space on iPadOS, which cannot be unbound | **irreducible**; following Ctrl+Space from the keymap was considered and rejected, below |
 | 3 | Switch key pressed while a modifier is held on `ru`, running the wrong direction | fixed: modifiers raise `en_letters` instead of switching the base, so the direction is never wrong |
-| 4 | Unintended switch — a fast space-then-backspace firing the old combo | fixed: the switch is a dedicated key |
-| 5 | Switch missed entirely — the old combo spanned both halves and needed both events inside `timeout-ms` = 50 while the peripheral's crossed BLE | fixed: the switch key is on the central half |
+| 4 | Unintended switch — a fast space-then-backspace correction firing the combo mid-word | **reduced, not fixed**: `require-prior-idle-ms` = 150 on both combos, the value this cost the last time the switch lived here |
+| 5 | Switch missed entirely — the combo spans both halves and needs both events inside `timeout-ms` = 50 while position 34's crosses BLE from the peripheral | **live again**: the switch moved back to positions 31+34, so a switch that simply did not happen is the expected failure; `nav` 6/7 is the recovery |
 | 6 | A modifier hold's release never runs, so `&to 1` never restores `ru` | reduced only; recovery is one keystroke |
 | 7 | Boot — layer 0 is the hardcoded default and layer state is not persisted, so every reflash and every battery pull starts on `en` regardless of the host | **irreducible**; the module's memory is RAM-only and shares this fate after a deep sleep |
 | 8 | A third keyboard layout enabled on the host — the switch then cycles through three, and the binary model breaks silently | avoid; currently ABC + Russian only |
@@ -927,6 +921,24 @@ Two things were checked and **excluded** as causes: macOS's "automatically switc
 input source" is off here (`TextInputGlobalPropertyPerContextInput = 0` in `com.apple.HIToolbox`), and
 the behavior queue cannot drop the `os_lang` half of `layer_en`/`layer_ru` — `ZMK_BEHAVIORS_QUEUE_SIZE`
 is 64 and those macros queue two items.
+
+**Ctrl+Space on iPadOS is cause 2 in its most reachable form, and following it from the keymap was
+considered and rejected.** iPadOS switches the input source on Ctrl+Space, its input-source shortcuts
+are fixed, and that one cannot be turned off — so the chord typed by hand moves the host while the
+firmware never hears of it. The keymap could have followed along: a mod-morph on position 31's tap,
+so that Ctrl+Space still reaches the host and additionally moves the layer. It would have had to
+*toggle* rather than pick a direction — `&tog L_RU`, not `layer_en`/`layer_ru` — because the right
+Ctrl raises `en_letters` over `ru` and arms `sken` after it, so the lookup at position 31 lands on a
+copy of `en` and would run "go to ru" from ru.
+
+What killed it is that **an app can take Ctrl+Space before the system does**: since iOS 15 a
+`UIKeyCommand` with `wantsPriorityOverSystemBehavior` wins over the system shortcut, and terminals
+want the chord because it is NUL (`^@`). Measured on the iPad: in Echo, Ctrl+Space does not switch
+the layout. Inside such an app the firmware would move the layer with the host standing still —
+cause 2 traded for its mirror image, in the app that is used most. It would also have needed the
+Mac's "Select next source in Input menu" moved onto Ctrl+Space (`AppleSymbolicHotKeys` 61, currently
+Hyper+`=`; 60, "previous", holds the Hyper+F13 that `os_lang` sends), because Ctrl+Space is unbound
+there and the layer would otherwise move alone on every press.
 
 **Closing the loop is not available on a stock host, and both routes were checked rather than
 assumed.** There is no feedback: with the host on Russian, `HIDCapsLockLEDOn` reads `No` for the
@@ -1061,20 +1073,30 @@ keystroke, which is precisely when `ъ` and `х` are wanted. `tapping-term-ms` i
 
 ## Combos
 
-**There are none left.** The layout switch was the last pair (`cmben`/`cmbru` on positions 31+34)
-and it moved to a single key on position 30; `kha` (Х) and `hrdsgn` (Ъ) went when `ru_ext` arrived.
-`config/op36.conf` still carries `CONFIG_ZMK_COMBO_MAX_KEYS_PER_COMBO=3` and
-`CONFIG_ZMK_COMBO_MAX_COMBOS_PER_KEY=7`; they now bound nothing and are left only so that adding a
-combo back does not need the limits rediscovered.
+**Two, both the layout switch**: `cmbru` (`layers = <L_EN>`, runs `&layer_ru`) and `cmben`
+(`layers = <L_RU>`, runs `&layer_en`), each on positions 31+34 with `require-prior-idle-ms = <150>`
+and the stock 50 ms `timeout-ms`. `kha` (Х) and `hrdsgn` (Ъ) went when `ru_ext` arrived and have not
+come back. `config/op36.conf` carries `CONFIG_ZMK_COMBO_MAX_KEYS_PER_COMBO=3` and
+`CONFIG_ZMK_COMBO_MAX_COMBOS_PER_KEY=7`, which these fit inside with room to spare.
 
-Two facts worth keeping if a combo is ever added again:
+Three facts govern this pair, and all three are costs rather than settings:
 
 - A combo's `layers = <N>` is checked against `zmk_keymap_highest_layer_active()` (see
   `app/src/combo.c`), **not** against "is that layer active anywhere in the stack". A combo scoped to
-  `ru` therefore does not fire while `nav` is held on top of it.
+  `ru` therefore does not fire while `nav` is held on top of it — nor while `en_letters` is, which is
+  what makes the switch refuse itself under a held modifier (`tests/switch-under-mod`).
 - A combo fires on **press**, so holding its keys switches exactly like tapping them. There is no way
   to tell the two apart in ZMK, which is what pushed `adj` off the Space+Backspace gesture in the
-  first place.
+  first place — and which now means **numbers over `nav` cannot be reached by striking those two
+  thumbs together**. Held in sequence they still stack normally, since 300 ms apart is outside
+  `timeout-ms`; `tests/adj-key` pins that shape.
+- Both events must arrive inside `timeout-ms`, and position 34 is on the **peripheral** half, so its
+  event crosses BLE. A switch that simply did not happen is the expected failure, and it is cause 5
+  in the desync table below.
+
+`require-prior-idle-ms = <150>` is the one guard that helped: without it a fast space-then-backspace
+correction mid-word fired the switch. It is the value this pair carried the last time it held the
+switch.
 
 The reason the deleted Cyrillic combos never carried a prior-idle guard still governs `ru_ext`: Х and
 Ъ are wanted mid-word ("плохо", "объект"), so anything that suppresses a trigger right after a
@@ -1132,16 +1154,18 @@ Deliberate, pending later work — do not "fix" them unprompted:
   software — the host switching by itself, and every boot starting on `en` — and iPadOS support rules
   out the two solutions that would close the loop. See "Every way the layer and the host can drift
   apart" for the full accounting and what is still worth trying.
-- **The switch key has no guard.** Position 30 fires the layout switch on press, unlike the combo it
-  replaced, which needed two keys and a 150 ms prior-idle window. That is the point — it can no
-  longer be missed — but it also cannot be un-pressed. If brushing the outer left thumb turns out to
-  switch layouts in real use, the fix is to make it a hold rather than to reinstate a combo.
+- **The switch is a combo again, and its two costs are structural.** Positions 31+34 with a 150 ms
+  prior-idle guard cannot be brushed by accident the way a dedicated key could, but a combo fires on
+  **press**, so those two thumbs can no longer be held together to stack numbers over `nav`; and both
+  events must land inside 50 ms while position 34's crosses BLE from the peripheral half, so the
+  switch can silently not fire. Both are spelled out under "Combos"; neither is tunable away.
 - `adj` is stripped to `&bootloader`, **two** `&bt BT_SEL` (0-1), `&bt BT_CLR`, both `&out` and
   `&studio_unlock`; everything else on it is `&none` by intent. Two profiles is two hosts, the Mac
   and the iPad. Profiles 2 and 3 have no key — ZMK still keeps their bonds, there is just no way to
   select them from the keymap, and adding one back is a binding on any of the free positions.
-  **The profile keys sit on the left hand, at positions 1 and 2**, because `adj` is held with the
-  right thumb and the left hand is the free one; the rest of the layer has not followed them yet.
+  **The profile keys sit on the right hand, at positions 6 and 7**, because `adj` is held with the
+  left thumb and the right hand is the free one; `&bootloader` moved to 15 for the same reason, and
+  the outputs and `&studio_unlock` were already there.
   `&bt BT_CLR` sits on the bottom row, away from the home row it used to share with the outputs,
   because it is the destructive one.
 
